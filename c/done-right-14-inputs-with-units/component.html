@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inputs with units · Done right #14 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 560px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-card { background: #FFFFFF; border: 1px solid rgba(40, 32, 20, .12); border-radius: 24px; padding: 24px; box-shadow: 0 24px 50px -28px rgba(40, 32, 20, .28); }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+
+  .units { display: grid; gap: 18px; color: #1D1B18; }
+  .units-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .units-title { margin: 0; font-size: 1.0625rem; font-weight: 600; }
+
+  /* Metric / imperial: two real radios that look like a switch. */
+  .units-system { display: flex; margin: 0; padding: 3px; border: 1.5px solid #857E73; border-radius: 12px; }
+  .units-system legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .units-system label { position: relative; }
+  .units-system input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+  .units-system span {
+    display: grid;
+    place-items: center;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 9px;
+    font-size: .9375rem;
+    font-weight: 600;
+  }
+  .units-system input:checked + span { background: #1D1B18; color: #FFFFFF; }
+  .units-system input:not(:checked):hover + span { background: #F2EFEA; }
+  .units-system input:focus-visible + span { outline: 2.5px solid #1D1B18; outline-offset: 2px; }
+
+  .units-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; }
+  .unit-field { display: grid; gap: 6px; align-content: start; min-width: 0; }
+  .unit-field > label { font-weight: 600; }
+  .unit-box {
+    display: flex;
+    align-items: center;
+    height: 48px;
+    border: 1.5px solid #857E73;      /* 4.0:1 on white */
+    border-radius: 12px;
+    background: #FFFFFF;
+  }
+  .unit-box:has(input:focus-visible) { border-color: #1D1B18; outline: 2.5px solid #1D1B18; outline-offset: 2px; }
+  .unit-box:has([aria-invalid="true"]) { border-color: #B3261E; }
+  .unit-box input {
+    flex: 1;
+    width: 0;                         /* let the box shrink to its column */
+    min-width: 0;
+    height: 100%;
+    padding: 0 4px 0 14px;
+    border: 0;
+    border-radius: 12px 0 0 12px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 1.0625rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .unit-box input:focus { outline: none; }
+  /* The unit is a second <label>: part of the name, never on top of the text. */
+  .unit-suffix {
+    flex: none;
+    padding: 0 14px 0 4px;
+    color: #5A544B;
+    font-weight: 500;
+    cursor: text;
+  }
+  .unit-hint { margin: 0; font-size: .8125rem; color: #5A544B; }
+  .unit-error {
+    display: flex; gap: 6px; margin: 0;
+    font-size: .8125rem; font-weight: 500; color: #B3261E;   /* 6.5:1 */
+  }
+  .unit-error[hidden] { display: none; }
+  .unit-error::before {
+    content: "!"; flex: none; display: grid; place-items: center; margin-top: .1em;
+    width: 1rem; height: 1rem; border-radius: 50%;
+    background: #B3261E; color: #FFFFFF; font-weight: 700; font-size: .6875rem;
+  }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #14 · @zellap.app</p>
+  <h1>Inputs with units</h1>
+  <p class="demo-lede">The unit is part of the field's name, clicking it focuses the field, "2,5" and "2.5" both work, and switching to inches converts the numbers instead of relabelling them.</p>
+
+  <div class="demo-card">
+    <div class="units" data-system="metric">
+      <div class="units-head">
+        <h2 class="units-title">Parcel size</h2>
+        <fieldset class="units-system">
+          <legend>Units</legend>
+          <label><input type="radio" name="system" value="metric" checked><span>cm, kg</span></label>
+          <label><input type="radio" name="system" value="imperial"><span>in, lb</span></label>
+        </fieldset>
+      </div>
+      <div class="units-fields">
+        <div class="unit-field" data-kind="length" data-max="120" data-value="40">
+          <label for="length">Length</label>
+          <div class="unit-box">
+            <input id="length" inputmode="decimal"
+                   autocomplete="off" value="40"
+                   aria-describedby="length-hint length-error">
+            <label for="length" class="unit-suffix">cm</label>
+          </div>
+          <p class="unit-hint" id="length-hint">Up to 120 cm</p>
+          <p class="unit-error" id="length-error" hidden></p>
+        </div>
+        <div class="unit-field" data-kind="length" data-max="120" data-value="30">
+          <label for="width">Width</label>
+          <div class="unit-box">
+            <input id="width" inputmode="decimal"
+                   autocomplete="off" value="30"
+                   aria-describedby="width-hint width-error">
+            <label for="width" class="unit-suffix">cm</label>
+          </div>
+          <p class="unit-hint" id="width-hint">Up to 120 cm</p>
+          <p class="unit-error" id="width-error" hidden></p>
+        </div>
+        <div class="unit-field" data-kind="weight" data-max="30" data-value="2.5">
+          <label for="weight">Weight</label>
+          <div class="unit-box">
+            <input id="weight" inputmode="decimal"
+                   autocomplete="off" value="2.5"
+                   aria-describedby="weight-hint weight-error">
+            <label for="weight" class="unit-suffix">kg</label>
+          </div>
+          <p class="unit-hint" id="weight-hint">Up to 30 kg</p>
+          <p class="unit-error" id="weight-error" hidden></p>
+        </div>
+      </div>
+      <p class="units-live sr-only" role="status"></p>
+    </div>
+  </div>
+
+  <p class="demo-notes">Type "2,5", "2.5" or "2.5 kg". Type 130 in Length to see the limit.<br>Switch to in, lb: the numbers convert, the limits too.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  // Values are stored in metric.
+  // Factor = shown units per metric unit.
+  const UNITS = {
+    length: { metric: ['cm', 1], imperial: ['in', 1 / 2.54] },
+    weight: { metric: ['kg', 1], imperial: ['lb', 2.20462] },
+  };
+  const round = (n) => Math.round(n * 10) / 10;
+
+  // "2,5", "2.5" and "2.5 kg" all mean 2.5.
+  const parse = (text, unit) => {
+    const t = text.trim()
+      .replace(',', '.')
+      .replace(new RegExp(`\\s*${unit}$`, 'i'), '');
+    return /^\d+(\.\d+)?$/.test(t) ? Number(t) : NaN;
+  };
+
+  for (const box of document.querySelectorAll('.units')) {
+    const live = box.querySelector('.units-live');
+    const fields = [...box.querySelectorAll('.unit-field')];
+    const unitOf = (f) => UNITS[f.dataset.kind][box.dataset.system];
+
+    const check = (f) => {
+      const input = f.querySelector('input');
+      const error = f.querySelector('.unit-error');
+      const [unit, k] = unitOf(f);
+      const max = round(f.dataset.max * k);
+      const n = parse(input.value, unit);
+      let msg = '';
+      if (input.value.trim() === '') f.dataset.value = '';
+      else if (Number.isNaN(n)) msg = 'Enter a number, like 2.5.';
+      else if (n > max) msg = `Max ${max} ${unit}.`;
+      else if (n === 0) msg = `More than 0 ${unit}, please.`;
+      else f.dataset.value = n / k;      // store it in metric
+      error.textContent = msg;
+      error.hidden = !msg;
+      input.setAttribute('aria-invalid', String(!!msg));
+    };
+
+    // Switching units converts numbers, unit labels and limits.
+    const render = () => {
+      for (const f of fields) {
+        const [unit, k] = unitOf(f);
+        const input = f.querySelector('input');
+        const hint = f.querySelector('.unit-hint');
+        const bad = input.getAttribute('aria-invalid') === 'true';
+        if (f.dataset.value !== '' && !bad) {
+          input.value = round(f.dataset.value * k);
+        }
+        f.querySelector('.unit-suffix').textContent = unit;
+        const max = round(f.dataset.max * k);
+        hint.textContent = `Up to ${max} ${unit}`;
+        if (bad) check(f);
+      }
+    };
+
+    box.addEventListener('change', (e) => {
+      if (e.target.closest('.units-system')) {
+        box.dataset.system = e.target.value;
+        render();
+        live.textContent = e.target.value === 'metric'
+          ? 'Converted to centimetres and kilograms.'
+          : 'Converted to inches and pounds.';
+      } else if (e.target.closest('.unit-field')) {
+        check(e.target.closest('.unit-field'));
+      }
+    });
+    // Once a field shows an error, re-check it as they type.
+    box.addEventListener('input', (e) => {
+      const f = e.target.closest('.unit-field');
+      if (f && e.target.getAttribute('aria-invalid') === 'true') check(f);
+    });
+  }
+</script>
+</body>
+</html>

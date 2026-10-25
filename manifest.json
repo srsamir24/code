@@ -1,7 +1,7 @@
 {
   "site": "@zellap.app source code",
   "instagram": "https://www.instagram.com/zellap.app/",
-  "count": 27,
+  "count": 28,
   "components": [
     {
       "id": "cursed-01-honest-rating",
@@ -407,6 +407,21 @@
       "download": "undo-vs-confirm.html",
       "source": "nytt/done-right/13-undo-vs-confirm/index.html",
       "bytes": 11540
+    },
+    {
+      "id": "done-right-14-inputs-with-units",
+      "series": "done-right",
+      "seriesName": "Done right",
+      "number": 14,
+      "label": "Done right #14",
+      "title": "Inputs with units",
+      "slug": "inputs-with-units",
+      "description": "The unit is part of the field's name, clicking it focuses the field, \"2,5\" and \"2.5\" both work, and switching to inches converts the numbers instead of relabelling them.",
+      "page": "c/done-right-14-inputs-with-units/",
+      "file": "c/done-right-14-inputs-with-units/component.html",
+      "download": "inputs-with-units.html",
+      "source": "nytt/done-right/14-inputs-with-units/index.html",
+      "bytes": 10098
     }
   ]
 }
