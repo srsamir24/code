@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Form submit states · Done right #10 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 520px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-card { background: #FFFFFF; border: 1px solid rgba(40, 32, 20, .12); border-radius: 24px; padding: 28px; box-shadow: 0 24px 50px -28px rgba(40, 32, 20, .28); }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+  .demo-notes label { display: inline-flex; gap: 8px; align-items: center; color: #1D1B18; cursor: pointer; }
+  .demo-notes input { width: 18px; height: 18px; accent-color: #1D1B18; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .send { display: grid; gap: 18px; color: #1D1B18; }
+  .send-field { display: grid; gap: 6px; }
+  .send-field label { font-weight: 600; }
+  .send-field input,
+  .send-field textarea {
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 14px;
+    border: 1.5px solid #857E73;      /* 4.0:1 on white */
+    border-radius: 12px;
+    background: #FFFFFF;
+    color: inherit;
+    font: inherit;
+    resize: vertical;
+  }
+  .send-field :focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 2px; border-color: #1D1B18; }
+  .send-field [aria-invalid="true"] { border-color: #B3261E; }
+  .send-field [readonly] { background: #F6F3EE; }
+
+  .send-error,
+  .send-alert {
+    display: flex;
+    gap: 8px;
+    margin: 0;
+    font-size: .875rem;
+    font-weight: 500;
+    color: #B3261E;                   /* 6.5:1 on white */
+  }
+  .send-error[hidden], .send-alert:empty { display: none; }
+  .send-error::before,
+  .send-alert::before {
+    content: "!"; flex: none; display: grid; place-items: center; margin-top: .1em;
+    width: 1.125rem; height: 1.125rem; border-radius: 50%;
+    background: #B3261E; color: #FFFFFF; font-weight: 700; font-size: .75rem;
+  }
+  .send-alert { padding: 12px 14px; border: 1.5px solid #B3261E; border-radius: 12px; background: #FCF1EF; }
+
+  /* All three labels share one grid cell, so the button never changes width. */
+  .send-btn {
+    display: inline-grid;
+    justify-self: start;
+    min-height: 48px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 12px;
+    background: #1D1B18;
+    color: #FFFFFF;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .send-label {
+    grid-area: 1 / 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    visibility: hidden;
+  }
+  .send[data-state="idle"] [data-for="idle"],
+  .send[data-state="error"] [data-for="idle"],
+  .send[data-state="loading"] [data-for="loading"],
+  .send[data-state="success"] [data-for="success"] {
+    visibility: visible;
+  }
+  .send[data-state="success"] .send-btn { background: #2D6A3E; }
+  .send-btn:hover { background: #3A3631; }
+  .send-btn[aria-disabled="true"] { cursor: progress; background: #1D1B18; }
+  .send-btn:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 3px; }
+  .send-btn svg { width: 18px; height: 18px; }
+
+  .send-spin {
+    width: 16px;
+    height: 16px;
+    border: 2.5px solid rgba(255, 255, 255, .35);
+    border-top-color: #FFFFFF;
+    border-radius: 50%;
+    animation: send-spin .8s linear infinite;
+  }
+  @keyframes send-spin { to { transform: rotate(1turn); } }
+
+  .send-status { margin: -6px 0 0; font-size: .9375rem; color: #5A544B; }
+  .send-status:empty { display: none; }
+  .send[data-state="success"] .send-status { color: #2D6A3E; font-weight: 500; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .send-spin { animation: none; }
+  }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #10 · @zellap.app</p>
+  <h1>Form submit states</h1>
+  <p class="demo-lede">Idle, loading, success, error. The button keeps its width and its focus, one click sends one request, and a failed send keeps every word you typed.</p>
+
+  <div class="demo-card">
+    <form class="send" action="/api/contact" method="post" novalidate data-state="idle"
+          data-ok="Message sent. We reply within one working day.">
+      <div class="send-field">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email" required
+               aria-describedby="email-error"
+               data-missing="Enter your email address."
+               data-bad="Enter an email like name@example.com.">
+        <p class="send-error" id="email-error" hidden></p>
+      </div>
+      <div class="send-field">
+        <label for="message">Message</label>
+        <textarea id="message" name="message" rows="3" required
+                  aria-describedby="message-error"
+                  data-missing="Write a message first."></textarea>
+        <p class="send-error" id="message-error" hidden></p>
+      </div>
+      <p class="send-alert" role="alert"></p>
+      <button class="send-btn" type="submit">
+        <span class="send-label" data-for="idle">Send message</span>
+        <span class="send-label" data-for="loading">
+          <span class="send-spin" aria-hidden="true"></span>
+          Sending…
+        </span>
+        <span class="send-label" data-for="success">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Sent
+        </span>
+      </button>
+      <p class="send-status" role="status"></p>
+    </form>
+  </div>
+
+  <p class="demo-notes">
+    <label><input type="checkbox" id="fail"> Make the server fail</label><br>
+    Fake server: 1.2 s per request. Submit empty to see the field errors.
+  </p>
+</main>
+
+<!-- Demo page only: a fake server. Delete this and the component uses fetch(). -->
+<script>
+  window.sendRequest = () => new Promise((resolve, reject) => {
+    const fail = document.getElementById('fail').checked;
+    setTimeout(() => (fail ? reject(new Error('500')) : resolve()), 1200);
+  });
+</script>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  // Your API call. Resolve on success, throw on failure.
+  const send = (form) => window.sendRequest
+    ? window.sendRequest(form)
+    : fetch(form.action, { method: 'POST', body: new FormData(form) })
+        .then((r) => { if (!r.ok) throw new Error(r.status); });
+
+  for (const form of document.querySelectorAll('.send')) {
+    const btn = form.querySelector('.send-btn');
+    const alert = form.querySelector('.send-alert');
+    const status = form.querySelector('.send-status');
+    const fields = [...form.querySelectorAll('input, textarea')];
+
+    const check = (field) => {
+      const v = field.validity;
+      const msg = v.valueMissing ? field.dataset.missing
+        : v.typeMismatch ? field.dataset.bad : '';
+      const error = document.getElementById(field.getAttribute('aria-describedby'));
+      error.textContent = msg;
+      error.hidden = !msg;
+      field.setAttribute('aria-invalid', String(!!msg));
+      return !msg;
+    };
+    // Once a field shows an error, re-check it as they type.
+    for (const field of fields) {
+      field.addEventListener('input', () => {
+        if (field.getAttribute('aria-invalid') === 'true') check(field);
+      });
+    }
+
+    const set = (state) => {
+      const busy = state === 'loading';
+      form.dataset.state = state;
+      // aria-disabled, not disabled: the button keeps focus.
+      btn.setAttribute('aria-disabled', String(busy));
+      for (const field of fields) field.readOnly = busy;
+    };
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (form.dataset.state === 'loading') return; // one send
+      const bad = fields.filter((field) => !check(field));
+      if (bad.length) return bad[0].focus();
+
+      alert.textContent = '';
+      set('loading');
+      status.textContent = 'Sending your message…';
+      try {
+        await send(form);
+        form.reset();
+        set('success');
+        status.textContent = form.dataset.ok;
+        setTimeout(() => {
+          if (form.dataset.state === 'success') set('idle');
+        }, 4000);
+      } catch {
+        set('error');                 // every word they typed stays
+        status.textContent = '';
+        alert.textContent =
+          "Couldn't send. Your message is still here. Try again.";
+      }
+    });
+  }
+</script>
+</body>
+</html>

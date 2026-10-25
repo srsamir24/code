@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gum Toggle</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<style>/* inlined from ../_kit/reel.css */
+/* Shared shell for the Cursed UI pages: palette, backdrop, hook/outro, reel canvas, cursor. */
+:root{
+  --bg:#f3f2ee; --ink:#121214; --ink-2:#5f5f66; --ink-3:#8d8c92;
+  --line:rgba(18,18,20,.085); --line-2:#e6e3dc;
+  --gold-1:#ffd772; --gold-2:#f2a43a; --gold-ink:#a8681a;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Satoshi",ui-sans-serif,sans-serif; -webkit-font-smoothing:antialiased;
+  overflow:hidden; -webkit-user-select:none; user-select:none;
+}
+.backdrop{position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(60% 45% at 50% 46%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bg),var(--bg));
+}
+.backdrop::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(18,18,20,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(18,18,20,.045) 1px,transparent 1px);
+  background-size:28px 28px; background-position:center;
+  -webkit-mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+          mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+}
+.stage{position:relative;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
+
+.tag{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 9px;border-radius:99px;
+  background:#fff;border:1px solid var(--line);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);
+  box-shadow:0 4px 10px -6px rgba(40,34,20,.18)}
+.tag i,.outro i{display:block;width:7px;height:7px;border-radius:50%;background:linear-gradient(var(--gold-1),var(--gold-2))}
+.hook{font-weight:900;font-size:27px;line-height:1.12;letter-spacing:-.025em;text-align:center;max-width:430px;text-wrap:balance}
+.handle{display:block;margin-top:10px;font-weight:500;font-size:12.5px;letter-spacing:.01em;color:var(--ink-3)}
+.outro{font-weight:900;font-size:30px;letter-spacing:-.025em;color:var(--ink);opacity:0;text-align:center}
+.outro span{display:inline-flex;align-items:center;gap:10px}
+.outro i{width:14px;height:14px}
+.outro b{display:inline-block;font-weight:900;background:var(--ink);color:#fff;border-radius:10px;padding:1px 10px 3px;margin:0 1px;letter-spacing:.01em}
+.outro small{display:block;margin-top:14px;font-weight:700;font-size:19px;letter-spacing:-.01em;color:#34343a}
+.outro small em{font-style:normal;font-weight:500;color:var(--ink-2)}
+
+.card{position:relative;width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:30px;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 40px 70px -32px rgba(40,34,20,.22),0 10px 24px -12px rgba(0,0,0,.08);
+}
+.app{display:flex;align-items:center;gap:12px}
+.icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.x{margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-3)}
+
+/* reel mode: fixed 540x960 phone canvas (recorded at 2x = 1080x1920) */
+body.reel .stage{display:block;width:540px;height:960px;margin:0 auto;padding:0}
+body.reel .tag{position:absolute;top:154px;left:50%;transform:translateX(-50%)}
+body.reel .hook{position:absolute;top:198px;left:50%;transform:translateX(-50%);width:450px;font-size:30px}
+body.reel .card{position:absolute;top:318px;left:60px}
+body.reel .outro{position:absolute;top:192px;left:0;right:0;font-size:25px}
+body:not(.reel) .outro{display:none}
+body.reel, body.reel *{cursor:none !important}
+#cursor{position:fixed;left:0;top:0;width:0;height:0;z-index:99;pointer-events:none;display:none}
+body.reel #cursor{display:block}
+#cursor svg{position:absolute;left:0;top:0;overflow:visible;filter:drop-shadow(0 3px 5px rgba(0,0,0,.25))}
+#ring{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;border:2px solid rgba(18,18,20,.5);opacity:0}
+</style>
+<style>
+  .card{padding:26px 28px 22px}
+  h1{margin-top:22px;font-weight:700;font-size:28px;letter-spacing:-.025em;line-height:1.1}
+  .sub{margin-top:7px;font-size:15px;color:var(--ink-2);font-weight:500}
+  .rows{margin-top:16px;border:1px solid var(--line-2);border-radius:18px}
+  .row{display:flex;align-items:center;gap:14px;height:72px;padding:0 16px}
+  .row+.row{border-top:1px solid var(--line)}
+  .row div{flex:1}
+  .row b{display:block;font-weight:700;font-size:15.5px;letter-spacing:-.01em}
+  .row span{display:block;margin-top:2px;font-size:13.5px;color:var(--ink-3);font-weight:500}
+  .row span em{font-style:normal;font-weight:900;font-size:17px;color:var(--ink);display:inline-block}
+  #rate{position:relative;display:inline-block}
+  #n{margin-right:4px}
+  .plus{position:absolute;left:100%;top:0;font-style:normal;font-weight:900;font-size:15px;color:#d9473d;opacity:0;pointer-events:none}
+  .sw{position:relative;width:56px;height:34px;border-radius:17px;border:0;padding:0;flex:none;cursor:pointer;
+    background:linear-gradient(180deg,#3cc66a,#28a956);box-shadow:inset 0 0 0 1px rgba(0,0,0,.05)}
+  .sw::after{content:"";position:absolute;top:3px;left:25px;width:28px;height:28px;border-radius:50%;background:#fff;
+    box-shadow:0 2px 5px rgba(0,0,0,.18),0 0 0 .5px rgba(0,0,0,.04)}
+  .sw.gum{background:none;box-shadow:none}
+  .sw.gum::after{display:none}
+  .lock{display:inline-flex;vertical-align:-1px;margin-left:4px;color:var(--ink-3)}
+  .foot{display:flex;align-items:center;gap:8px;margin-top:16px;font-size:16px;color:var(--ink-3);font-weight:500}
+  .foot i{width:7px;height:7px;border-radius:50%;background:#2fb35d;box-shadow:0 0 0 3px rgba(47,179,93,.15)}
+  #gumsvg{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;overflow:visible}
+</style>
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="stage">
+  <div class="tag"><i></i>Cursed UI #4</div>
+  <header class="hook">Just let me unsubscribe.<span class="handle">@zellap.app</span></header>
+
+  <main class="card" id="card">
+    <div class="app">
+      <div class="icon" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="5.2" fill="#fff"/><ellipse cx="13" cy="13" rx="11" ry="4.6" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.4" transform="rotate(-24 13 13)"/><circle cx="22.6" cy="8.6" r="2" fill="#f2a43a"/></svg>
+      </div>
+      <div><b>Orbit</b><span>Settings &middot; Notifications</span></div>
+      <div class="x" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+    </div>
+    <h1>Email preferences</h1>
+    <p class="sub">Choose what lands in your inbox.</p>
+    <div class="rows">
+      <div class="row"><div><b>Security alerts</b><span>Always on<span class="lock" style="display:inline-flex"><svg width="11" height="11" viewBox="0 0 11 11"><rect x="2" y="5" width="7" height="5" rx="1.3" fill="currentColor"/><path d="M3.6 5V3.6a1.9 1.9 0 0 1 3.8 0V5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></span></span></div><button class="sw jig" role="switch" aria-checked="true" aria-label="Security alerts"></button></div>
+      <div class="row"><div><b>Product updates</b><span>Once a month</span></div><button class="sw jig" role="switch" aria-checked="true" aria-label="Product updates"></button></div>
+      <div class="row"><div><b>Marketing emails</b><span id="rate"><em id="n">14</em> emails a week<i class="plus" id="plus">+7</i></span></div><button class="sw gum" id="gum" role="switch" aria-checked="true" aria-label="Marketing emails"></button></div>
+    </div>
+    <p class="foot" id="foot"><i></i><span id="footText">Saved. You're subscribed.</span></p>
+  </main>
+
+  <footer class="outro" id="outro"><span><i></i>Comment <b>CODE</b> for the source</span><small>Follow for more cursed UI <em>&middot; @zellap.app</em></small></footer>
+</div>
+
+<svg id="gumsvg" aria-hidden="true">
+  <defs>
+    <filter id="goo" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4.5" result="b"/>
+      <feColorMatrix in="b" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -10"/>
+    </filter>
+    <linearGradient id="green" x1="0" y1="0" x2="0" y2="1"><stop id="g0" offset="0" stop-color="#3cc66a"/><stop id="g1" offset="1" stop-color="#28a956"/></linearGradient>
+    <filter id="ks" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="2" stdDeviation="2.4" flood-color="#000" flood-opacity=".2"/></filter>
+  </defs>
+  <g id="strand" filter="url(#goo)"></g>
+  <ellipse id="knob" rx="14" ry="14" fill="#fff" filter="url(#ks)"/>
+</svg>
+
+<script>/* inlined from ../_kit/reel.js */
+/* Shared runtime for the Cursed UI pages.
+   - a simulation clock (K.now, ms) advanced by K.tick(ms): rAF in the browser, stepped by the recorder (?manual)
+   - tweens, easing, the hook <-> outro swap (window.__outro), and the reel cursor driven by real pointer events */
+window.ReelKit = function (opts) {
+  const qs = new URLSearchParams(location.search);
+  const REEL = qs.has('reel'), MANUAL = qs.has('manual');
+  if (REEL) document.body.classList.add('reel');
+
+  const K = { REEL, MANUAL, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  /* critically-ish damped spring step: z = damping ratio */
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+
+  /* ---------- cursor ---------- */
+  document.body.insertAdjacentHTML('beforeend', `<div id="cursor">
+    <div id="ring"></div>
+    <svg id="c-arrow" width="26" height="34" viewBox="0 0 26 34"><path d="M2 2 L2 26 L8.2 20.4 L12.4 30.4 L16.6 28.6 L12.5 18.9 L20.8 18.6 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg id="c-hand" width="30" height="34" viewBox="0 0 30 34" style="display:none;left:-9px;top:-2px"><path d="M10 15V5.2a2.6 2.6 0 0 1 5.2 0V13 M15.2 12.6a2.5 2.5 0 0 1 5 0v1.8 M20.2 13.6a2.5 2.5 0 0 1 5 0v6.2c0 6.6-4 11.2-10 11.2-4.6 0-6.7-2.2-9.4-6.5L3 19.6a2.5 2.5 0 0 1 4.2-2.7L10 20.8V15" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg id="c-grab" width="30" height="30" viewBox="0 0 30 30" style="display:none;left:-15px;top:-13px"><path d="M8.2 11.4a2.4 2.4 0 0 1 4.8 0v-1a2.4 2.4 0 0 1 4.8 0v1a2.4 2.4 0 0 1 4.8 0v1.4a2.4 2.4 0 0 1 4.6.9v4.8c0 5.6-3.8 9.4-9.4 9.4-4.2 0-6.4-1.8-8.6-5.2l-2.4-3.8a2.3 2.3 0 0 1 3.4-3z M13 11.4v4 M17.8 11.4v4 M22.6 12.8v3" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  </div>`);
+  const $ = id => document.getElementById(id);
+  const cur = $('cursor'), ring = $('ring'), shapes = { arrow: $('c-arrow'), hand: $('c-hand'), grab: $('c-grab') };
+  let curScale = 1;
+  function moveCursor() {
+    if (!REEL) return;
+    const el = document.elementFromPoint(K.px, K.py);
+    const kind = (opts.cursorKind && opts.cursorKind(el)) || 'arrow';
+    for (const k in shapes) shapes[k].style.display = k === kind ? '' : 'none';
+    cur.style.transform = `translate(${K.px}px,${K.py}px) scale(${curScale})`;
+  }
+  K.moveCursor = moveCursor;
+  window.addEventListener('pointermove', e => { K.px = e.clientX; K.py = e.clientY; moveCursor(); });
+  window.addEventListener('pointerleave', () => { K.px = K.py = -999; });
+  window.addEventListener('pointerdown', () => {
+    K.down = true;
+    if (!REEL) return;
+    K.tween(90, p => { curScale = 1 - .14 * p; moveCursor(); });
+    K.tween(300, p => { curScale = .86 + .14 * p; moveCursor(); }, K.ease.back, 120);
+    K.tween(480, p => { ring.style.opacity = (1 - p) * .9; ring.style.transform = `scale(${.4 + p * 1.1})`; });
+  });
+  window.addEventListener('pointerup', () => { K.down = false; moveCursor(); });
+
+  /* ---------- hook <-> outro ---------- */
+  let outroOn = false;
+  window.__outro = on => {
+    if (on === outroOn) return; outroOn = on;
+    const hook = document.querySelector('.hook'), outro = document.querySelector('.outro');
+    K.tween(440, p => { const q = on ? p : 1 - p;
+      hook.style.opacity = K.clamp(1 - q / .45, 0, 1);   // strictly sequential: never two lines at once
+      const o = K.clamp((q - .55) / .45, 0, 1);
+      outro.style.opacity = o; outro.style.transform = `translateY(${(1 - o) * 10}px)`; }, K.ease.lin);
+  };
+
+  /* ---------- clock ---------- */
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  window.__tick = tick;
+  K.start = () => {
+    if (!MANUAL) {
+      let last = performance.now();
+      requestAnimationFrame(function loop(t) { tick(Math.min(50, t - last)); last = t; requestAnimationFrame(loop); });
+    } else tick(16);
+  };
+  return K;
+};
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  const gum = $('gum'), strand = $('strand'), knob = $('knob'), nEl = $('n'), footText = $('footText');
+  const card = $('card');
+
+  const K = ReelKit({
+    cursorKind: el => dragging ? 'grab' : (el && el.closest('button')) || nearKnob() ? 'hand' : 'arrow',
+    update, render
+  });
+
+  const TR = 17, KR = 14, LMAX = 520;
+  const kn = { x: 0, y: 0, vx: 0, vy: 0 };
+  let A = [0, 0];                 // where the knob lives when "on"
+  let dragging = false, grab = [0, 0], emails = 14, pulledFar = 0;
+  const jig = [...document.querySelectorAll('.jig')].map(el => ({ el, x: 0, v: 0 }));
+  const cardS = { x: 0, v: 0 };
+
+  function anchor() { const r = gum.getBoundingClientRect(); return [r.right - TR, r.top + r.height / 2]; }
+  function nearKnob() { return Math.hypot(K.px - kn.x, K.py - kn.y) < KR + 10; }
+
+  window.addEventListener('pointerdown', e => {
+    if (Math.hypot(e.clientX - kn.x, e.clientY - kn.y) < KR + 10) {
+      dragging = true; grab = [kn.x - e.clientX, kn.y - e.clientY]; pulledFar = 0;
+      K.moveCursor();
+    }
+  });
+  window.addEventListener('pointerup', () => {
+    if (!dragging) return;
+    dragging = false; K.moveCursor();
+    const L = Math.hypot(kn.x - A[0], kn.y - A[1]);
+    if (L > 40) snapped(L);
+  });
+  // keyboard users get the same experience
+  gum.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); kn.vx -= 900; snapped(60); } });
+
+  function snapped(L) {
+    emails += 7;
+    setTimeout0(140, () => {
+      nEl.textContent = emails;
+      K.tween(420, p => nEl.style.transform = `scale(${1 + .35 * (1 - p)})`, K.ease.out);
+      K.tween(900, p => nEl.style.color = p < 1 ? '#d9473d' : '', K.ease.lin);
+      footText.textContent = 'Saved. You\'re still subscribed.';
+      const plus = $('plus');
+      K.tween(700, p => { plus.style.opacity = p < .7 ? 1 : (1 - p) / .3; plus.style.transform = `translate(6px,${-2 - 16 * p}px)`; }, K.ease.out);
+    });
+    const hit = Math.min(1, L / 260);
+    jig.forEach((j, i) => j.v += (380 + i * 120) * hit);
+    cardS.v += 160 * hit;
+  }
+  const timers = [];
+  function setTimeout0(ms, fn) { timers.push({ at: K.now + ms, fn }); }
+
+  function update(dt) {
+    for (let i = timers.length - 1; i >= 0; i--) if (K.now >= timers[i].at) timers.splice(i, 1)[0].fn();
+    A = anchor();
+    let tx = A[0], ty = A[1], k = 240, z = .48;
+    if (dragging) {
+      // rubber: the further you pull, the less it follows
+      const dx = K.px + grab[0] - A[0], dy = K.py + grab[1] - A[1];
+      const L = Math.hypot(dx, dy) || 1, Le = LMAX * Math.tanh(L / LMAX);
+      tx = A[0] + dx / L * Le; ty = A[1] + dy / L * Le;
+      k = 900; z = .7;
+      if (L > 30) footText.textContent = Le > 200 ? 'Are you sure? Really sure?' : 'Unsubscribing…';
+    }
+    kn.vx += (k * (tx - kn.x) - 2 * Math.sqrt(k) * z * kn.vx) * dt;
+    kn.vy += (k * (ty - kn.y) - 2 * Math.sqrt(k) * z * kn.vy) * dt;
+    kn.x += kn.vx * dt; kn.y += kn.vy * dt;
+    for (const j of jig) { j.v += (-300 * j.x - 2 * Math.sqrt(300) * .12 * j.v) * dt; j.x += j.v * dt; }
+    cardS.v += (-260 * cardS.x - 2 * Math.sqrt(260) * .2 * cardS.v) * dt; cardS.x += cardS.v * dt;
+  }
+
+  const pool = [];
+  function circle(i) {
+    if (!pool[i]) { const c = document.createElementNS(NS, 'circle'); c.setAttribute('fill', 'url(#green)'); strand.appendChild(c); pool[i] = c; }
+    return pool[i];
+  }
+  function render() {
+    const [ax, ay] = A;
+    const over = kn.x - ax, ox = over > 0 ? 34 * Math.tanh(over / 34) : over;   // overshoot squashes against the end
+    const dx = ox, dy = kn.y - ay, L = Math.hypot(dx, dy);
+    const KX = ax + dx;
+    // the track itself (rest pill), as a row of circles so the goo blends it with the strand
+    let i = 0;
+    for (let s = 0; s <= 22; s += 5.5) { const c = circle(i++); c.setAttribute('cx', ax - s); c.setAttribute('cy', ay); c.setAttribute('r', TR); }
+    // the strand: thins as it stretches, sags under its own weight
+    const n = Math.ceil(L / 5);
+    const thin = Math.max(3, TR * Math.pow(40 / (40 + L), .78));
+    const sag = Math.min(46, L * .16) * (dragging ? 1 : .6);
+    for (let k = 1; k <= n; k++) {
+      const t = k / n;
+      const w = Math.pow(Math.sin(Math.PI * t), .7);
+      const r = TR - (TR - thin) * w;
+      const c = circle(i++);
+      c.setAttribute('cx', (ax + dx * t).toFixed(2));
+      c.setAttribute('cy', (ay + dy * t + sag * Math.sin(Math.PI * t)).toFixed(2));
+      c.setAttribute('r', r.toFixed(2));
+    }
+    const kc = circle(i++); kc.setAttribute('cx', KX.toFixed(2)); kc.setAttribute('cy', kn.y.toFixed(2)); kc.setAttribute('r', TR);
+    for (let j = i; j < pool.length; j++) pool[j].setAttribute('r', 0);
+    // gum gets paler when it's stretched thin
+    const pale = Math.min(1, L / LMAX);
+    const mix = (a, b) => '#' + a.map((v, q) => Math.round(v + (b[q] - v) * pale).toString(16).padStart(2, '0')).join('');
+    $('g0').setAttribute('stop-color', mix([0x3c,0xc6,0x6a],[0x9b,0xe3,0xb0]));
+    $('g1').setAttribute('stop-color', mix([0x28,0xa9,0x56],[0x7c,0xd3,0x96]));
+    // knob: squash along its velocity
+    const sp = Math.hypot(kn.vx, kn.vy), st = Math.min(.1, sp / 6000);
+    const ang = Math.atan2(kn.vy, kn.vx) * 180 / Math.PI;
+    knob.setAttribute('transform', `translate(${KX.toFixed(2)},${kn.y.toFixed(2)}) rotate(${ang.toFixed(1)}) scale(${(1 + st).toFixed(3)},${(1 - st * .6).toFixed(3)})`);
+    jig.forEach((j, ix) => j.el.style.transform = `translateX(${(j.x * .05).toFixed(2)}px) rotate(${(j.x * .012).toFixed(2)}deg)`);
+    card.style.transform = `translateX(${(cardS.x * .02).toFixed(2)}px)`;
+  }
+
+  function reset() {
+    const rate = $('rate'), foot = $('foot');
+    K.tween(160, p => rate.style.opacity = foot.style.opacity = 1 - p);
+    setTimeout0(170, () => {
+      emails = 14; nEl.textContent = '14'; nEl.style.color = ''; nEl.style.transform = '';
+      footText.textContent = 'Saved. You\'re subscribed.';
+      K.tween(240, p => rate.style.opacity = foot.style.opacity = p);
+    });
+  }
+  window.__reset = reset;
+  window.__knob = () => [kn.x, kn.y];
+
+  A = anchor(); kn.x = A[0]; kn.y = A[1];
+  K.start();
+})();
+</script>
+</body>
+</html>

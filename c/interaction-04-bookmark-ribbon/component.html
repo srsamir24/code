@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bookmark Ribbon</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>/* inlined from ../_shared/reel.css */
+/* Shared look for "Interaction #N" pages: paper tokens + the Reel overlay layer.
+   The overlay layer only shows with ?capture (html.reel). Fonts: General Sans + Geist Mono. */
+:root {
+  --paper: #ECE8E0;
+  --card: #FAF8F4;
+  --ink: #1D1B18;
+  --ink-2: #57524A;
+  --muted: #9A948A;
+  --hair: rgba(40, 32, 20, .10);
+  --hair-strong: rgba(40, 32, 20, .16);
+  --accent: #D9502B;
+  --code-bg: #1E1C19;
+  --sans: "General Sans", ui-sans-serif, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(1200px 900px at 50% 38%, rgba(255,255,255,.55), transparent 70%),
+    radial-gradient(900px 700px at 50% 110%, rgba(120,100,70,.10), transparent 70%);
+}
+.stage { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+
+.card {
+  position: relative;
+  background: linear-gradient(180deg, #FCFBF8 0%, var(--card) 100%);
+  border-radius: 36px;
+  border: 1px solid var(--hair);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 1px 1px rgba(40,30,15,.04),
+    0 6px 12px -4px rgba(40,30,15,.06),
+    0 30px 60px -20px rgba(40,30,15,.16),
+    0 70px 120px -40px rgba(40,30,15,.18);
+}
+
+/* ---------- reel overlays (capture mode only) ---------- */
+.hook, .handle, .chip, .end, .codecard, #cursor, .big, .tint { display: none; pointer-events: none; }
+.reel body { user-select: none; -webkit-user-select: none; }
+.reel .stage { width: 1080px; height: 1920px; display: block; }
+.reel .card { position: absolute; left: var(--card-left, 80px); top: var(--card-top, 640px); scale: var(--card-scale, 1.1); transform-origin: 0 0; }
+.reel .hook, .reel .handle, .reel .chip, .reel .end, .reel .codecard, .reel #cursor, .reel .big, .reel .tint { display: block; }
+
+.tint { position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(900px 1300px at 50% 46%, transparent 50%, rgba(150,95,50,.10) 100%), rgba(230,170,110,.035); }
+.handle {
+  position: absolute; left: 0; right: 0; top: 300px; text-align: center;
+  font-family: var(--mono); font-size: 30px; color: var(--muted); letter-spacing: .02em;
+}
+.handle b { font-weight: 500; color: var(--accent); }
+.hook {
+  position: absolute; left: 80px; right: 80px; top: 356px; text-align: center;
+  font-size: 96px; font-weight: 600; letter-spacing: -.035em; line-height: 1.02; color: var(--ink);
+  text-wrap: balance;
+}
+.hook em { font-style: normal; color: var(--accent); }
+.chip { position: absolute; left: 0; right: 0; top: var(--chip-top, 1400px); text-align: center; }
+.chip span {
+  display: inline-flex; align-items: center; gap: 14px;
+  font-family: var(--mono); font-size: 28px; color: var(--ink-2);
+  padding: 14px 26px; border-radius: 999px; border: 1px solid var(--hair-strong);
+  background: rgba(250,248,244,.7);
+}
+.chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+.chip b { font-weight: 400; }
+.big { position: absolute; left: 0; right: 0; top: var(--big-top, 1440px); text-align: center; opacity: 0;
+  font-family: var(--mono); font-weight: 300; font-size: 132px; letter-spacing: -.05em; color: var(--accent); line-height: 1; }
+.big small { font-size: 30px; letter-spacing: .02em; color: var(--ink-2); font-weight: 400; display: block; margin-top: 10px; }
+.end {
+  position: absolute; left: 120px; right: 120px; top: var(--end-top, 1160px); text-align: center; opacity: 0;
+  font-size: 42px; font-weight: 500; letter-spacing: -.02em; line-height: 1.25; color: var(--ink);
+}
+.end b { font-weight: 600; color: var(--accent); }
+.end span { color: var(--muted); }
+.codecard {
+  position: absolute; left: 70px; top: var(--code-top, 640px); width: 890px; opacity: 0;
+  background: var(--code-bg); color: #E9E4DA; border-radius: 36px;
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 40px 90px -30px rgba(30,20,10,.45), 0 10px 24px -8px rgba(30,20,10,.25);
+  padding: 44px 46px 50px;
+}
+.codecard .file { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 25px; color: #8C857A; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 30px; }
+.codecard pre { font-family: var(--mono); font-size: 30px; line-height: 1.7; white-space: pre; margin: 0 -18px; }
+.codecard .ln { display: block; padding: 0 18px; border-radius: 10px; transition: none; }
+.codecard .ln.on { background: rgba(255,255,255,.07); box-shadow: inset 4px 0 0 var(--accent); }
+.c { color: #A39C90; } .k { color: #E8A27F; } .n { color: #F2C66D; } .o { color: #9C958A; }
+.hl.on { color: #fff; background: rgba(217,80,43,.30); border-radius: 6px; padding: 0 4px; margin: 0 -4px; }
+
+#cursor { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 50; pointer-events: none; }
+#cursor .tip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  background: rgba(29,27,24,.16); border: 2.5px solid rgba(29,27,24,.62);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.75), 0 8px 18px rgba(30,20,10,.22); }
+#cursor.down .tip { transform: scale(.88); background: rgba(29,27,24,.26); border-color: rgba(29,27,24,.8); }
+#cursor .rip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  border: 3px solid var(--accent); opacity: 0; }
+</style>
+<style>
+  :root { --card-top: 630px; --chip-top: 1420px; --big-top: 1400px; --code-top: 640px; --end-top: 1180px; }
+  .card { width: 800px; height: 680px; padding: 54px 56px; }
+  .meta { font-family: var(--mono); font-size: 23px; color: var(--muted); display: flex; gap: 18px; align-items: center; }
+  .meta .saved { color: var(--accent); opacity: 0; display: inline-block; transform-origin: 0 60%; }
+  .title { margin-top: 30px; width: 520px; font-size: 62px; font-weight: 600; letter-spacing: -.035em; line-height: 1.02; color: var(--ink); }
+  .dek { margin-top: 26px; width: 540px; font-size: 29px; line-height: 1.4; color: var(--ink-2); }
+  .foot { position: absolute; left: 56px; right: 56px; bottom: 46px; display: flex; justify-content: space-between;
+          font-family: var(--mono); font-size: 22px; color: var(--muted); border-top: 1px solid var(--hair); padding-top: 22px; }
+
+  svg.rib { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .hit { pointer-events: auto; cursor: grab; touch-action: none; }
+  .held .hit { cursor: grabbing; }
+  button.save { position: absolute; top: 0; right: 102px; width: 96px; height: 140px; opacity: 0; border: 0; padding: 0;
+                background: none; cursor: pointer; }
+  button.save:focus-visible + svg .ring { opacity: 1; }
+  .ring { opacity: 0; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="tint" id="tint"></div>
+  <div class="handle"><b>Interaction #4</b> · @zellap.app</div>
+  <h1 class="hook">Pull the ribbon to <em>save.</em></h1>
+
+  <div class="card" id="card">
+    <div class="meta"><span>Field notes</span><span>·</span><span>6 min read</span><span class="saved" id="savedTag">· saved</span></div>
+    <h2 class="title">The case for fewer font sizes</h2>
+    <p class="dek">Four sizes, one scale, and why the in-between ones keep sneaking back in.</p>
+    <div class="foot"><span>Typography</span><span id="hint">pull to save ↓</span></div>
+
+    <button class="save" id="save" aria-pressed="false" aria-label="Save article"></button>
+    <svg class="rib" id="svg">
+      <defs>
+        <filter id="blur" x="-50%" y="-20%" width="200%" height="140%"><feGaussianBlur stdDeviation="7"/></filter>
+        <linearGradient id="weave" x1="0" x2="1">
+          <stop offset="0" stop-color="#000" stop-opacity=".10"/><stop id="sheenStop" offset=".3" stop-color="#fff" stop-opacity=".14"/>
+          <stop offset=".7" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".14"/>
+        </linearGradient>
+      </defs>
+      <path id="shadow" fill="rgba(60,30,10,.30)" filter="url(#blur)"/>
+      <path id="body"/>
+      <path id="sheen" fill="url(#weave)"/>
+      <path id="stitch" fill="none" stroke-width="1.6" stroke-dasharray="7 6" stroke-linecap="round"/>
+      <rect id="slot" height="8" rx="4" fill="#CFC8BC" stroke="rgba(40,30,15,.18)"/>
+      <path id="ring" class="ring" fill="none" stroke="#D9502B" stroke-width="3"/>
+      <path id="hit" class="hit" fill="transparent" stroke="transparent" stroke-width="40"/>
+    </svg>
+    <span class="sr" role="status" aria-live="polite" id="live"></span>
+  </div>
+
+  <div class="codecard" id="code">
+    <div class="file"><span>ribbon.js</span><span>every tick, dt = 1/1440 s</span></div>
+<pre><span class="ln"><span class="k">if</span> (len <span class="o">&gt;</span> <span class="hl"><span class="n">280</span></span>) saved <span class="o">=</span> <span class="k">true</span>;      <span class="c">// latch</span></span><span class="ln"><span class="k">const</span> rest <span class="o">=</span> saved <span class="o">?</span> <span class="n">340</span> <span class="o">:</span> <span class="n">130</span>;</span><span class="ln">vLen <span class="o">+=</span> (rest <span class="o">-</span> len) <span class="o">*</span> <span class="n">260</span> <span class="o">*</span> dt;  <span class="c">// spring</span></span><span class="ln">w <span class="o">-=</span> <span class="hl"><span class="n">11e3</span><span class="o">/</span>len</span> <span class="o">*</span> Math.<span class="k">sin</span>(a) <span class="o">*</span> dt; <span class="c">// swing</span></span><span class="ln">vLen <span class="o">*=</span> <span class="n">0.992</span>;  w <span class="o">*=</span> <span class="n">0.998</span>;       <span class="c">// damping</span></span><span class="ln">len <span class="o">+=</span> vLen <span class="o">*</span> dt;  a <span class="o">+=</span> w <span class="o">*</span> dt;</span></pre>
+  </div>
+
+  <div class="chip" id="chip"><span><i></i><b id="chipText">1× real time</b></span></div>
+  <div class="big" id="big">0.5×<small>slow motion</small></div>
+  <p class="end" id="end">Comment <b>CODE</b> for the source.<br><span>Follow for more.</span></p>
+  <div id="cursor"><div class="tip"></div></div>
+</div>
+
+<script>/* inlined from ../_shared/reel.js */
+// Shared runtime for "Interaction #N" pages.
+// Normal use: a fixed-step rAF loop drives the component (stable at any refresh rate).
+// ?capture: the recorder drives time frame by frame via __tick(dt), and the overlay via __overlay(o).
+window.Reel = function ({ step, render, DT = 1 / 1440, geom = () => ({}) }) {
+  const CAPTURE = new URLSearchParams(location.search).has('capture');
+  if (CAPTURE) document.documentElement.classList.add('reel');
+  const $ = id => document.getElementById(id);
+  const advance = seconds => {           // whole fixed steps only, so the sim never depends on frame timing
+    const n = Math.round(seconds / DT);
+    for (let i = 0; i < n; i++) step(DT);
+  };
+  render();
+  if (!CAPTURE) {
+    let last = performance.now(), acc = 0;
+    const frame = now => {
+      acc += Math.min(0.05, (now - last) / 1000); last = now;
+      while (acc >= DT) { step(DT); acc -= DT; }
+      render(); requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    return CAPTURE;
+  }
+  const cur = $('cursor');
+  cur.style.transform = 'translate(-200px,-200px)';
+  // a press ring that grows out of the fingertip, on simulated time (so it slows down in slow motion too)
+  const rip = document.createElement('i'); rip.className = 'rip'; cur.appendChild(rip);
+  let ripT = 9;
+  addEventListener('pointerdown', () => { cur.classList.add('down'); ripT = 0; }, true);
+  addEventListener('pointerup', () => cur.classList.remove('down'), true);
+  const drawRip = () => {
+    const u = Math.min(1, ripT / 0.45), e = 1 - (1 - u) ** 3;
+    rip.style.transform = `scale(${(0.9 + 0.9 * e).toFixed(4)})`;
+    rip.style.opacity = (u < 1 ? 0.55 * (1 - u) : 0).toFixed(3);
+  };
+  drawRip();
+  window.__tick = sec => { advance(sec); ripT += sec; drawRip(); render(); };
+  window.__geom = geom;
+  window.__overlay = o => {
+    // sequential, never two text layers at once: card out, then code in (and back)
+    const card = $('card'), code = $('code');
+    card.style.opacity = o.card;
+    card.style.transform = `translateY(${(1 - o.card) * -18}px)`;
+    code.style.opacity = o.code;
+    code.style.transform = `translateY(${(1 - o.code) * 22}px)`;
+    $('chip').style.opacity = o.chipA ?? o.card * (1 - o.big);
+    $('end').style.opacity = o.code;
+    $('big').style.opacity = o.big; $('big').style.transform = `scale(${0.94 + 0.06 * o.big})`;
+    $('tint').style.opacity = o.tint;
+    document.querySelectorAll('.hl').forEach(el => el.classList.toggle('on', !!o.hl));
+    document.querySelectorAll('#code .ln').forEach((el, i) => el.classList.toggle('on', i === o.line));
+    cur.style.opacity = o.cursor ?? o.card;
+    $('chipText').textContent = o.chip;
+    if (o.cx !== undefined) cur.style.transform = `translate(${o.cx}px, ${o.cy}px)`;
+  };
+  return CAPTURE;
+};
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const card = $('card'), svg = $('svg');
+  const AX = 800 - 150, WID = 96, NOTCH = 34;        // anchor x in the card, ribbon width, V-notch depth
+  const L_OFF = 130, L_ON = 340, LATCH = 280;          // rest lengths and the latch line (px)
+  const K = 260, G = 11e3, D_LEN = 0.992, D_SWING = 0.998;  // length spring, pendulum "gravity", damping per 1/1440 s step
+
+  let saved = false, len = L_OFF, vLen = 0, a = 0, w = 0, fill = 0;
+  let drag = null;                                     // { y0, len0, x, y, moved, hist }
+
+  // ---------- input ----------
+  const local = e => { const r = card.getBoundingClientRect(), k = 800 / r.width; return { x: (e.clientX - r.left) * k, y: (e.clientY - r.top) * k }; };
+  let latchT = 9;                                      // time since the latch, for the little "pop"
+  function setSaved(on) {
+    if (on === saved) return;
+    saved = on; if (on) latchT = 0;
+    $('save').setAttribute('aria-pressed', on);
+    $('live').textContent = on ? 'Saved' : 'Removed from saved';
+  }
+  $('hit').addEventListener('pointerdown', e => {
+    e.preventDefault(); svg.setPointerCapture(e.pointerId);
+    const p = local(e);
+    drag = { y0: p.y, len0: len, x: p.x, y: p.y, moved: 0, hist: [] };
+    card.classList.add('held');
+  });
+  svg.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const p = local(e);
+    drag.moved = Math.max(drag.moved, Math.hypot(p.x - drag.x, p.y - drag.y0));
+    drag.x = p.x; drag.y = p.y;
+  });
+  function release() {
+    if (!drag) return;
+    const tap = drag.moved < 10;
+    // momentum from the last ~60 ms of the drag
+    const h = drag.hist, o = h.find(s => h[h.length - 1].t - s.t <= 0.06) || h[0];
+    const n = h[h.length - 1], dt = Math.max(1e-3, n.t - o.t);
+    drag = null; card.classList.remove('held');
+    if (tap) { setSaved(!saved); w += saved ? 2.6 : -2.2; return; }
+    vLen = (n.len - o.len) / dt;
+    w = (n.a - o.a) / dt + (saved ? 2.6 * Math.sign(a || 1) : 0);   // the latch kicks it into a swing
+  }
+  svg.addEventListener('pointerup', release);
+  svg.addEventListener('pointercancel', release);
+  $('save').addEventListener('click', e => {           // keyboard / assistive tech
+    if (e.detail !== 0) return;
+    setSaved(!saved); w += saved ? 2.6 : -2.2;
+  });
+
+  // ---------- physics ----------
+  let simT = 0;
+  function step(dt) {
+    simT += dt; latchT += dt;
+    fill += ((saved ? 1 : 0) - fill) * (1 - Math.exp(-dt / 0.09));
+    if (drag) {                                        // the finger owns the tip
+      const pull = drag.y - drag.y0, raw = drag.len0 + pull;
+      const next = raw > LATCH + 40 ? LATCH + 40 + (raw - LATCH - 40) * 0.35 : Math.max(L_OFF * 0.85, raw);  // rubber band past the line
+      const na = Math.atan2(drag.x - AX, Math.max(60, next)) * 0.9;
+      len = next; a = na; vLen = 0; w = 0;
+      drag.hist.push({ t: simT, len, a }); if (drag.hist.length > 400) drag.hist.shift();
+      if (len > LATCH) setSaved(true);                 // latch
+      return;
+    }
+    if (reduce.matches) { len = saved ? L_ON : L_OFF; a = 0; vLen = w = 0; return; }
+    const rest = saved ? L_ON : L_OFF;
+    vLen += (rest - len) * K * dt;                     // spring
+    w -= G / len * Math.sin(a) * dt;                   // swing
+    vLen *= D_LEN; w *= D_SWING;                       // damping (dt is always 1/1440 s)
+    len += vLen * dt; a += w * dt;
+  }
+
+  // ---------- render: a strip of cloth, hanging from a slot ----------
+  function outline(L, ang, spin, pop) {
+    // the root is held straight by the slot; the bend grows toward the tip, and the tip trails the swing
+    const N = 24, ds = L / N, left = [], right = [];
+    let x = AX, y = -4, phi = 0;
+    const pts = [];
+    for (let i = 0; i <= N; i++) {
+      const s = i / N;
+      phi = ang * Math.min(1, s * 1.7) ** 1.4 - spin * 0.035 * s * s;
+      const half = WID / 2 * (1 + pop * 0.12) * (1 - 0.2 * Math.min(1, Math.abs(spin) / 5) * s);  // cloth turns edge-on as it swings
+      pts.push({ x, y, phi, half });
+      x += Math.sin(phi) * ds; y += Math.cos(phi) * ds;
+    }
+    for (const p of pts) {
+      const nx = Math.cos(p.phi) * p.half, ny = -Math.sin(p.phi) * p.half;
+      left.push([p.x - nx, p.y - ny]); right.push([p.x + nx, p.y + ny]);
+    }
+    const tip = pts[pts.length - 1], up = [-Math.sin(tip.phi) * NOTCH, -Math.cos(tip.phi) * NOTCH];
+    const f = q => q.map(v => v.toFixed(2)).join(' ');
+    const d = 'M' + left.map(f).join('L') + 'L' + f([tip.x + up[0], tip.y + up[1]]) + 'L' + right.slice().reverse().map(f).join('L') + 'Z';
+    const inset = (side, k) => side.map(([px, py], i) => [px + (pts[i].x - px) * k, py + (pts[i].y - py) * k]);
+    const st = 'M' + inset(left, 0.22).slice(1, -1).map(f).join('L') + 'M' + inset(right, 0.22).slice(1, -1).map(f).join('L');
+    return { d, st, tip };
+  }
+  const mix = (c1, c2, t) => c1.map((v, i) => Math.round(v + (c2[i] - v) * t));
+  function render() {
+    const pop = latchT < 0.5 ? Math.sin(Math.min(1, latchT / 0.3) * Math.PI) * Math.exp(-latchT / 0.25) : 0;
+    const { d, st, tip } = outline(len, a, w, pop);
+    $('sheenStop').setAttribute('offset', (0.3 + Math.max(-0.25, Math.min(0.4, a * 0.9))).toFixed(3));
+    $('savedTag').style.transform = `scale(${(1 + pop * 0.35).toFixed(4)})`;
+    for (const id of ['body', 'sheen', 'hit', 'ring']) $(id).setAttribute('d', d);
+    $('shadow').setAttribute('d', d); $('shadow').setAttribute('transform', `translate(${(6 + a * 10).toFixed(2)} 12)`);
+    $('stitch').setAttribute('d', st);
+    const c = mix([214, 207, 195], [217, 80, 43], fill);
+    $('body').setAttribute('fill', `rgb(${c})`);
+    $('stitch').setAttribute('stroke', `rgba(255,255,255,${(0.35 + 0.25 * fill).toFixed(3)})`);
+    $('slot').setAttribute('x', AX - WID / 2 - 8); $('slot').setAttribute('y', -4); $('slot').setAttribute('width', WID + 16);
+    $('savedTag').style.opacity = fill.toFixed(3);
+    $('hint').textContent = saved ? 'saved ✓' : 'pull to save ↓';
+    render.tip = tip;
+  }
+
+  Reel({
+    step, render,
+    geom: () => {
+      const r = card.getBoundingClientRect();
+      return { left: r.left, top: r.top, k: r.width / 800, ax: AX, lOff: L_OFF, lOn: L_ON, latch: LATCH, tipY: render.tip.y };
+    },
+  });
+})();
+</script>
+</body>
+</html>

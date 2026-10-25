@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Split-Flap Copy</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>/* inlined from ../_shared/reel.css */
+/* Shared look for "Interaction #N" pages: paper tokens + the Reel overlay layer.
+   The overlay layer only shows with ?capture (html.reel). Fonts: General Sans + Geist Mono. */
+:root {
+  --paper: #ECE8E0;
+  --card: #FAF8F4;
+  --ink: #1D1B18;
+  --ink-2: #57524A;
+  --muted: #9A948A;
+  --hair: rgba(40, 32, 20, .10);
+  --hair-strong: rgba(40, 32, 20, .16);
+  --accent: #D9502B;
+  --code-bg: #1E1C19;
+  --sans: "General Sans", ui-sans-serif, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(1200px 900px at 50% 38%, rgba(255,255,255,.55), transparent 70%),
+    radial-gradient(900px 700px at 50% 110%, rgba(120,100,70,.10), transparent 70%);
+}
+.stage { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+
+.card {
+  position: relative;
+  background: linear-gradient(180deg, #FCFBF8 0%, var(--card) 100%);
+  border-radius: 36px;
+  border: 1px solid var(--hair);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 1px 1px rgba(40,30,15,.04),
+    0 6px 12px -4px rgba(40,30,15,.06),
+    0 30px 60px -20px rgba(40,30,15,.16),
+    0 70px 120px -40px rgba(40,30,15,.18);
+}
+
+/* ---------- reel overlays (capture mode only) ---------- */
+.hook, .handle, .chip, .end, .codecard, #cursor, .big, .tint { display: none; pointer-events: none; }
+.reel body { user-select: none; -webkit-user-select: none; }
+.reel .stage { width: 1080px; height: 1920px; display: block; }
+.reel .card { position: absolute; left: var(--card-left, 80px); top: var(--card-top, 640px); scale: var(--card-scale, 1.1); transform-origin: 0 0; }
+.reel .hook, .reel .handle, .reel .chip, .reel .end, .reel .codecard, .reel #cursor, .reel .big, .reel .tint { display: block; }
+
+.tint { position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(900px 1300px at 50% 46%, transparent 50%, rgba(150,95,50,.10) 100%), rgba(230,170,110,.035); }
+.handle {
+  position: absolute; left: 0; right: 0; top: 300px; text-align: center;
+  font-family: var(--mono); font-size: 30px; color: var(--muted); letter-spacing: .02em;
+}
+.handle b { font-weight: 500; color: var(--accent); }
+.hook {
+  position: absolute; left: 80px; right: 80px; top: 356px; text-align: center;
+  font-size: 96px; font-weight: 600; letter-spacing: -.035em; line-height: 1.02; color: var(--ink);
+  text-wrap: balance;
+}
+.hook em { font-style: normal; color: var(--accent); }
+.chip { position: absolute; left: 0; right: 0; top: var(--chip-top, 1400px); text-align: center; }
+.chip span {
+  display: inline-flex; align-items: center; gap: 14px;
+  font-family: var(--mono); font-size: 28px; color: var(--ink-2);
+  padding: 14px 26px; border-radius: 999px; border: 1px solid var(--hair-strong);
+  background: rgba(250,248,244,.7);
+}
+.chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+.chip b { font-weight: 400; }
+.big { position: absolute; left: 0; right: 0; top: var(--big-top, 1440px); text-align: center; opacity: 0;
+  font-family: var(--mono); font-weight: 300; font-size: 132px; letter-spacing: -.05em; color: var(--accent); line-height: 1; }
+.big small { font-size: 30px; letter-spacing: .02em; color: var(--ink-2); font-weight: 400; display: block; margin-top: 10px; }
+.end {
+  position: absolute; left: 120px; right: 120px; top: var(--end-top, 1160px); text-align: center; opacity: 0;
+  font-size: 42px; font-weight: 500; letter-spacing: -.02em; line-height: 1.25; color: var(--ink);
+}
+.end b { font-weight: 600; color: var(--accent); }
+.end span { color: var(--muted); }
+.codecard {
+  position: absolute; left: 70px; top: var(--code-top, 640px); width: 890px; opacity: 0;
+  background: var(--code-bg); color: #E9E4DA; border-radius: 36px;
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 40px 90px -30px rgba(30,20,10,.45), 0 10px 24px -8px rgba(30,20,10,.25);
+  padding: 44px 46px 50px;
+}
+.codecard .file { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 25px; color: #8C857A; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 30px; }
+.codecard pre { font-family: var(--mono); font-size: 30px; line-height: 1.7; white-space: pre; margin: 0 -18px; }
+.codecard .ln { display: block; padding: 0 18px; border-radius: 10px; transition: none; }
+.codecard .ln.on { background: rgba(255,255,255,.07); box-shadow: inset 4px 0 0 var(--accent); }
+.c { color: #A39C90; } .k { color: #E8A27F; } .n { color: #F2C66D; } .o { color: #9C958A; }
+.hl.on { color: #fff; background: rgba(217,80,43,.30); border-radius: 6px; padding: 0 4px; margin: 0 -4px; }
+
+#cursor { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 50; pointer-events: none; }
+#cursor .tip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  background: rgba(29,27,24,.16); border: 2.5px solid rgba(29,27,24,.62);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.75), 0 8px 18px rgba(30,20,10,.22); }
+#cursor.down .tip { transform: scale(.88); background: rgba(29,27,24,.26); border-color: rgba(29,27,24,.8); }
+#cursor .rip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  border: 3px solid var(--accent); opacity: 0; }
+</style>
+<style>
+  :root { --card-top: 640px; --chip-top: 1210px; --big-top: 1200px; --code-top: 640px; --end-top: 1130px;
+          --cw: 104px; --ch: 150px; }
+  .card { width: 800px; padding: 44px 46px 50px; }
+  .head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 8px 22px; }
+  .label { font-size: 30px; font-weight: 500; letter-spacing: -.01em; color: var(--ink-2); }
+  .lang { font-family: var(--mono); font-size: 22px; color: var(--muted); }
+  .snippet {
+    font-family: var(--mono); font-size: 40px; letter-spacing: -.02em; color: var(--ink);
+    padding: 26px 28px; border-radius: 20px; background: #F1EDE6; border: 1px solid var(--hair);
+    margin-bottom: 34px;
+  }
+  .snippet .p { color: #B0472A; } .snippet .v { color: var(--ink-2); }
+
+  /* ---------- the split-flap button ---------- */
+  button.flapbtn {
+    display: flex; gap: 8px; margin: 0 auto; padding: 16px; border: 0; border-radius: 26px; cursor: pointer;
+    background: linear-gradient(180deg, #2A2724, #191715);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 2px 0 #0F0E0C, 0 22px 40px -18px rgba(30,20,10,.55);
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  button.flapbtn:focus-visible { outline: 3px solid var(--accent); outline-offset: 6px; }
+  .cell { position: relative; width: var(--cw); height: var(--ch); perspective: 900px; }
+  .half, .flap { position: absolute; left: 0; right: 0; height: 50%; overflow: hidden; background: #2E2B27; }
+  .half.top, .flap.top { top: 0; border-radius: 10px 10px 2px 2px; transform-origin: 50% 100%; }
+  .half.bot, .flap.bot { bottom: 0; border-radius: 2px 2px 10px 10px; transform-origin: 50% 0; }
+  .half.top, .flap.top { background: linear-gradient(180deg, #34302C, #2B2825); }
+  .half.bot, .flap.bot { background: linear-gradient(180deg, #282522, #2F2C28); }
+  .half b, .flap b {
+    position: absolute; left: 0; right: 0; height: var(--ch); display: grid; place-items: center;
+    font-family: var(--mono); font-weight: 500; font-size: 104px; line-height: 1; color: #F3EEE4; letter-spacing: 0;
+  }
+  .top b { top: 0; } .bot b { top: calc(var(--ch) / -2); }
+  .flap { backface-visibility: hidden; will-change: transform; visibility: hidden; }
+  .flap i, .half i { position: absolute; inset: 0; pointer-events: none; }     /* shading layers */
+  .cell::after {                                                             /* the split */
+    content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: #12110F;
+  }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="tint" id="tint"></div>
+  <div class="handle"><b>Interaction #3</b> · @zellap.app</div>
+  <h1 class="hook">A copy button that <em>flaps.</em></h1>
+
+  <div class="card" id="card">
+    <div class="head"><div class="label">Balanced headlines</div><div class="lang">css</div></div>
+    <div class="snippet" id="snip"><span class="p">text-wrap</span>: <span class="v">balance</span>;</div>
+    <button class="flapbtn" id="btn" aria-label="Copy code" aria-describedby="snip"></button>
+    <span class="sr" role="status" aria-live="polite" id="live"></span>
+  </div>
+
+  <div class="codecard" id="code">
+    <div class="file"><span>flap.js</span><span>every flap, every tick</span></div>
+<pre><span class="ln"><span class="c">// a = flap angle, w = its speed</span></span><span class="ln">w <span class="o">+=</span> <span class="hl"><span class="n">1400</span></span> <span class="o">*</span> dt;  a <span class="o">+=</span> w <span class="o">*</span> dt; <span class="c">// gravity</span></span><span class="ln"><span class="k">if</span> (a <span class="o">&lt;</span> Math.PI) <span class="k">return</span>;      <span class="c">// falling</span></span><span class="ln"><span class="k">if</span> (ch <span class="o">!==</span> goal) <span class="k">return</span> next(); <span class="c">// flip on</span></span><span class="ln">a <span class="o">=</span> Math.PI;  w <span class="o">*=</span> <span class="hl"><span class="n">-0.3</span></span>;      <span class="c">// bounce</span></span></pre>
+  </div>
+
+  <div class="chip" id="chip"><span><i></i><b id="chipText">1× real time</b></span></div>
+  <div class="big" id="big">0.5×<small>slow motion</small></div>
+  <p class="end" id="end">Comment <b>CODE</b> for the source.<br><span>Follow for more.</span></p>
+  <div id="cursor"><div class="tip"></div></div>
+</div>
+
+<script>/* inlined from ../_shared/reel.js */
+// Shared runtime for "Interaction #N" pages.
+// Normal use: a fixed-step rAF loop drives the component (stable at any refresh rate).
+// ?capture: the recorder drives time frame by frame via __tick(dt), and the overlay via __overlay(o).
+window.Reel = function ({ step, render, DT = 1 / 1440, geom = () => ({}) }) {
+  const CAPTURE = new URLSearchParams(location.search).has('capture');
+  if (CAPTURE) document.documentElement.classList.add('reel');
+  const $ = id => document.getElementById(id);
+  const advance = seconds => {           // whole fixed steps only, so the sim never depends on frame timing
+    const n = Math.round(seconds / DT);
+    for (let i = 0; i < n; i++) step(DT);
+  };
+  render();
+  if (!CAPTURE) {
+    let last = performance.now(), acc = 0;
+    const frame = now => {
+      acc += Math.min(0.05, (now - last) / 1000); last = now;
+      while (acc >= DT) { step(DT); acc -= DT; }
+      render(); requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    return CAPTURE;
+  }
+  const cur = $('cursor');
+  cur.style.transform = 'translate(-200px,-200px)';
+  // a press ring that grows out of the fingertip, on simulated time (so it slows down in slow motion too)
+  const rip = document.createElement('i'); rip.className = 'rip'; cur.appendChild(rip);
+  let ripT = 9;
+  addEventListener('pointerdown', () => { cur.classList.add('down'); ripT = 0; }, true);
+  addEventListener('pointerup', () => cur.classList.remove('down'), true);
+  const drawRip = () => {
+    const u = Math.min(1, ripT / 0.45), e = 1 - (1 - u) ** 3;
+    rip.style.transform = `scale(${(0.9 + 0.9 * e).toFixed(4)})`;
+    rip.style.opacity = (u < 1 ? 0.55 * (1 - u) : 0).toFixed(3);
+  };
+  drawRip();
+  window.__tick = sec => { advance(sec); ripT += sec; drawRip(); render(); };
+  window.__geom = geom;
+  window.__overlay = o => {
+    // sequential, never two text layers at once: card out, then code in (and back)
+    const card = $('card'), code = $('code');
+    card.style.opacity = o.card;
+    card.style.transform = `translateY(${(1 - o.card) * -18}px)`;
+    code.style.opacity = o.code;
+    code.style.transform = `translateY(${(1 - o.code) * 22}px)`;
+    $('chip').style.opacity = o.chipA ?? o.card * (1 - o.big);
+    $('end').style.opacity = o.code;
+    $('big').style.opacity = o.big; $('big').style.transform = `scale(${0.94 + 0.06 * o.big})`;
+    $('tint').style.opacity = o.tint;
+    document.querySelectorAll('.hl').forEach(el => el.classList.toggle('on', !!o.hl));
+    document.querySelectorAll('#code .ln').forEach((el, i) => el.classList.toggle('on', i === o.line));
+    cur.style.opacity = o.cursor ?? o.card;
+    $('chipText').textContent = o.chip;
+    if (o.cx !== undefined) cur.style.transform = `translate(${o.cx}px, ${o.cy}px)`;
+  };
+  return CAPTURE;
+};
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const ABC = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ';           // the drum order: a flap can only go forward
+  const IDLE = 'COPY  ', DONE = 'COPIED', FAIL = 'RETRY ';
+  const G = 1400, KICK = 40, BOUNCE = 0.3, STAGGER = 0.06, HOLD = 1.5;
+  const PI = Math.PI;
+
+  const btn = $('btn');
+  const cells = [...IDLE].map((c) => {
+    const el = document.createElement('span'); el.className = 'cell';
+    el.innerHTML = '<span class="half top"><b></b><i></i></span><span class="half bot"><b></b><i></i></span>' +
+                   '<span class="flap top"><b></b><i></i></span><span class="flap bot"><b></b><i></i></span>';
+    el.setAttribute('aria-hidden', 'true');
+    btn.appendChild(el);
+    const q = s => el.querySelector(s);
+    return { el, ch: ABC.indexOf(c), goal: ABC.indexOf(c), a: 0, w: 0, moving: false, wait: 0, settle: false,
+             hTop: q('.half.top b'), hBot: q('.half.bot b'), fTop: q('.flap.top'), fBot: q('.flap.bot'),
+             fTopB: q('.flap.top b'), fBotB: q('.flap.bot b'), shTop: q('.flap.top i'), shBot: q('.flap.bot i'), shHalf: q('.half.bot i') };
+  });
+  const next = i => (i + 1) % ABC.length;
+
+  let revertIn = Infinity;
+  function show(word) {
+    let k = 0;                                                 // stagger only the cells that change
+    [...word].forEach((c, i) => {
+      const cell = cells[i], g = ABC.indexOf(c);
+      if (cell.goal === g) return;
+      cell.goal = g;
+      if (reduce.matches) { cell.ch = g; cell.moving = false; cell.a = 0; return; }
+      if (!cell.moving || cell.settle) { cell.moving = true; cell.settle = false; cell.a = 0; cell.w = KICK; cell.wait = k++ * STAGGER; }
+    });
+  }
+
+  async function copy(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch {}
+    const ta = document.createElement('textarea');            // fallback: the old execCommand route
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch {}
+    ta.remove(); return ok;
+  }
+  btn.addEventListener('click', async () => {
+    show(DONE); revertIn = HOLD;                               // flip right away, feels instant
+    const ok = await copy($('snip').textContent);
+    $('live').textContent = ok ? 'Copied to clipboard' : 'Copy failed, try again';
+    if (!ok) show(FAIL);
+  });
+
+  // ---------- physics ----------
+  function step(dt) {
+    if (revertIn !== Infinity && (revertIn -= dt) <= 0) { revertIn = Infinity; show(IDLE); $('live').textContent = ''; }
+    for (const c of cells) {
+      if (!c.moving) continue;
+      if (c.wait > 0) { c.wait -= dt; continue; }
+      c.w += G * dt; c.a += c.w * dt;                          // gravity
+      if (c.a < PI) continue;                                  // still falling
+      if (!c.settle) {
+        c.ch = next(c.ch);                                     // the flap landed: one letter on
+        if (c.ch !== c.goal) { c.a = 0; c.w = KICK; continue; }// next letter
+        c.settle = true;                                       // that was the last one
+      }
+      c.a = PI; c.w *= -BOUNCE;                                // last one bounces
+      if (Math.abs(c.w) < 1.2) { c.moving = false; c.w = 0; c.a = 0; c.settle = false; }
+    }
+  }
+
+  // ---------- render ----------
+  function render() {
+    for (const c of cells) {
+      const cur = ABC[c.ch], nxt = ABC[c.settle ? c.ch : next(c.ch)];
+      const flipping = c.moving && c.wait <= 0;
+      if (!flipping) {
+        c.hTop.textContent = c.hBot.textContent = cur;
+        c.fTop.style.visibility = c.fBot.style.visibility = 'hidden';
+        c.shHalf.style.background = 'none';
+      } else if (c.settle) {                                   // bouncing on the final letter
+        c.hTop.textContent = c.hBot.textContent = cur;
+        c.fTop.style.visibility = 'hidden';
+        c.fBot.style.visibility = 'visible'; c.fBotB.textContent = cur;
+        const lift = PI - c.a;                                 // how far the flap bounced up
+        c.fBot.style.transform = `rotateX(${(lift * 180 / PI).toFixed(2)}deg)`;
+        c.shBot.style.background = `rgba(0,0,0,${(Math.sin(lift) * 0.5).toFixed(3)})`;
+        c.shHalf.style.background = `rgba(0,0,0,${(Math.sin(lift) * 0.35).toFixed(3)})`;
+      } else {
+        c.hTop.textContent = nxt; c.hBot.textContent = cur;    // behind the moving flap
+        if (c.a < PI / 2) {                                    // top flap falling: old letter
+          c.fTop.style.visibility = 'visible'; c.fBot.style.visibility = 'hidden';
+          c.fTopB.textContent = cur;
+          c.fTop.style.transform = `rotateX(${(-c.a * 180 / PI).toFixed(2)}deg)`;
+          c.shTop.style.background = `rgba(0,0,0,${(Math.sin(c.a) * 0.45).toFixed(3)})`;
+          c.shHalf.style.background = `rgba(0,0,0,${(Math.sin(c.a) * 0.3).toFixed(3)})`;
+        } else {                                               // its back lands: new letter, bottom half
+          c.fTop.style.visibility = 'hidden'; c.fBot.style.visibility = 'visible';
+          c.fBotB.textContent = nxt;
+          c.fBot.style.transform = `rotateX(${((PI - c.a) * 180 / PI).toFixed(2)}deg)`;
+          c.shBot.style.background = `rgba(255,255,255,${(Math.sin(c.a) * 0.06).toFixed(3)})`;
+          c.shHalf.style.background = `rgba(0,0,0,${(Math.sin(c.a) * 0.3).toFixed(3)})`;
+        }
+      }
+    }
+  }
+
+  Reel({
+    step, render,
+    geom: () => { const b = btn.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2, w: b.width }; },
+  });
+})();
+</script>
+</body>
+</html>

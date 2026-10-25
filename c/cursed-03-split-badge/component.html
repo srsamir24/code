@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Split Badge</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<style>/* inlined from ../_kit/reel.css */
+/* Shared shell for the Cursed UI pages: palette, backdrop, hook/outro, reel canvas, cursor. */
+:root{
+  --bg:#f3f2ee; --ink:#121214; --ink-2:#5f5f66; --ink-3:#8d8c92;
+  --line:rgba(18,18,20,.085); --line-2:#e6e3dc;
+  --gold-1:#ffd772; --gold-2:#f2a43a; --gold-ink:#a8681a;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Satoshi",ui-sans-serif,sans-serif; -webkit-font-smoothing:antialiased;
+  overflow:hidden; -webkit-user-select:none; user-select:none;
+}
+.backdrop{position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(60% 45% at 50% 46%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bg),var(--bg));
+}
+.backdrop::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(18,18,20,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(18,18,20,.045) 1px,transparent 1px);
+  background-size:28px 28px; background-position:center;
+  -webkit-mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+          mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+}
+.stage{position:relative;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
+
+.tag{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 9px;border-radius:99px;
+  background:#fff;border:1px solid var(--line);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);
+  box-shadow:0 4px 10px -6px rgba(40,34,20,.18)}
+.tag i,.outro i{display:block;width:7px;height:7px;border-radius:50%;background:linear-gradient(var(--gold-1),var(--gold-2))}
+.hook{font-weight:900;font-size:27px;line-height:1.12;letter-spacing:-.025em;text-align:center;max-width:430px;text-wrap:balance}
+.handle{display:block;margin-top:10px;font-weight:500;font-size:12.5px;letter-spacing:.01em;color:var(--ink-3)}
+.outro{font-weight:900;font-size:30px;letter-spacing:-.025em;color:var(--ink);opacity:0;text-align:center}
+.outro span{display:inline-flex;align-items:center;gap:10px}
+.outro i{width:14px;height:14px}
+.outro b{display:inline-block;font-weight:900;background:var(--ink);color:#fff;border-radius:10px;padding:1px 10px 3px;margin:0 1px;letter-spacing:.01em}
+.outro small{display:block;margin-top:14px;font-weight:700;font-size:19px;letter-spacing:-.01em;color:#34343a}
+.outro small em{font-style:normal;font-weight:500;color:var(--ink-2)}
+
+.card{position:relative;width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:30px;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 40px 70px -32px rgba(40,34,20,.22),0 10px 24px -12px rgba(0,0,0,.08);
+}
+.app{display:flex;align-items:center;gap:12px}
+.icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.x{margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-3)}
+
+/* reel mode: fixed 540x960 phone canvas (recorded at 2x = 1080x1920) */
+body.reel .stage{display:block;width:540px;height:960px;margin:0 auto;padding:0}
+body.reel .tag{position:absolute;top:154px;left:50%;transform:translateX(-50%)}
+body.reel .hook{position:absolute;top:198px;left:50%;transform:translateX(-50%);width:450px;font-size:30px}
+body.reel .card{position:absolute;top:318px;left:60px}
+body.reel .outro{position:absolute;top:192px;left:0;right:0;font-size:25px}
+body:not(.reel) .outro{display:none}
+body.reel, body.reel *{cursor:none !important}
+#cursor{position:fixed;left:0;top:0;width:0;height:0;z-index:99;pointer-events:none;display:none}
+body.reel #cursor{display:block}
+#cursor svg{position:absolute;left:0;top:0;overflow:visible;filter:drop-shadow(0 3px 5px rgba(0,0,0,.25))}
+#ring{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;border:2px solid rgba(18,18,20,.5);opacity:0}
+</style>
+<style>
+  .card{padding:26px 28px 14px}
+  .ibtn{margin-left:auto;width:44px;height:44px;border-radius:50%;border:1px solid var(--line-2);background:#fff;display:grid;place-items:center;color:var(--ink);cursor:pointer}
+  h1{margin-top:22px;font-weight:700;font-size:28px;letter-spacing:-.025em;line-height:1.1;display:flex;align-items:center;gap:10px;height:31px}
+  h1 .chk{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#eef6ee;flex:none}
+  .sub{margin-top:7px;font-size:16px;color:var(--ink-2);font-weight:500;height:20px}
+  .sub b{color:#d93a31;font-weight:700}
+  .list{list-style:none;padding:0;margin-top:16px;border:1px solid var(--line-2);border-radius:18px;overflow:hidden}
+  .list li{display:flex;align-items:center;gap:12px;height:62px;padding:0 14px}
+  .list li+li{border-top:1px solid var(--line)}
+  .av{width:36px;height:36px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:700;font-size:14px;color:#fff}
+  .list p{flex:1;font-size:15.5px;line-height:1.3;color:var(--ink-2);font-weight:500}
+  .list p strong{color:var(--ink);font-weight:700}
+  .list time{font-size:12.5px;color:var(--ink-3);font-weight:500}
+  .btn{display:block;width:100%;height:48px;margin-top:14px;border:0;border-radius:14px;background:var(--ink);color:#fff;font:700 15px "Satoshi",sans-serif;letter-spacing:-.01em;cursor:pointer;
+    box-shadow:0 1px 0 rgba(255,255,255,.15) inset,0 8px 18px -10px rgba(0,0,0,.6)}
+  .tabs{display:flex;justify-content:space-between;margin:16px -10px 0;padding-top:10px;border-top:1px solid var(--line)}
+  .tab{width:56px;height:44px;display:grid;place-items:center;color:var(--ink-3)}
+  .tab.on{color:var(--ink)}
+  #goo{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;overflow:visible}
+  #goo text{font:700 14px "Satoshi",sans-serif;fill:#fff}
+</style>
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="stage">
+  <div class="tag"><i></i>Cursed UI #3</div>
+  <header class="hook">Try clearing this notification.<span class="handle">@zellap.app</span></header>
+
+  <main class="card" id="card">
+    <div class="app">
+      <div class="icon" id="appicon" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="5.2" fill="#fff"/><ellipse cx="13" cy="13" rx="11" ry="4.6" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.4" transform="rotate(-24 13 13)"/><circle cx="22.6" cy="8.6" r="2" fill="#f2a43a"/></svg>
+      </div>
+      <div><b>Orbit</b><span>Activity</span></div>
+      <button class="ibtn" id="bell" aria-label="Notifications">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M5 8a5 5 0 0 1 10 0c0 4.2 1.6 5.6 1.6 5.6H3.4S5 12.2 5 8z"/><path d="M8.2 16.4a2 2 0 0 0 3.6 0"/></svg>
+      </button>
+    </div>
+    <h1 id="title"><span id="titleText">1 new notification</span></h1>
+    <p class="sub" id="sub">Click the badge to clear it.</p>
+    <ul class="list">
+      <li><div class="av" id="av1" style="background:linear-gradient(160deg,#ffcf7a,#e9953a)">M</div><p><strong>Maya</strong> commented on <strong>Homepage v3</strong></p><time>2m</time></li>
+      <li><div class="av" id="av2" style="background:linear-gradient(160deg,#8f8d99,#55535e)">J</div><p><strong>Jonas</strong> liked your shot</p><time id="t2">1h</time></li>
+    </ul>
+    <button class="btn" id="markall">Mark all as read</button>
+    <nav class="tabs">
+      <div class="tab on" id="tab-home"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3.5 9.5L11 3.5l7.5 6V18a1 1 0 0 1-1 1h-4v-5.5h-5V19h-4a1 1 0 0 1-1-1z"/></svg></div>
+      <div class="tab" id="tab-search"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="6"/><path d="M14.5 14.5L19 19"/></svg></div>
+      <div class="tab" id="tab-plus"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="3.5" width="15" height="15" rx="4.5"/><path d="M11 7.5v7M7.5 11h7"/></svg></div>
+      <div class="tab" id="tab-chat"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5.5A2 2 0 0 1 6 3.5h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-4 3.5v-3.5H6a2 2 0 0 1-2-2z"/></svg></div>
+      <div class="tab" id="tab-me"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="8" r="3.6"/><path d="M4 19c.8-3.6 3.6-5.4 7-5.4s6.2 1.8 7 5.4" stroke-linecap="round"/></svg></div>
+    </nav>
+  </main>
+
+  <footer class="outro" id="outro"><span><i></i>Comment <b>CODE</b> for the source</span><small>Follow for more cursed UI <em>&middot; @zellap.app</em></small></footer>
+</div>
+
+<svg id="goo" aria-hidden="true">
+  <defs>
+    <filter id="gf" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4.2" result="b"/>
+      <feColorMatrix in="b" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -11" result="g"/>
+      <feMorphology in="g" operator="dilate" radius="2.6" result="d"/>
+      <feFlood flood-color="#fff"/><feComposite in2="d" operator="in" result="w"/>
+      <feMerge result="m"><feMergeNode in="w"/><feMergeNode in="g"/></feMerge>
+      <feDropShadow in="m" dx="0" dy="2.5" stdDeviation="2" flood-color="#7a1b14" flood-opacity=".28"/>
+    </filter>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5a4e"/><stop offset="1" stop-color="#e5352b"/></linearGradient>
+  </defs>
+  <g id="body" filter="url(#gf)"></g>
+  <g id="nums"></g>
+</svg>
+
+<script>/* inlined from ../_kit/reel.js */
+/* Shared runtime for the Cursed UI pages.
+   - a simulation clock (K.now, ms) advanced by K.tick(ms): rAF in the browser, stepped by the recorder (?manual)
+   - tweens, easing, the hook <-> outro swap (window.__outro), and the reel cursor driven by real pointer events */
+window.ReelKit = function (opts) {
+  const qs = new URLSearchParams(location.search);
+  const REEL = qs.has('reel'), MANUAL = qs.has('manual');
+  if (REEL) document.body.classList.add('reel');
+
+  const K = { REEL, MANUAL, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  /* critically-ish damped spring step: z = damping ratio */
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+
+  /* ---------- cursor ---------- */
+  document.body.insertAdjacentHTML('beforeend', `<div id="cursor">
+    <div id="ring"></div>
+    <svg id="c-arrow" width="26" height="34" viewBox="0 0 26 34"><path d="M2 2 L2 26 L8.2 20.4 L12.4 30.4 L16.6 28.6 L12.5 18.9 L20.8 18.6 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg id="c-hand" width="30" height="34" viewBox="0 0 30 34" style="display:none;left:-9px;top:-2px"><path d="M10 15V5.2a2.6 2.6 0 0 1 5.2 0V13 M15.2 12.6a2.5 2.5 0 0 1 5 0v1.8 M20.2 13.6a2.5 2.5 0 0 1 5 0v6.2c0 6.6-4 11.2-10 11.2-4.6 0-6.7-2.2-9.4-6.5L3 19.6a2.5 2.5 0 0 1 4.2-2.7L10 20.8V15" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg id="c-grab" width="30" height="30" viewBox="0 0 30 30" style="display:none;left:-15px;top:-13px"><path d="M8.2 11.4a2.4 2.4 0 0 1 4.8 0v-1a2.4 2.4 0 0 1 4.8 0v1a2.4 2.4 0 0 1 4.8 0v1.4a2.4 2.4 0 0 1 4.6.9v4.8c0 5.6-3.8 9.4-9.4 9.4-4.2 0-6.4-1.8-8.6-5.2l-2.4-3.8a2.3 2.3 0 0 1 3.4-3z M13 11.4v4 M17.8 11.4v4 M22.6 12.8v3" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  </div>`);
+  const $ = id => document.getElementById(id);
+  const cur = $('cursor'), ring = $('ring'), shapes = { arrow: $('c-arrow'), hand: $('c-hand'), grab: $('c-grab') };
+  let curScale = 1;
+  function moveCursor() {
+    if (!REEL) return;
+    const el = document.elementFromPoint(K.px, K.py);
+    const kind = (opts.cursorKind && opts.cursorKind(el)) || 'arrow';
+    for (const k in shapes) shapes[k].style.display = k === kind ? '' : 'none';
+    cur.style.transform = `translate(${K.px}px,${K.py}px) scale(${curScale})`;
+  }
+  K.moveCursor = moveCursor;
+  window.addEventListener('pointermove', e => { K.px = e.clientX; K.py = e.clientY; moveCursor(); });
+  window.addEventListener('pointerleave', () => { K.px = K.py = -999; });
+  window.addEventListener('pointerdown', () => {
+    K.down = true;
+    if (!REEL) return;
+    K.tween(90, p => { curScale = 1 - .14 * p; moveCursor(); });
+    K.tween(300, p => { curScale = .86 + .14 * p; moveCursor(); }, K.ease.back, 120);
+    K.tween(480, p => { ring.style.opacity = (1 - p) * .9; ring.style.transform = `scale(${.4 + p * 1.1})`; });
+  });
+  window.addEventListener('pointerup', () => { K.down = false; moveCursor(); });
+
+  /* ---------- hook <-> outro ---------- */
+  let outroOn = false;
+  window.__outro = on => {
+    if (on === outroOn) return; outroOn = on;
+    const hook = document.querySelector('.hook'), outro = document.querySelector('.outro');
+    K.tween(440, p => { const q = on ? p : 1 - p;
+      hook.style.opacity = K.clamp(1 - q / .45, 0, 1);   // strictly sequential: never two lines at once
+      const o = K.clamp((q - .55) / .45, 0, 1);
+      outro.style.opacity = o; outro.style.transform = `translateY(${(1 - o) * 10}px)`; }, K.ease.lin);
+  };
+
+  /* ---------- clock ---------- */
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  window.__tick = tick;
+  K.start = () => {
+    if (!MANUAL) {
+      let last = performance.now();
+      requestAnimationFrame(function loop(t) { tick(Math.min(50, t - last)); last = t; requestAnimationFrame(loop); });
+    } else tick(16);
+  };
+  return K;
+};
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const titleText = $('titleText'), title = $('title'), sub = $('sub');
+
+  const K = ReelKit({
+    cursorKind: el => el && (el.closest('button') || overBadge()) ? 'hand' : 'arrow',
+    update, render
+  });
+
+  /* anchors: [element id, fx, fy] = where a badge likes to sit (top-right corners of things), then free spots */
+  const ANCH = [
+    ['bell', .86, .14], ['tab-chat', .72, .12], ['tab-home', .72, .12], ['tab-me', .72, .12], ['tab-search', .72, .12],
+    ['appicon', .92, .08], ['av1', .9, .1], ['av2', .9, .1], ['tab-plus', .72, .12], ['markall', .97, .1],
+    ['title', .0, .0], ['markall', .03, .1], ['tab-home', .28, .12], ['tab-me', .28, .12], ['av1', .1, .9], ['bell', .14, .86],
+    ['markall', .5, .05], ['appicon', .1, .92], ['title', .0, .0], ['av2', .1, .9], ['tab-search', .28, .12], ['markall', .75, .95],
+    ['tab-chat', .28, .12], ['markall', .25, .95]
+  ];
+  // the "title" anchors follow the end of the title text
+  function anchorPos(i) {
+    const [id, fx, fy] = ANCH[i % ANCH.length];
+    let r = $(id).getBoundingClientRect();
+    if (id === 'title') { r = titleText.getBoundingClientRect(); return [r.right + 18 + (i > 12 ? 30 : 0), r.top + r.height * .3]; }
+    return [r.left + r.width * fx, r.top + r.height * fy];
+  }
+
+  const R = 12;
+  let badges = [];
+  let merging = false, settled = true;
+  function mk(x, y, anchor) {
+    const b = { x, y, vx: 0, vy: 0, anchor, s: 1, sv: 0, born: K.now, hold: null };
+    b.bd = document.createElementNS(SVGNS, 'circle'); b.bd.setAttribute('fill', 'url(#red)'); $('body').appendChild(b.bd);
+    b.tx = document.createElementNS(SVGNS, 'text'); b.tx.setAttribute('text-anchor', 'middle'); b.tx.textContent = '1'; $('nums').appendChild(b.tx);
+    badges.push(b); return b;
+  }
+  function kill(b) { b.bd.remove(); b.tx.remove(); }
+  function freeAnchor(from) {
+    const used = new Set(badges.map(b => b.anchor));
+    let best = -1, bd = 1e9;
+    const [fx, fy] = [from.x, from.y];
+    for (let i = 0; i < ANCH.length; i++) {
+      if (used.has(i)) continue;
+      const [ax, ay] = anchorPos(i);
+      const d = Math.abs(Math.hypot(ax - fx, ay - fy) - 170) + i * 3;   // fly a satisfying distance, not next door
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best < 0 ? Math.floor(Math.random() * ANCH.length) : best;
+  }
+
+  /* clearing a badge = mitosis: it pinches into a peanut, then the two halves fly apart */
+  function split(b) {
+    const a = freeAnchor(b);
+    const c = mk(b.x, b.y, a);
+    const [ax, ay] = anchorPos(a);
+    let dx = ax - b.x, dy = ay - b.y; const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
+    c.hold = { until: K.now + 170, x: b.x + dx * 8, y: b.y + dy * 8 };
+    b.hold = { until: K.now + 170, x: b.x - dx * 8, y: b.y - dy * 8 };
+    b.sv -= 3.5; c.sv -= 3.5;
+    count();
+  }
+  function count() {
+    const n = badges.length;
+    if (!caught) titleText.textContent = `${n} new notification${n > 1 ? 's' : ''}`;
+    else sub.innerHTML = `<b>${n} unread</b> &middot; nothing to see here`;
+    K.tween(260, p => title.style.transform = `translateY(${(1 - p) * 3}px)`);
+  }
+
+  let caught = false;
+  window.addEventListener('pointerdown', e => {
+    if (merging) return;
+    const hit = hitBadge(e.clientX, e.clientY);
+    if (hit) split(hit);
+  });
+  $('markall').addEventListener('pointerdown', () => K.tween(110, p => $('markall').style.transform = `scale(${1 - .03 * p})`));
+  $('markall').addEventListener('pointerup', () => K.tween(380, p => $('markall').style.transform = `scale(${.97 + .03 * p})`, K.ease.back));
+  $('markall').addEventListener('click', () => markAll());
+  function markAll() {
+    if (merging) return;
+    caught = true;
+    titleText.textContent = 'All caught up';
+    title.insertAdjacentHTML('afterbegin', '<span class="chk"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7.4l2.6 2.6L11 4.6" fill="none" stroke="#2f8a3e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>');
+    [...badges].forEach(split);
+    setTimeoutSim(330, () => [...badges].forEach(split));
+  }
+  const timers = [];
+  function setTimeoutSim(ms, fn) { timers.push({ at: K.now + ms, fn }); }
+
+  function hitBadge(x, y) {
+    let best = null, bd = R + 7;
+    for (const b of badges) { const d = Math.hypot(b.x - x, b.y - y); if (d < bd) { bd = d; best = b; } }
+    return best;
+  }
+  function overBadge() { return !!hitBadge(K.px, K.py); }
+
+  window.__badge = i => { const b = badges[i]; return b ? anchorPos(b.anchor) : null; };
+  window.__count = () => badges.length;
+
+  function update(dt) {
+    for (let i = timers.length - 1; i >= 0; i--) if (K.now >= timers[i].at) { const t = timers.splice(i, 1)[0]; t.fn(); }
+    const k = 120, z = .48;
+    for (const b of badges) {
+      let tx, ty;
+      if (merging) [tx, ty] = anchorPos(0);
+      else if (b.hold && K.now < b.hold.until) { tx = b.hold.x; ty = b.hold.y; }
+      else [tx, ty] = anchorPos(b.anchor);
+      const kk = b.hold && K.now < b.hold.until ? 900 : (merging ? 90 : k);
+      const c = 2 * Math.sqrt(kk) * (merging ? .9 : z);
+      b.vx += (kk * (tx - b.x) - c * b.vx) * dt; b.vy += (kk * (ty - b.y) - c * b.vy) * dt;
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      b.sv += (260 * (1 - b.s) - 2 * Math.sqrt(260) * .3 * b.sv) * dt; b.s += b.sv * dt;
+    }
+    if (merging && K.now > mergeAt + 1100) {
+      const [ax, ay] = anchorPos(0);
+      badges.slice(1).forEach(kill); badges = badges.slice(0, 1);
+      const b = badges[0]; b.x = ax; b.y = ay; b.vx = b.vy = 0; b.s = 1; b.sv = 0; b.anchor = 0; b.hold = null;
+      merging = false;
+    }
+  }
+
+  function render() {
+    for (const b of badges) {
+      let dmin = 1e9;
+      for (const o of badges) if (o !== b) dmin = Math.min(dmin, Math.hypot(o.x - b.x, o.y - b.y));
+      const sp = Math.min(Math.hypot(b.vx, b.vy) / 2400, .25);
+      let r = R * Math.max(.2, b.s) * (1 - sp * .25);
+      if (merging && b !== badges[0]) { const [ax, ay] = anchorPos(0); r *= K.clamp(Math.hypot(b.x - ax, b.y - ay) / 110, 0, 1); }   // melt in, don't pile up
+      for (const [el, rr] of [[b.bd, r]]) {
+        el.setAttribute('cx', b.x.toFixed(2)); el.setAttribute('cy', b.y.toFixed(2)); el.setAttribute('r', rr.toFixed(2));
+      }
+      b.tx.setAttribute('x', b.x.toFixed(2)); b.tx.setAttribute('y', (b.y + 4.6).toFixed(2));
+      b.tx.setAttribute('opacity', K.clamp((dmin - 2 * R) / 8, 0, 1).toFixed(3));
+    }
+  }
+
+  let mergeAt = 0;
+  function reset() {
+    merging = true; mergeAt = K.now;
+    caught = false;
+    K.tween(150, p => { title.style.opacity = sub.style.opacity = 1 - p; });
+    setTimeoutSim(160, () => {
+      const chk = title.querySelector('.chk'); if (chk) chk.remove();
+      titleText.textContent = '1 new notification'; sub.textContent = 'Click the badge to clear it.';
+      K.tween(240, p => { title.style.opacity = sub.style.opacity = p; });
+    });
+  }
+  window.__reset = reset;
+
+  const [x0, y0] = anchorPos(0);
+  mk(x0, y0, 0);
+  K.start();
+  addEventListener('resize', () => {});
+})();
+</script>
+</body>
+</html>

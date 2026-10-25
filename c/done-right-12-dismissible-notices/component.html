@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dismissible notices · Done right #12 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 560px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-card { background: #FFFFFF; border: 1px solid rgba(40, 32, 20, .12); border-radius: 24px; padding: 24px; box-shadow: 0 24px 50px -28px rgba(40, 32, 20, .28); }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+  .demo-notes button { font: inherit; color: #1D1B18; text-decoration: underline; background: none; border: 0; padding: 0; cursor: pointer; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+
+  .notices { color: #1D1B18; }
+  .notices-title { margin: 0 0 12px; font-size: 1.0625rem; font-weight: 600; }
+  .notices-title:focus { outline: none; }
+  .notices-title:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 4px; border-radius: 4px; }
+
+  /* Outer grid row collapses on dismiss; inner padding keeps the gap. */
+  .notice {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows .26s ease, opacity .2s ease;
+  }
+  .notice.is-leaving { grid-template-rows: 0fr; opacity: 0; }
+  .notice-wrap { min-height: 0; overflow: hidden; padding-bottom: 10px; }
+
+  .notice-box {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    gap: 12px;
+    align-items: start;
+    padding: 14px 6px 14px 16px;
+    border: 1.5px solid var(--line);
+    border-radius: 14px;
+    background: var(--bg);
+  }
+  .notice[data-kind="warning"] { --bg: #FFF5E1; --line: #A86400; --ink: #7A4200; }
+  .notice[data-kind="new"]     { --bg: #EEF2FD; --line: #3557C0; --ink: #2B4AA8; }
+  .notice[data-kind="error"]   { --bg: #FCF0EE; --line: #B3261E; --ink: #A1221A; }
+  .notice-box > svg { width: 22px; height: 22px; margin-top: 1px; color: var(--ink); }
+  .notice-head { margin: 0; font-weight: 600; line-height: 1.35; }
+  /* The kind is a word, not just a colour. */
+  .notice-kind { color: var(--ink); }
+  .notice-text { margin: 2px 0 0; font-size: .9375rem; color: #4F4A43; }
+  .notice-text a { color: inherit; font-weight: 600; }
+  .notice-text a:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 2px; border-radius: 3px; }
+
+  .notice-close {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin: -8px 0 -8px 0;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #1D1B18;
+    cursor: pointer;
+  }
+  .notice-close svg { width: 18px; height: 18px; }
+  .notice-close:hover { background: rgba(29, 27, 24, .08); }
+  .notice-close:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: -2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .notice { transition: none; }
+  }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #12 · @zellap.app</p>
+  <h1>Dismissible notices</h1>
+  <p class="demo-lede">The close button says what it closes, focus lands somewhere sensible, a dismissed notice stays dismissed, and the one about your failed payment doesn't get an × at all.</p>
+
+  <div class="demo-card">
+    <section class="notices" aria-labelledby="notices-title">
+      <h2 class="notices-title" id="notices-title" tabindex="-1">Updates</h2>
+
+      <!-- No ×: it goes away when the problem is fixed. -->
+      <div class="notice" data-kind="error">
+        <div class="notice-wrap"><div class="notice-box">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5M12 18h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          <div>
+            <p class="notice-head">
+              <span class="notice-kind">Action needed:</span>
+              <span class="notice-name">Payment failed</span>
+            </p>
+            <p class="notice-text">Your card was declined. <a href="#billing">Update your card</a> to keep Pro.</p>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="notice" data-kind="warning"
+           data-id="maintenance-2026-11-08">
+        <div class="notice-wrap"><div class="notice-box">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <div>
+            <p class="notice-head">
+              <span class="notice-kind">Heads up:</span>
+              <span class="notice-name">Scheduled maintenance</span>
+            </p>
+            <p class="notice-text">Sun 8 Nov, 02:00–03:00 CET. Saving pauses for an hour.</p>
+          </div>
+          <button class="notice-close" type="button"
+                  aria-label="Dismiss notice: Scheduled maintenance">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>
+        </div></div>
+      </div>
+
+      <div class="notice" data-kind="new"
+           data-id="invoice-vat-lines">
+        <div class="notice-wrap"><div class="notice-box">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.6 5.6L20.5 9l-4.3 4 1.1 6L12 16.2 6.7 19l1.1-6-4.3-4 5.9-.4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          <div>
+            <p class="notice-head">
+              <span class="notice-kind">New:</span>
+              <span class="notice-name">VAT on every invoice line</span>
+            </p>
+            <p class="notice-text">New invoices show VAT per line. Old ones stay as they were.</p>
+          </div>
+          <button class="notice-close" type="button"
+                  aria-label="Dismiss notice: VAT on every invoice line">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>
+        </div></div>
+      </div>
+
+      <p class="notices-live sr-only" role="status"></p>
+    </section>
+  </div>
+
+  <p class="demo-notes">Dismiss one, then reload: it stays gone. <button type="button" onclick="localStorage.clear(); location.reload()">Reset the demo</button></p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  // Private mode can block storage. The notice still closes.
+  const store = {
+    get(k) {
+      try { return localStorage.getItem(k); }
+      catch { return null; }
+    },
+    set(k, v) {
+      try { localStorage.setItem(k, v); } catch {}
+    },
+  };
+  const OPEN = '.notice:not(.is-leaving)';
+
+  for (const box of document.querySelectorAll('.notices')) {
+    const title = box.querySelector('.notices-title');
+    const live = box.querySelector('.notices-live');
+    const key = (n) => `dismissed:${n.dataset.id}`;
+
+    // Dismissed before? Don't flash it back in.
+    for (const n of box.querySelectorAll('.notice[data-id]')) {
+      if (store.get(key(n))) n.remove();
+    }
+
+    box.addEventListener('click', (e) => {
+      const btn = e.target.closest('.notice-close');
+      if (!btn) return;
+      const notice = btn.closest('.notice');
+      const name = notice.querySelector('.notice-name').textContent;
+      store.set(key(notice), '1');
+
+      // Focus: the next ×, else the previous ×, else the heading.
+      const all = [...box.querySelectorAll(`${OPEN} .notice-close`)];
+      const i = all.indexOf(btn);
+      (all[i + 1] || all[i - 1] || title).focus();
+
+      notice.inert = true;
+      notice.classList.add('is-leaving');
+      const left = box.querySelectorAll(OPEN).length;
+      const s = left === 1 ? '' : 's';
+      live.textContent =
+        `Dismissed: ${name}. ${left} notice${s} left.`;
+
+      const gone = () => notice.remove();
+      const calm = matchMedia('(prefers-reduced-motion: reduce)');
+      if (calm.matches) return gone();
+      notice.addEventListener('transitionend', (ev) => {
+        if (ev.propertyName === 'grid-template-rows') gone();
+      });
+    });
+  }
+</script>
+</body>
+</html>

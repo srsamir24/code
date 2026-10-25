@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sortable list · Done right #11 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 520px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-card { background: #FFFFFF; border: 1px solid rgba(40, 32, 20, .12); border-radius: 24px; padding: 24px; box-shadow: 0 24px 50px -28px rgba(40, 32, 20, .28); }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .sort { display: grid; gap: 10px; color: #1D1B18; }
+  .sort-title { margin: 0; font-size: 1.0625rem; font-weight: 600; }
+  .sort-help { margin: -6px 0 4px; font-size: .875rem; color: #5A544B; }
+
+  .sort-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; counter-reset: pos; }
+  .sort-item {
+    counter-increment: pos;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 56px;
+    padding: 0 6px;
+    border: 1px solid #DDD6CB;
+    border-radius: 14px;
+    background: #FFFFFF;
+  }
+  /* The number comes from the list order, so it can never be stale. */
+  .sort-item::before {
+    content: counter(pos);
+    order: 1;
+    width: 1.75rem;
+    font: 500 .875rem/1 ui-monospace, monospace;
+    color: #5A544B;
+    text-align: center;
+  }
+  .sort-handle { order: 0; }
+  .sort-name { order: 2; flex: 1; font-weight: 500; }
+  .sort-move { order: 3; }
+
+  .sort-handle,
+  .sort-move {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #1D1B18;
+    cursor: pointer;
+  }
+  .sort-handle { width: 44px; cursor: grab; touch-action: none; }
+  .sort-handle svg, .sort-move svg { width: 20px; height: 20px; }
+  .sort-handle:hover, .sort-move:enabled:hover { background: #F2EFEA; }
+  .sort-move:disabled { color: #B5AEA3; cursor: default; }
+  .sort-handle:focus-visible,
+  .sort-move:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 1px; }
+
+  /* Picked up: lifted, outlined, handle filled. Not colour alone. */
+  .sort-item.is-grabbed,
+  .sort-item.is-dragging {
+    position: relative;
+    z-index: 1;
+    border-color: #1D1B18;
+    box-shadow: 0 0 0 1px #1D1B18, 0 14px 30px -12px rgba(29, 27, 24, .45);
+    background: #FBFAF7;
+  }
+  .sort-handle[aria-pressed="true"] { background: #1D1B18; color: #FFFFFF; }
+  .sort-item.is-dragging .sort-handle { cursor: grabbing; }
+
+  .sort-live { min-height: 1.4em; margin: 2px 0 0; font-size: .875rem; color: #4F4A43; }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #11 · @zellap.app</p>
+  <h1>Sortable list</h1>
+  <p class="demo-lede">Drag it, use the arrow buttons, or do it all from the keyboard. Every move is announced, Escape puts it back, and focus never wanders off.</p>
+
+  <div class="demo-card">
+    <div class="sort">
+      <h2 class="sort-title" id="menu-title">Menu order</h2>
+      <p class="sort-help" id="menu-help">
+        Drag a handle, or focus it, press Space, then use the arrow keys.
+      </p>
+      <ol class="sort-list" aria-labelledby="menu-title">
+        <li class="sort-item">
+          <button class="sort-handle" type="button"
+                  aria-label="Reorder Home"
+                  aria-describedby="menu-help"
+                  aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></g></svg>
+          </button>
+          <span class="sort-name">Home</span>
+          <button class="sort-move" type="button"
+                  data-move="-1" tabindex="-1"
+                  aria-label="Move Home up">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="sort-move" type="button"
+                  data-move="1" tabindex="-1"
+                  aria-label="Move Home down">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </li>
+        <li class="sort-item">
+          <button class="sort-handle" type="button"
+                  aria-label="Reorder Work"
+                  aria-describedby="menu-help"
+                  aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></g></svg>
+          </button>
+          <span class="sort-name">Work</span>
+          <button class="sort-move" type="button"
+                  data-move="-1" tabindex="-1"
+                  aria-label="Move Work up">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="sort-move" type="button"
+                  data-move="1" tabindex="-1"
+                  aria-label="Move Work down">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </li>
+        <li class="sort-item">
+          <button class="sort-handle" type="button"
+                  aria-label="Reorder About"
+                  aria-describedby="menu-help"
+                  aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></g></svg>
+          </button>
+          <span class="sort-name">About</span>
+          <button class="sort-move" type="button"
+                  data-move="-1" tabindex="-1"
+                  aria-label="Move About up">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="sort-move" type="button"
+                  data-move="1" tabindex="-1"
+                  aria-label="Move About down">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </li>
+        <li class="sort-item">
+          <button class="sort-handle" type="button"
+                  aria-label="Reorder Journal"
+                  aria-describedby="menu-help"
+                  aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></g></svg>
+          </button>
+          <span class="sort-name">Journal</span>
+          <button class="sort-move" type="button"
+                  data-move="-1" tabindex="-1"
+                  aria-label="Move Journal up">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="sort-move" type="button"
+                  data-move="1" tabindex="-1"
+                  aria-label="Move Journal down">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </li>
+        <li class="sort-item">
+          <button class="sort-handle" type="button"
+                  aria-label="Reorder Contact"
+                  aria-describedby="menu-help"
+                  aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></g></svg>
+          </button>
+          <span class="sort-name">Contact</span>
+          <button class="sort-move" type="button"
+                  data-move="-1" tabindex="-1"
+                  aria-label="Move Contact up">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="sort-move" type="button"
+                  data-move="1" tabindex="-1"
+                  aria-label="Move Contact down">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </li>
+      </ol>
+      <p class="sort-live" role="status"></p>
+    </div>
+  </div>
+
+  <p class="demo-notes">Tab to a handle · Space picks up · ↑ ↓ move · Space drops · Esc cancels.<br>Listen for the "reorder" event to save the new order.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  for (const sort of document.querySelectorAll('.sort')) {
+    const list = sort.querySelector('.sort-list');
+    const live = sort.querySelector('.sort-live');
+    const items = () => [...list.children];
+    const name = (item) => item.querySelector('.sort-name').textContent;
+    const where = (item) =>
+      `position ${items().indexOf(item) + 1} of ${items().length}`;
+    const say = (text) => { live.textContent = text; };
+    let grabbed = null, from = 0;
+
+    // Move the neighbour, not the item: focus stays where it is.
+    const step = (item, dir) => {
+      const other = dir < 0
+        ? item.previousElementSibling
+        : item.nextElementSibling;
+      if (!other) return false;
+      if (dir < 0) item.after(other); else item.before(other);
+      return true;
+    };
+    const ends = () => {
+      for (const item of items()) {
+        const [up, down] = item.querySelectorAll('.sort-move');
+        up.disabled = !item.previousElementSibling;
+        down.disabled = !item.nextElementSibling;
+      }
+    };
+    const settle = () => {
+      ends();
+      sort.dispatchEvent(new CustomEvent('reorder', { detail: items().map(name) }));
+    };
+    const lift = (item, on) => {
+      item.classList.toggle('is-grabbed', on);
+      item.querySelector('.sort-handle').setAttribute('aria-pressed', String(on));
+    };
+    const drop = (cancel) => {
+      const item = grabbed;
+      grabbed = null;
+      lift(item, false);
+      if (!cancel) return say(`${name(item)} dropped at ${where(item)}.`);
+      while (items().indexOf(item) > from) step(item, -1);
+      while (items().indexOf(item) < from) step(item, 1);
+      settle();
+      say(`Cancelled. ${name(item)} is back at ${where(item)}.`);
+    };
+
+    // Keyboard: Space picks up, arrows move, Space drops, Escape cancels.
+    list.addEventListener('keydown', (e) => {
+      const handle = e.target.closest('.sort-handle');
+      if (!handle) return;
+      const item = handle.closest('.sort-item');
+      const arrow = { ArrowUp: -1, ArrowDown: 1 }[e.key];
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        if (grabbed) return drop(false);
+        grabbed = item;
+        from = items().indexOf(item);
+        lift(item, true);
+        say(`${name(item)} picked up, ${where(item)}. ` +
+          'Arrow keys move it, Space drops it, Escape cancels.');
+      } else if (grabbed === item && arrow) {
+        e.preventDefault();
+        if (!step(item, arrow)) return;
+        settle();
+        say(`${name(item)}, ${where(item)}.`);
+      } else if (grabbed === item && e.key === 'Escape') {
+        e.preventDefault();
+        drop(true);
+      }
+    });
+    // Tabbing away while holding an item drops it where it is.
+    list.addEventListener('focusout', () => { if (grabbed) drop(false); });
+
+    // Pointer: drag the handle.
+    list.addEventListener('pointerdown', (e) => {
+      const handle = e.target.closest('.sort-handle');
+      if (!handle || e.button !== 0) return;
+      e.preventDefault();
+      const item = handle.closest('.sort-item');
+      const start = items().indexOf(item);
+      const mid = (el) => { const r = el.getBoundingClientRect(); return r.top + r.height / 2; };
+      item.classList.add('is-dragging');
+      const move = (ev) => {
+        let prev, next;
+        while ((prev = item.previousElementSibling) && ev.clientY < mid(prev)) step(item, -1);
+        while ((next = item.nextElementSibling) && ev.clientY > mid(next)) step(item, 1);
+        ends();
+      };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', () => {
+        document.removeEventListener('pointermove', move);
+        item.classList.remove('is-dragging');
+        if (items().indexOf(item) === start) return;
+        settle();
+        say(`${name(item)} moved to ${where(item)}.`);
+      }, { once: true });
+    });
+
+    // No drag needed: the up and down buttons do the same job.
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest('.sort-move');
+      if (!btn) return;
+      const item = btn.closest('.sort-item');
+      if (!step(item, Number(btn.dataset.move))) return;
+      settle();
+      say(`${name(item)} moved to ${where(item)}.`);
+    });
+
+    settle();
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sticky Note Peel</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>/* inlined from ../_shared/reel.css */
+/* Shared look for "Interaction #N" pages: paper tokens + the Reel overlay layer.
+   The overlay layer only shows with ?capture (html.reel). Fonts: General Sans + Geist Mono. */
+:root {
+  --paper: #ECE8E0;
+  --card: #FAF8F4;
+  --ink: #1D1B18;
+  --ink-2: #57524A;
+  --muted: #9A948A;
+  --hair: rgba(40, 32, 20, .10);
+  --hair-strong: rgba(40, 32, 20, .16);
+  --accent: #D9502B;
+  --code-bg: #1E1C19;
+  --sans: "General Sans", ui-sans-serif, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(1200px 900px at 50% 38%, rgba(255,255,255,.55), transparent 70%),
+    radial-gradient(900px 700px at 50% 110%, rgba(120,100,70,.10), transparent 70%);
+}
+.stage { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+
+.card {
+  position: relative;
+  background: linear-gradient(180deg, #FCFBF8 0%, var(--card) 100%);
+  border-radius: 36px;
+  border: 1px solid var(--hair);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 1px 1px rgba(40,30,15,.04),
+    0 6px 12px -4px rgba(40,30,15,.06),
+    0 30px 60px -20px rgba(40,30,15,.16),
+    0 70px 120px -40px rgba(40,30,15,.18);
+}
+
+/* ---------- reel overlays (capture mode only) ---------- */
+.hook, .handle, .chip, .end, .codecard, #cursor, .big, .tint { display: none; pointer-events: none; }
+.reel body { user-select: none; -webkit-user-select: none; }
+.reel .stage { width: 1080px; height: 1920px; display: block; }
+.reel .card { position: absolute; left: var(--card-left, 80px); top: var(--card-top, 640px); scale: var(--card-scale, 1.1); transform-origin: 0 0; }
+.reel .hook, .reel .handle, .reel .chip, .reel .end, .reel .codecard, .reel #cursor, .reel .big, .reel .tint { display: block; }
+
+.tint { position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(900px 1300px at 50% 46%, transparent 50%, rgba(150,95,50,.10) 100%), rgba(230,170,110,.035); }
+.handle {
+  position: absolute; left: 0; right: 0; top: 300px; text-align: center;
+  font-family: var(--mono); font-size: 30px; color: var(--muted); letter-spacing: .02em;
+}
+.handle b { font-weight: 500; color: var(--accent); }
+.hook {
+  position: absolute; left: 80px; right: 80px; top: 356px; text-align: center;
+  font-size: 96px; font-weight: 600; letter-spacing: -.035em; line-height: 1.02; color: var(--ink);
+  text-wrap: balance;
+}
+.hook em { font-style: normal; color: var(--accent); }
+.chip { position: absolute; left: 0; right: 0; top: var(--chip-top, 1400px); text-align: center; }
+.chip span {
+  display: inline-flex; align-items: center; gap: 14px;
+  font-family: var(--mono); font-size: 28px; color: var(--ink-2);
+  padding: 14px 26px; border-radius: 999px; border: 1px solid var(--hair-strong);
+  background: rgba(250,248,244,.7);
+}
+.chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+.chip b { font-weight: 400; }
+.big { position: absolute; left: 0; right: 0; top: var(--big-top, 1440px); text-align: center; opacity: 0;
+  font-family: var(--mono); font-weight: 300; font-size: 132px; letter-spacing: -.05em; color: var(--accent); line-height: 1; }
+.big small { font-size: 30px; letter-spacing: .02em; color: var(--ink-2); font-weight: 400; display: block; margin-top: 10px; }
+.end {
+  position: absolute; left: 120px; right: 120px; top: var(--end-top, 1160px); text-align: center; opacity: 0;
+  font-size: 42px; font-weight: 500; letter-spacing: -.02em; line-height: 1.25; color: var(--ink);
+}
+.end b { font-weight: 600; color: var(--accent); }
+.end span { color: var(--muted); }
+.codecard {
+  position: absolute; left: 70px; top: var(--code-top, 640px); width: 890px; opacity: 0;
+  background: var(--code-bg); color: #E9E4DA; border-radius: 36px;
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 40px 90px -30px rgba(30,20,10,.45), 0 10px 24px -8px rgba(30,20,10,.25);
+  padding: 44px 46px 50px;
+}
+.codecard .file { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 25px; color: #8C857A; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 30px; }
+.codecard pre { font-family: var(--mono); font-size: 30px; line-height: 1.7; white-space: pre; margin: 0 -18px; }
+.codecard .ln { display: block; padding: 0 18px; border-radius: 10px; transition: none; }
+.codecard .ln.on { background: rgba(255,255,255,.07); box-shadow: inset 4px 0 0 var(--accent); }
+.c { color: #A39C90; } .k { color: #E8A27F; } .n { color: #F2C66D; } .o { color: #9C958A; }
+.hl.on { color: #fff; background: rgba(217,80,43,.30); border-radius: 6px; padding: 0 4px; margin: 0 -4px; }
+
+#cursor { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 50; pointer-events: none; }
+#cursor .tip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  background: rgba(29,27,24,.16); border: 2.5px solid rgba(29,27,24,.62);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.75), 0 8px 18px rgba(30,20,10,.22); }
+#cursor.down .tip { transform: scale(.88); background: rgba(29,27,24,.26); border-color: rgba(29,27,24,.8); }
+#cursor .rip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  border: 3px solid var(--accent); opacity: 0; }
+</style>
+<style>
+  :root { --card-top: 630px; --chip-top: 1470px; --big-top: 1450px; --code-top: 640px; --end-top: 1180px; }
+  .card { width: 800px; height: 720px; }
+  .meta { position: absolute; left: 56px; right: 56px; top: 50px; display: flex; justify-content: space-between;
+          font-family: var(--mono); font-size: 23px; color: var(--muted); }
+  .meta b { font-weight: 400; color: var(--accent); }
+  .under { position: absolute; left: 160px; top: 118px; width: 480px; height: 480px; border-radius: 6px;
+           border: 2px dashed rgba(40,32,20,.12); display: grid; place-items: center; text-align: center; }
+  .under p { font-size: 34px; font-weight: 500; letter-spacing: -.02em; color: var(--ink-2); }
+  .under span { display: block; margin-top: 8px; font-family: var(--mono); font-size: 21px; color: var(--muted); }
+  .foot { position: absolute; left: 56px; right: 56px; bottom: 40px; display: flex; justify-content: space-between;
+          font-family: var(--mono); font-size: 22px; color: var(--muted); border-top: 1px solid var(--hair); padding-top: 20px; }
+  canvas.gl { position: absolute; left: -500px; top: -560px; width: 1600px; height: 1380px; touch-action: none; }
+  canvas#shadow { filter: blur(9px); pointer-events: none; }
+  canvas#note { pointer-events: none; }
+  .dismiss { position: absolute; left: 560px; top: 520px; width: 80px; height: 80px; opacity: 0; border: 0; padding: 0; background: none; cursor: grab; touch-action: none; }
+  .dismiss:focus-visible { opacity: 1; outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="tint" id="tint"></div>
+  <div class="handle"><b>Interaction #6</b> · @zellap.app</div>
+  <h1 class="hook">Peel it off to <em>dismiss.</em></h1>
+
+  <div class="card" id="card">
+    <div class="meta"><span>Team board · <b id="count">1 note</b></span><span>Mon 09.11</span></div>
+    <div class="under"><div><p>All caught up.</p><span>nothing pinned ✓</span></div></div>
+    <div class="foot"><span id="hint">peel from the corner ↘</span><span>dismissible notice</span></div>
+    <canvas class="gl" id="shadow" width="1760" height="1518"></canvas>
+    <canvas class="gl" id="note" width="1760" height="1518"></canvas>
+    <button class="dismiss" id="dismiss" aria-label="Dismiss note"></button>
+    <span class="sr" role="status" aria-live="polite" id="live"></span>
+  </div>
+
+  <div class="codecard" id="code">
+    <div class="file"><span>peel.glsl</span><span>every vertex, every frame</span></div>
+<pre><span class="ln"><span class="k">float</span> s <span class="o">=</span> dot(p <span class="o">-</span> fold, dir); <span class="c">// past fold?</span></span><span class="ln"><span class="k">if</span> (s <span class="o">&gt;</span> <span class="n">0.</span>) { <span class="k">float</span> a <span class="o">=</span> <span class="hl">s <span class="o">/</span> R</span>;  <span class="c">// wrap</span></span><span class="ln">  p <span class="o">-=</span> dir <span class="o">*</span> (s <span class="o">-</span> R <span class="o">*</span> <span class="k">sin</span>(a));</span><span class="ln">  z <span class="o">=</span> R <span class="o">*</span> (<span class="n">1.</span> <span class="o">-</span> <span class="k">cos</span>(a)); }  <span class="c">// lift</span></span><span class="ln"><span class="c">// the fold sits halfway to your finger:</span></span><span class="ln">fold <span class="o">=</span> corner <span class="o">-</span> dir <span class="o">*</span> <span class="hl">(dist <span class="o">+</span> PI <span class="o">*</span> R) <span class="o">/</span> <span class="n">2.</span></span>;</span></pre>
+  </div>
+
+  <div class="chip" id="chip"><span><i></i><b id="chipText">1× real time</b></span></div>
+  <div class="big" id="big">0.5×<small>slow motion</small></div>
+  <p class="end" id="end">Comment <b>CODE</b> for the source.<br><span>Follow for more.</span></p>
+  <div id="cursor"><div class="tip"></div></div>
+</div>
+
+<script>/* inlined from ../_shared/reel.js */
+// Shared runtime for "Interaction #N" pages.
+// Normal use: a fixed-step rAF loop drives the component (stable at any refresh rate).
+// ?capture: the recorder drives time frame by frame via __tick(dt), and the overlay via __overlay(o).
+window.Reel = function ({ step, render, DT = 1 / 1440, geom = () => ({}) }) {
+  const CAPTURE = new URLSearchParams(location.search).has('capture');
+  if (CAPTURE) document.documentElement.classList.add('reel');
+  const $ = id => document.getElementById(id);
+  const advance = seconds => {           // whole fixed steps only, so the sim never depends on frame timing
+    const n = Math.round(seconds / DT);
+    for (let i = 0; i < n; i++) step(DT);
+  };
+  render();
+  if (!CAPTURE) {
+    let last = performance.now(), acc = 0;
+    const frame = now => {
+      acc += Math.min(0.05, (now - last) / 1000); last = now;
+      while (acc >= DT) { step(DT); acc -= DT; }
+      render(); requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    return CAPTURE;
+  }
+  const cur = $('cursor');
+  cur.style.transform = 'translate(-200px,-200px)';
+  // a press ring that grows out of the fingertip, on simulated time (so it slows down in slow motion too)
+  const rip = document.createElement('i'); rip.className = 'rip'; cur.appendChild(rip);
+  let ripT = 9;
+  addEventListener('pointerdown', () => { cur.classList.add('down'); ripT = 0; }, true);
+  addEventListener('pointerup', () => cur.classList.remove('down'), true);
+  const drawRip = () => {
+    const u = Math.min(1, ripT / 0.45), e = 1 - (1 - u) ** 3;
+    rip.style.transform = `scale(${(0.9 + 0.9 * e).toFixed(4)})`;
+    rip.style.opacity = (u < 1 ? 0.55 * (1 - u) : 0).toFixed(3);
+  };
+  drawRip();
+  window.__tick = sec => { advance(sec); ripT += sec; drawRip(); render(); };
+  window.__geom = geom;
+  window.__overlay = o => {
+    // sequential, never two text layers at once: card out, then code in (and back)
+    const card = $('card'), code = $('code');
+    card.style.opacity = o.card;
+    card.style.transform = `translateY(${(1 - o.card) * -18}px)`;
+    code.style.opacity = o.code;
+    code.style.transform = `translateY(${(1 - o.code) * 22}px)`;
+    $('chip').style.opacity = o.chipA ?? o.card * (1 - o.big);
+    $('end').style.opacity = o.code;
+    $('big').style.opacity = o.big; $('big').style.transform = `scale(${0.94 + 0.06 * o.big})`;
+    $('tint').style.opacity = o.tint;
+    document.querySelectorAll('.hl').forEach(el => el.classList.toggle('on', !!o.hl));
+    document.querySelectorAll('#code .ln').forEach((el, i) => el.classList.toggle('on', i === o.line));
+    cur.style.opacity = o.cursor ?? o.card;
+    $('chipText').textContent = o.chip;
+    if (o.cx !== undefined) cur.style.transform = `translate(${o.cx}px, ${o.cy}px)`;
+  };
+  return CAPTURE;
+};
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const card = $('card');
+  const NX = 160, NY = 118, W = 480, H = 480, R0 = 42;            // note placement and curl radius (card units)
+  const CAN = [-500, -560, 1600, 1380];                             // canvas rect in card units
+  const CAM = [400, 360, 2400];                                     // perspective centre + distance
+  const FLY_F = 190, FLY_T = 0.5, LAND = 0.34;
+  const NOTES = [
+    { bg: [246, 216, 107], title: 'Deploy freeze', body: ['Fridays from 18:00.', 'Ship before lunch.'], tag: 'ops' },
+    { bg: [245, 196, 158], title: 'Standup moved', body: ['10:15 tomorrow,', 'room Fjord.'], tag: 'team' },
+  ];
+
+  // ---------- WebGL: one paper mesh, drawn twice (note + flattened shadow) ----------
+  const VS = `
+    attribute vec2 a_uv;
+    uniform vec2 u_size, u_d, u_C, u_pivot; uniform float u_f, u_R, u_lift, u_shadow;
+    uniform vec3 u_rot, u_pos, u_cam; uniform vec4 u_can;
+    varying vec2 v_uv; varying vec3 v_n;
+    void main() {
+      vec2 p = a_uv * u_size;
+      float z = u_lift * pow(a_uv.y, 3.0);                 // a real note lifts a little at the free edge
+      vec3 n = vec3(0.0, 0.0, 1.0);
+      if (u_f > 0.0) {
+        vec2 L0 = u_C - u_d * u_f;
+        float s = dot(p - L0, u_d);
+        if (s > 0.0) {
+          vec2 base = p - u_d * s;
+          float th = s / u_R;
+          if (th < 3.14159265) { p = base + u_d * (u_R * sin(th)); z += u_R * (1.0 - cos(th)); n = vec3(-u_d * sin(th), cos(th)); }
+          else { p = base - u_d * (s - 3.14159265 * u_R); z += 2.0 * u_R; n = vec3(0.0, 0.0, -1.0); }
+        }
+      }
+      vec3 P = vec3(p - u_pivot, z);
+      float cx = cos(u_rot.x), sx = sin(u_rot.x), cy = cos(u_rot.y), sy = sin(u_rot.y), cz = cos(u_rot.z), sz = sin(u_rot.z);
+      mat3 Rx = mat3(1., 0., 0., 0., cx, sx, 0., -sx, cx);
+      mat3 Ry = mat3(cy, 0., -sy, 0., 1., 0., sy, 0., cy);
+      mat3 Rz = mat3(cz, sz, 0., -sz, cz, 0., 0., 0., 1.);
+      mat3 M = Rz * Ry * Rx;
+      P = M * P + u_pos; n = M * n;
+      vec2 sp; float zc;
+      if (u_shadow > 0.5) { sp = P.xy + vec2(0.22, 0.42) * P.z + vec2(2.0, 5.0); zc = 0.0; }
+      else { float k = u_cam.z / (u_cam.z - P.z); sp = u_cam.xy + (P.xy - u_cam.xy) * k; zc = -P.z / 3000.0; }
+      gl_Position = vec4((sp.x - u_can.x) / u_can.z * 2.0 - 1.0, 1.0 - (sp.y - u_can.y) / u_can.w * 2.0, zc, 1.0);
+      v_uv = a_uv; v_n = n;
+    }`;
+  const FS = `
+    precision highp float;
+    uniform sampler2D u_tex; uniform float u_shadow, u_alpha; uniform vec3 u_back;
+    varying vec2 v_uv; varying vec3 v_n;
+    void main() {
+      if (u_shadow > 0.5) { gl_FragColor = vec4(0.16, 0.10, 0.04, 1.0) * u_alpha; return; }
+      vec3 N = normalize(v_n);
+      bool front = gl_FrontFacing;
+      vec3 Nf = front ? N : -N;
+      vec3 L = normalize(vec3(-0.35, -0.55, 1.0));
+      float lit = 0.70 + 0.36 * max(dot(Nf, L), 0.0);
+      vec4 t = texture2D(u_tex, v_uv);
+      vec3 c = front ? t.rgb : u_back * (0.97 + 0.03 * fract(sin(dot(v_uv, vec2(91.7, 47.3))) * 4375.5));   // plain paper back
+      gl_FragColor = vec4(c * lit, 1.0);
+    }`;
+  function renderer(canvas, shadow) {
+    const gl = canvas.getContext('webgl', { premultipliedAlpha: true, alpha: true, antialias: true, preserveDrawingBuffer: true });
+    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw gl.getShaderInfoLog(s); return s; };
+    const pr = gl.createProgram();
+    gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr); if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw gl.getProgramInfoLog(pr); gl.useProgram(pr);
+    const N = 44, uv = [], idx = [];
+    for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) uv.push(i / N, j / N);
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const a = j * (N + 1) + i, b = a + 1, c = a + N + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uv), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(pr, 'a_uv'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const U = n => gl.getUniformLocation(pr, n);
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.uniform2f(U('u_size'), W, H); gl.uniform2f(U('u_C'), W, H); gl.uniform2f(U('u_pivot'), W / 2, H / 2);
+    gl.uniform3f(U('u_cam'), ...CAM); gl.uniform4f(U('u_can'), ...CAN); gl.uniform1f(U('u_shadow'), shadow ? 1 : 0);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    if (!shadow) gl.enable(gl.DEPTH_TEST);
+    return {
+      texture(img) { if (shadow) return; gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img); },
+      draw(st) {
+        gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        if (!st.visible) return;
+        gl.uniform2f(U('u_d'), st.d[0], st.d[1]); gl.uniform1f(U('u_f'), st.f); gl.uniform1f(U('u_R'), st.R); gl.uniform1f(U('u_lift'), st.lift);
+        gl.uniform3f(U('u_rot'), ...st.rot); gl.uniform3f(U('u_pos'), ...st.pos);
+        gl.uniform1f(U('u_alpha'), st.shadowA); gl.uniform3f(U('u_back'), ...st.back);
+        gl.drawElements(gl.TRIANGLES, idx.length, gl.UNSIGNED_SHORT, 0);
+      },
+    };
+  }
+  const glNote = renderer($('note'), false), glShadow = renderer($('shadow'), true);
+
+  // the note face, drawn once per note into a texture
+  const face = document.createElement('canvas'); face.width = face.height = 1024;
+  function paint(i) {
+    const n = NOTES[i % 2], c = face.getContext('2d'), k = 1024 / W, [r, g, b] = n.bg;
+    c.setTransform(k, 0, 0, k, 0, 0);
+    const gr = c.createLinearGradient(0, 0, W * 0.3, H);
+    gr.addColorStop(0, `rgb(${r + 6},${g + 8},${b + 10})`); gr.addColorStop(1, `rgb(${r - 6},${g - 10},${b - 8})`);
+    c.fillStyle = gr; c.fillRect(0, 0, W, H);
+    c.fillStyle = 'rgba(120,80,0,.06)'; c.fillRect(0, 0, W, 64);           // the glue strip
+    c.fillStyle = 'rgba(255,255,255,.18)'; c.fillRect(0, 62, W, 2);
+    c.fillStyle = 'rgba(40,25,5,.55)'; c.font = '400 19px "Geist Mono"'; c.fillText('#' + n.tag, 40, 40);
+    c.fillStyle = '#2A2014'; c.font = '600 52px "General Sans"'; c.fillText(n.title, 40, 150);
+    c.font = '400 32px "General Sans"'; c.fillStyle = 'rgba(42,32,20,.82)';
+    n.body.forEach((l, j) => c.fillText(l, 40, 218 + j * 46));
+    c.strokeStyle = 'rgba(42,32,20,.35)'; c.lineWidth = 2;                  // a hand-drawn underline
+    c.beginPath(); c.moveTo(40, 168); c.bezierCurveTo(140, 162, 260, 172, 360, 164); c.stroke();
+    c.fillStyle = 'rgba(42,32,20,.45)'; c.font = '400 19px "Geist Mono"'; c.textAlign = 'right'; c.fillText('peel ↘', W - 34, H - 30); c.textAlign = 'left';
+    glNote.texture(face);
+  }
+
+  // ---------- state ----------
+  let d0 = 0, R1 = R0, i = 0, state, f, fV, d, R, lift, liftV, pos, vel, rot, rotV, t, drag = null;
+  const rest = () => [NX + W / 2, NY + H / 2, 0];
+  function fresh() {
+    state = 'stuck'; f = 0; fV = 0; d = [Math.SQRT1_2, Math.SQRT1_2]; R = R0; lift = 7; liftV = 0;
+    pos = rest(); vel = [0, 0, 0]; rot = [0, 0, 0]; rotV = 0; t = 0;
+  }
+  fresh(); paint(0);
+  document.fonts.ready.then(() => paint(i));
+
+  // ---------- input ----------
+  const local = e => { const r = card.getBoundingClientRect(), k = 800 / r.width; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k]; };
+  const hit = $('dismiss');
+  hit.addEventListener('pointerdown', e => {
+    if (state !== 'stuck') return;
+    e.preventDefault(); hit.setPointerCapture(e.pointerId);
+    const [x, y] = local(e);
+    drag = { off: [NX + W - x, NY + H - y], x, y, hist: [] };
+    state = 'peel';
+  });
+  hit.addEventListener('pointermove', e => { if (drag) [drag.x, drag.y] = local(e); });
+  function release() {
+    if (!drag) return;
+    const h = drag.hist, n = h[h.length - 1], o = h.find(s => n.t - s.t <= 0.06) || h[0];
+    const dt = Math.max(1e-3, n.t - o.t), v = [(n.x - o.x) / dt, (n.y - o.y) / dt];
+    drag = null;
+    if (f > FLY_F || Math.hypot(...v) > 2400) fly(v);
+    else state = 'back';
+  }
+  hit.addEventListener('pointerup', release);
+  hit.addEventListener('pointercancel', release);
+  hit.addEventListener('click', e => { if (e.detail === 0 && state === 'stuck') { f = FLY_F; fly([-900, -700]); } });   // keyboard
+  function fly(v) {
+    state = 'fly'; t = 0;
+    vel = [v[0] * 0.35 + 400, v[1] * 0.35 - 150, 320]; d0 = Math.atan2(d[1], d[0]); R1 = R;
+    rotV = -1.6 * Math.sign(v[0] || -1);
+    $('live').textContent = 'Note dismissed';
+  }
+
+  // ---------- simulation ----------
+  let simT = 0;
+  function step(dt) {
+    simT += dt; t += dt;
+    if (state === 'peel' && drag) {
+      const P = [drag.x + drag.off[0] - NX, drag.y + drag.off[1] - NY];   // where the corner is now (note coords)
+      const v = [W - P[0], H - P[1]], dist = Math.hypot(...v);
+      if (dist > 1) { d = [v[0] / dist, v[1] / dist]; f = (dist + Math.PI * R) / 2; } else f = 0;
+      f = Math.min(f, 560);
+      drag.hist.push({ t: simT, x: drag.x, y: drag.y }); if (drag.hist.length > 300) drag.hist.shift();
+    } else if (state === 'back') {                     // not far enough: it slaps back down
+      fV += -f * 900 * dt; fV *= 0.99; f += fV * dt;
+      if (f <= 0) { f = 0; fV = 0; liftV += 160; state = 'stuck'; }
+    } else if (state === 'fly') {                      // it lets go: curls tighter, flutters up and out
+      // the paper keeps working in the air: the curl rolls on, breathes and the fold line swings
+      f += (Math.min(900, f + 420) - f) * (1 - Math.exp(-dt / 0.5));
+      R1 += (20 - R1) * (1 - Math.exp(-dt / 0.5));
+      const flap = Math.exp(-t * 2.4) * Math.min(1, t * 8);
+      R = R1 + 11 * Math.sin(t * 13) * flap;
+      const a = d0 + 0.32 * Math.sin(t * 10 + 0.6) * flap; d = [Math.cos(a), Math.sin(a)];
+      vel[0] += 5000 * dt; vel[1] += -1100 * dt;
+      vel[2] *= Math.exp(-dt * 2.2);
+      for (let k = 0; k < 3; k++) pos[k] += vel[k] * dt;
+      rot = [0.55 * Math.sin(t * 9.5) * Math.min(1, t * 3), 0.4 * Math.sin(t * 7 + 1) * Math.min(1, t * 3), rot[2] + rotV * dt];
+      if (t >= FLY_T) { state = 'empty'; t = 0; }
+    } else if (state === 'empty' && t >= 0.06) {
+      i++; fresh(); paint(i); state = 'land'; t = 0;
+    } else if (state === 'land') {                     // the next note drops on and slaps flat
+      const u = Math.min(1, t / LAND);
+      const e = 1 - u * u; pos[1] = NY + H / 2 - 170 * e; pos[2] = 170 * e; rot[2] = -0.08 * e;
+      if (u >= 1) { pos[2] = 0; rot[2] = 0; state = 'stuck'; liftV += 260; }
+    }
+    if (reduce.matches && state === 'fly') { state = 'empty'; t = 0; }
+    liftV += (7 - lift) * 1500 * dt; liftV *= 0.993; lift += liftV * dt;
+  }
+
+  // ---------- render ----------
+  function render() {
+    const back = NOTES[i % 2].bg.map(v => v / 255 * 0.86);
+    const landA = state === 'land' ? Math.min(1, t / LAND) : 1;
+    const st = {
+      visible: state !== 'empty', d, f, R, lift, rot, pos, back,
+      shadowA: (state === 'fly' ? Math.max(0, 0.3 * (1 - t / 0.7)) : 0.3 * (0.35 + 0.65 * landA)),
+    };
+    glNote.draw(st); glShadow.draw(st);
+    const gone = state === 'fly' || state === 'empty';
+    $('count').textContent = gone ? '0 notes' : '1 note'; $('count').style.color = gone ? 'var(--muted)' : '';
+    $('hint').textContent = state === 'peel' ? (f > FLY_F ? 'let go to dismiss' : 'keep pulling…') : state === 'stuck' ? 'peel from the corner ↘' : 'dismissed';
+  }
+
+  Reel({
+    step, render,
+    geom: () => {
+      const r = card.getBoundingClientRect(), k = r.width / 800;
+      return { left: r.left, top: r.top, k, cx: NX + W, cy: NY + H };
+    },
+  });
+})();
+</script>
+</body>
+</html>

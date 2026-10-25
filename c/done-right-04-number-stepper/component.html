@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Number stepper · Done right #4 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 520px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-card { background: #FFFFFF; border: 1px solid rgba(40, 32, 20, .12); border-radius: 24px; padding: 32px; box-shadow: 0 24px 50px -28px rgba(40, 32, 20, .28); }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+
+  .stepper { display: grid; gap: 6px; width: max-content; color: #1D1B18; }
+  .stepper > label { font-weight: 600; font-size: 1.0625rem; }
+
+  .stepper-field {
+    display: grid;
+    grid-template-columns: 48px 64px 48px;
+    height: 52px;
+    border: 1.5px solid #857E73;   /* 4.0:1 on white */
+    border-radius: 14px;
+    background: #FFFFFF;
+    overflow: hidden;
+  }
+  /* One focus ring around the whole field, keyboard only. */
+  .stepper-field:has(.stepper-input:focus-visible) {
+    border-color: #1D1B18;
+    outline: 2.5px solid #1D1B18;
+    outline-offset: 2px;
+  }
+  .stepper-field:has([aria-invalid="true"]) { border-color: #B3261E; }
+
+  .stepper-input {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 1.25rem;
+    font-weight: 600;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .stepper-input:focus { outline: none; }
+
+  .stepper-btn {
+    display: grid;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    color: #1D1B18;
+    cursor: pointer;
+  }
+  .stepper-btn svg { width: 18px; height: 18px; }
+  .stepper-btn:enabled:hover { background: #F2EFEA; }
+  .stepper-btn:disabled { color: #B5AEA3; cursor: not-allowed; }
+
+  .stepper-hint { margin: 0; font-size: .875rem; color: #5A544B; }
+  .stepper-error {
+    display: flex; align-items: center; gap: .5rem;
+    margin: 0; font-size: .875rem; font-weight: 500; color: #B3261E;
+  }
+  .stepper-error[hidden] { display: none; }
+  .stepper-error::before {
+    content: "!"; flex: none; display: grid; place-items: center;
+    width: 1.125rem; height: 1.125rem; border-radius: 50%;
+    background: #B3261E; color: #FFFFFF; font-weight: 700; font-size: .75rem;
+  }
+
+  .stepper:has(.stepper-input:disabled) { opacity: .45; }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #4 · @zellap.app</p>
+  <h1>Number stepper</h1>
+  <p class="demo-lede">A text input with the spinbutton role, real limits, and buttons that never steal focus. Type, use the arrow keys, or tap.</p>
+
+  <div class="demo-card">
+    <div class="stepper">
+      <label for="qty">Tickets</label>
+      <div class="stepper-field">
+        <button class="stepper-btn" type="button" data-step="-1"
+                tabindex="-1" aria-controls="qty"
+                aria-label="One ticket less">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </button>
+        <input class="stepper-input" id="qty" value="2"
+               type="text" inputmode="numeric"
+               role="spinbutton" autocomplete="off"
+               aria-valuemin="1" aria-valuemax="10"
+               aria-valuenow="2" data-unit="ticket"
+               aria-describedby="qty-hint qty-error">
+        <button class="stepper-btn" type="button" data-step="1"
+                tabindex="-1" aria-controls="qty"
+                aria-label="One ticket more">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <p class="stepper-hint" id="qty-hint">1 to 10 per order</p>
+      <p class="stepper-error" id="qty-error" hidden></p>
+      <span class="stepper-live sr-only" aria-live="polite"></span>
+    </div>
+  </div>
+
+  <p class="demo-notes">Arrow Up/Down: one. Page Up/Down: five. Home/End: the limits.<br>Type 12 or "abc" to see the error state.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  for (const stepper of document.querySelectorAll('.stepper')) {
+    const input = stepper.querySelector('[role="spinbutton"]');
+    const [less, more] = stepper.querySelectorAll('.stepper-btn');
+    const error = stepper.querySelector('.stepper-error');
+    const live = stepper.querySelector('.stepper-live');
+    const min = Number(input.getAttribute('aria-valuemin'));
+    const max = Number(input.getAttribute('aria-valuemax'));
+    const unit = input.dataset.unit;
+    const say = (n) => `${n} ${unit}${n === 1 ? '' : 's'}`;
+    const now = () => Number(input.getAttribute('aria-valuenow'));
+
+    const showError = (message) => {
+      error.textContent = message;
+      error.hidden = !message;
+      input.setAttribute('aria-invalid', message ? 'true' : 'false');
+    };
+
+    const set = (n, announce = false) => {
+      n = Math.min(max, Math.max(min, n));
+      input.value = n;
+      input.setAttribute('aria-valuenow', n);
+      input.setAttribute('aria-valuetext', say(n));
+      less.disabled = input.disabled || n <= min;
+      more.disabled = input.disabled || n >= max;
+      showError('');
+      if (announce) live.textContent = say(n);
+    };
+
+    const steps = {
+      ArrowUp: 1, ArrowDown: -1, PageUp: 5, PageDown: -5,
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key in steps) set(now() + steps[e.key]);
+      else if (e.key === 'Home') set(min);
+      else if (e.key === 'End') set(max);
+      else return;
+      e.preventDefault();
+    });
+
+    // Typing is allowed. Wrong input gets a message, not a silent fix.
+    input.addEventListener('input', () => {
+      const text = input.value.trim();
+      const n = Number(text);
+      if (!/^\d+$/.test(text)) showError(`Enter a number from ${min} to ${max}.`);
+      else if (n > max) showError(`Max ${max} per order.`);
+      else if (n < min) showError(`At least ${min}.`);
+      else set(n);
+    });
+
+    for (const btn of [less, more]) {
+      // Keep focus where it is, then step and announce.
+      btn.onmousedown = (e) => e.preventDefault();
+      btn.addEventListener('click', () => {
+        set(now() + Number(btn.dataset.step), true);
+      });
+    }
+
+    set(now());
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cancel Plan</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<style>/* inlined from ../_kit/reel.css */
+/* Shared shell for the Cursed UI pages: palette, backdrop, hook/outro, reel canvas, cursor. */
+:root{
+  --bg:#f3f2ee; --ink:#121214; --ink-2:#5f5f66; --ink-3:#8d8c92;
+  --line:rgba(18,18,20,.085); --line-2:#e6e3dc;
+  --gold-1:#ffd772; --gold-2:#f2a43a; --gold-ink:#a8681a;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Satoshi",ui-sans-serif,sans-serif; -webkit-font-smoothing:antialiased;
+  overflow:hidden; -webkit-user-select:none; user-select:none;
+}
+.backdrop{position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(60% 45% at 50% 46%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bg),var(--bg));
+}
+.backdrop::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(18,18,20,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(18,18,20,.045) 1px,transparent 1px);
+  background-size:28px 28px; background-position:center;
+  -webkit-mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+          mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+}
+.stage{position:relative;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
+
+.tag{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 9px;border-radius:99px;
+  background:#fff;border:1px solid var(--line);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);
+  box-shadow:0 4px 10px -6px rgba(40,34,20,.18)}
+.tag i,.outro i{display:block;width:7px;height:7px;border-radius:50%;background:linear-gradient(var(--gold-1),var(--gold-2))}
+.hook{font-weight:900;font-size:27px;line-height:1.12;letter-spacing:-.025em;text-align:center;max-width:430px;text-wrap:balance}
+.handle{display:block;margin-top:10px;font-weight:500;font-size:12.5px;letter-spacing:.01em;color:var(--ink-3)}
+.outro{font-weight:900;font-size:30px;letter-spacing:-.025em;color:var(--ink);opacity:0;text-align:center}
+.outro span{display:inline-flex;align-items:center;gap:10px}
+.outro i{width:14px;height:14px}
+.outro b{display:inline-block;font-weight:900;background:var(--ink);color:#fff;border-radius:10px;padding:1px 10px 3px;margin:0 1px;letter-spacing:.01em}
+.outro small{display:block;margin-top:14px;font-weight:700;font-size:19px;letter-spacing:-.01em;color:#34343a}
+.outro small em{font-style:normal;font-weight:500;color:var(--ink-2)}
+
+.card{position:relative;width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:30px;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 40px 70px -32px rgba(40,34,20,.22),0 10px 24px -12px rgba(0,0,0,.08);
+}
+.app{display:flex;align-items:center;gap:12px}
+.icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.x{margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-3)}
+
+/* reel mode: fixed 540x960 phone canvas (recorded at 2x = 1080x1920) */
+body.reel .stage{display:block;width:540px;height:960px;margin:0 auto;padding:0}
+body.reel .tag{position:absolute;top:154px;left:50%;transform:translateX(-50%)}
+body.reel .hook{position:absolute;top:198px;left:50%;transform:translateX(-50%);width:450px;font-size:30px}
+body.reel .card{position:absolute;top:318px;left:60px}
+body.reel .outro{position:absolute;top:192px;left:0;right:0;font-size:25px}
+body:not(.reel) .outro{display:none}
+body.reel, body.reel *{cursor:none !important}
+#cursor{position:fixed;left:0;top:0;width:0;height:0;z-index:99;pointer-events:none;display:none}
+body.reel #cursor{display:block}
+#cursor svg{position:absolute;left:0;top:0;overflow:visible;filter:drop-shadow(0 3px 5px rgba(0,0,0,.25))}
+#ring{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;border:2px solid rgba(18,18,20,.5);opacity:0}
+</style>
+<style>
+  .card{height:455px;isolation:isolate}
+  .form{position:absolute;inset:0;padding:26px 28px}
+  h1{margin-top:22px;font-weight:700;font-size:28px;letter-spacing:-.025em;line-height:1.1}
+  .plan{margin-top:18px;border:1px solid var(--line-2);border-radius:18px;padding:15px 16px 14px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:2px 12px;
+    background:linear-gradient(180deg,#fff,#fbfaf7)}
+  .badge{grid-row:span 2;width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-weight:900;font-size:13px;color:#7a4c10;
+    background:linear-gradient(160deg,#ffe3a3,#f6b552);box-shadow:inset 0 0 0 1px rgba(168,104,26,.18)}
+  .plan b{font-weight:700;font-size:17px;letter-spacing:-.015em}
+  .plan .price{grid-row:span 2;text-align:right;font-weight:700;font-size:22px;letter-spacing:-.02em}
+  .plan .price small{font-size:13px;color:var(--ink-3);font-weight:500;letter-spacing:0}
+  .plan span{font-size:13px;color:var(--ink-3);font-weight:500}
+  .feats{list-style:none;padding:0;margin-top:12px}
+  .feats li{display:flex;align-items:center;gap:10px;height:30px;font-size:14.5px;font-weight:500;color:var(--ink-2)}
+  .feats li+li{border-top:1px solid var(--line)}
+  .feats svg{flex:none}
+  .actions{position:absolute;left:28px;right:28px;top:343px;height:0}
+  .keep{position:absolute;left:0;right:0;top:0;height:52px;border:0;border-radius:14px;background:var(--ink);color:#fff;z-index:2;
+    font:700 15px "Satoshi",sans-serif;letter-spacing:-.01em;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    box-shadow:0 1px 0 rgba(255,255,255,.15) inset,0 8px 18px -10px rgba(0,0,0,.6);will-change:transform}
+  .keep .shine{position:absolute;left:12%;right:12%;top:7px;height:38%;border-radius:999px;background:linear-gradient(rgba(255,255,255,.07),rgba(255,255,255,0));opacity:0;pointer-events:none}
+  .keep em{display:block;font-style:normal;font-weight:500;font-size:.42em;letter-spacing:0;color:rgba(255,255,255,.62);height:0;opacity:0;overflow:hidden}
+  .cancel{position:absolute;left:50%;top:66px;white-space:nowrap;border:0;background:none;padding:2px 6px;cursor:pointer;
+    font:500 16px "Satoshi",sans-serif;color:var(--ink-2);text-decoration:underline;text-decoration-color:rgba(18,18,20,.3);text-underline-offset:3px;transform-origin:50% 0}
+
+  .done{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px;opacity:0;pointer-events:none}
+  .done .ok{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(160deg,#ffe3a3,#f6b552);box-shadow:0 10px 22px -10px rgba(242,164,58,.7);margin-bottom:20px}
+  .done h2{font-weight:700;font-size:31px;letter-spacing:-.025em;line-height:1.1}
+  .done p{margin-top:8px;font-size:16px;color:var(--ink-2);font-weight:500}
+  .stats{display:flex;margin-top:24px;border:1px solid var(--line-2);border-radius:16px;overflow:hidden}
+  .stats div{padding:13px 20px 11px;text-align:left}
+  .stats div+div{border-left:1px solid var(--line-2)}
+  .stats small{display:block;font-size:13px;color:var(--ink-2);font-weight:500;letter-spacing:.02em;text-transform:uppercase}
+  .stats strong{display:block;font-size:36px;line-height:1.1;font-weight:700;letter-spacing:-.02em;margin-top:2px}
+  .again{margin-top:18px;border:0;background:none;font:500 13.5px "Satoshi",sans-serif;color:var(--ink-3);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+  body.reel .again{display:none}
+</style>
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="stage">
+  <div class="tag"><i></i>Cursed UI #2</div>
+  <header class="hook">Cancelling takes one click.<span class="handle">@zellap.app</span></header>
+
+  <main class="card" id="card">
+    <section class="form" id="form">
+      <div class="app">
+        <div class="icon" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="5.2" fill="#fff"/><ellipse cx="13" cy="13" rx="11" ry="4.6" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.4" transform="rotate(-24 13 13)"/><circle cx="22.6" cy="8.6" r="2" fill="#f2a43a"/></svg>
+        </div>
+        <div><b>Orbit</b><span>Billing &middot; Subscription</span></div>
+        <div class="x" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+      </div>
+      <h1>Your plan</h1>
+      <div class="plan">
+        <div class="badge">PRO</div>
+        <b>Orbit Pro</b>
+        <div class="price">$24<small> /mo</small></div>
+        <span>Renews on Nov 28</span>
+      </div>
+      <ul class="feats">
+        <li><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#f4efe4"/><path d="M4.8 8.2l2.1 2.1 4.3-4.4" fill="none" stroke="#a8681a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Unlimited projects</li>
+        <li><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#f4efe4"/><path d="M4.8 8.2l2.1 2.1 4.3-4.4" fill="none" stroke="#a8681a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Custom domains</li>
+        <li><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#f4efe4"/><path d="M4.8 8.2l2.1 2.1 4.3-4.4" fill="none" stroke="#a8681a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Priority support</li>
+      </ul>
+      <div class="actions" id="actions">
+        <button class="keep" id="keep"><span class="shine"></span><span id="keepLabel">Keep my plan</span><em id="keepSub">and every feature you love</em></button>
+        <button class="cancel" id="cancel">Cancel plan</button>
+      </div>
+    </section>
+
+    <section class="done" id="done" aria-live="polite">
+      <div class="ok"><svg width="28" height="28" viewBox="0 0 28 28"><path d="M7 14.5l4.6 4.6L21.5 9" fill="none" stroke="#7a4c10" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h2>You're staying on Pro!</h2>
+      <p>Great choice. We knew you would.</p>
+      <div class="stats">
+        <div><small>Plans cancelled</small><strong>0</strong></div>
+        <div><small>Clicks to cancel</small><strong id="clicks">&infin;</strong></div>
+      </div>
+      <button class="again" id="again">Back to billing</button>
+    </section>
+  </main>
+
+  <footer class="outro" id="outro"><span><i></i>Comment <b>CODE</b> for the source</span><small>Follow for more cursed UI <em>&middot; @zellap.app</em></small></footer>
+</div>
+
+<script>/* inlined from ../_kit/reel.js */
+/* Shared runtime for the Cursed UI pages.
+   - a simulation clock (K.now, ms) advanced by K.tick(ms): rAF in the browser, stepped by the recorder (?manual)
+   - tweens, easing, the hook <-> outro swap (window.__outro), and the reel cursor driven by real pointer events */
+window.ReelKit = function (opts) {
+  const qs = new URLSearchParams(location.search);
+  const REEL = qs.has('reel'), MANUAL = qs.has('manual');
+  if (REEL) document.body.classList.add('reel');
+
+  const K = { REEL, MANUAL, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  /* critically-ish damped spring step: z = damping ratio */
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+
+  /* ---------- cursor ---------- */
+  document.body.insertAdjacentHTML('beforeend', `<div id="cursor">
+    <div id="ring"></div>
+    <svg id="c-arrow" width="26" height="34" viewBox="0 0 26 34"><path d="M2 2 L2 26 L8.2 20.4 L12.4 30.4 L16.6 28.6 L12.5 18.9 L20.8 18.6 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg id="c-hand" width="30" height="34" viewBox="0 0 30 34" style="display:none;left:-9px;top:-2px"><path d="M10 15V5.2a2.6 2.6 0 0 1 5.2 0V13 M15.2 12.6a2.5 2.5 0 0 1 5 0v1.8 M20.2 13.6a2.5 2.5 0 0 1 5 0v6.2c0 6.6-4 11.2-10 11.2-4.6 0-6.7-2.2-9.4-6.5L3 19.6a2.5 2.5 0 0 1 4.2-2.7L10 20.8V15" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg id="c-grab" width="30" height="30" viewBox="0 0 30 30" style="display:none;left:-15px;top:-13px"><path d="M8.2 11.4a2.4 2.4 0 0 1 4.8 0v-1a2.4 2.4 0 0 1 4.8 0v1a2.4 2.4 0 0 1 4.8 0v1.4a2.4 2.4 0 0 1 4.6.9v4.8c0 5.6-3.8 9.4-9.4 9.4-4.2 0-6.4-1.8-8.6-5.2l-2.4-3.8a2.3 2.3 0 0 1 3.4-3z M13 11.4v4 M17.8 11.4v4 M22.6 12.8v3" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  </div>`);
+  const $ = id => document.getElementById(id);
+  const cur = $('cursor'), ring = $('ring'), shapes = { arrow: $('c-arrow'), hand: $('c-hand'), grab: $('c-grab') };
+  let curScale = 1;
+  function moveCursor() {
+    if (!REEL) return;
+    const el = document.elementFromPoint(K.px, K.py);
+    const kind = (opts.cursorKind && opts.cursorKind(el)) || 'arrow';
+    for (const k in shapes) shapes[k].style.display = k === kind ? '' : 'none';
+    cur.style.transform = `translate(${K.px}px,${K.py}px) scale(${curScale})`;
+  }
+  K.moveCursor = moveCursor;
+  window.addEventListener('pointermove', e => { K.px = e.clientX; K.py = e.clientY; moveCursor(); });
+  window.addEventListener('pointerleave', () => { K.px = K.py = -999; });
+  window.addEventListener('pointerdown', () => {
+    K.down = true;
+    if (!REEL) return;
+    K.tween(90, p => { curScale = 1 - .14 * p; moveCursor(); });
+    K.tween(300, p => { curScale = .86 + .14 * p; moveCursor(); }, K.ease.back, 120);
+    K.tween(480, p => { ring.style.opacity = (1 - p) * .9; ring.style.transform = `scale(${.4 + p * 1.1})`; });
+  });
+  window.addEventListener('pointerup', () => { K.down = false; moveCursor(); });
+
+  /* ---------- hook <-> outro ---------- */
+  let outroOn = false;
+  window.__outro = on => {
+    if (on === outroOn) return; outroOn = on;
+    const hook = document.querySelector('.hook'), outro = document.querySelector('.outro');
+    K.tween(440, p => { const q = on ? p : 1 - p;
+      hook.style.opacity = K.clamp(1 - q / .45, 0, 1);   // strictly sequential: never two lines at once
+      const o = K.clamp((q - .55) / .45, 0, 1);
+      outro.style.opacity = o; outro.style.transform = `translateY(${(1 - o) * 10}px)`; }, K.ease.lin);
+  };
+
+  /* ---------- clock ---------- */
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  window.__tick = tick;
+  K.start = () => {
+    if (!MANUAL) {
+      let last = performance.now();
+      requestAnimationFrame(function loop(t) { tick(Math.min(50, t - last)); last = t; requestAnimationFrame(loop); });
+    } else tick(16);
+  };
+  return K;
+};
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const card = $('card'), form = $('form'), done = $('done'), keep = $('keep'), cancel = $('cancel');
+  const keepLabel = $('keepLabel'), keepSub = $('keepSub'), shine = keep.querySelector('.shine');
+
+  const K = ReelKit({
+    cursorKind: el => el && el.closest('button') ? 'hand' : 'arrow',
+    update, render
+  });
+
+  /* pressure builds while you go for "Cancel plan" and barely leaks away: the button remembers you tried */
+  let P = 0, gone = false, doneShown = false;
+  const g = { x: 0, v: 0 };          // inflation, sprung (balloon wobble)
+  const lk = { x: 0, v: 0 };         // link sideways nudge
+  const BASE_TOP = 343, H0 = 52;
+  let cancelled = false, fall = null;
+
+  cancel.addEventListener('click', () => { cancelled = true; cancel.textContent = 'Cancelled (for real)'; });   // reachable if you are fast. you are not.
+  keep.addEventListener('pointerdown', () => K.tween(110, p => keep.style.scale = 1 - .03 * p));
+  keep.addEventListener('click', () => showDone());
+  $('again').addEventListener('click', () => reset());
+
+  function linkCenter() {
+    const r = cancel.getBoundingClientRect();
+    return [r.left + r.width / 2, r.top + r.height / 2];
+  }
+  window.__link = () => { const [x, y] = linkCenter(); return [x, y, gone ? 1 : 0, g.x]; };
+
+  function update(dt) {
+    if (!doneShown) {
+      const [lx, ly] = linkCenter();
+      const d = Math.hypot(K.px - lx, K.py - ly);
+      const close = K.clamp(1 - d / 170, 0, 1);
+      if (!gone) P = Math.min(1, P + close * close * .3 * dt + (close > 0 ? .03 * dt : 0));
+      else P = Math.min(1, P + .2 * dt);
+      if (close === 0 && !gone) P = Math.max(0, P - .05 * dt);
+      // sideways flinch away from the pointer
+      const side = close > 0 ? K.clamp((lx - K.px) / 50, -1, 1) * 34 * close : 0;
+      K.spring(lk, side, 160, .5, dt);
+    }
+    K.spring(g, P, 70, .32, dt);
+  }
+
+  function render() {
+    const s = Math.max(0, g.x);
+    const actW = card.clientWidth - 56;
+    const up = 118 * s, downB = 64 * s;                       // grows up over the features, down into the link
+    const top = -up, height = Math.min(H0 + downB, 455 - BASE_TOP - 6) + up;
+    const bulge = 10 * s;
+    keep.style.top = top + 'px';
+    keep.style.height = height + 'px';
+    keep.style.left = (-bulge) + 'px'; keep.style.right = (-bulge) + 'px';
+    keep.style.borderRadius = (14 + 40 * s) + 'px';
+    const wob = K.clamp(g.v * .02, -.05, .05);
+    keep.style.transform = `scale(${1 - wob * .6},${1 + wob})`;
+    keep.style.fontSize = (15 + 21 * s) + 'px';
+    keep.style.boxShadow = `0 1px 0 rgba(255,255,255,.15) inset,0 ${8 + 22 * s}px ${18 + 30 * s}px -${10 + 6 * s}px rgba(0,0,0,${.6 - .25 * s})`;
+    shine.style.opacity = K.clamp(s * 1.4, 0, 1);
+    const sub = K.clamp((s - .35) / .3, 0, 1);
+    keepSub.style.opacity = sub; keepSub.style.height = (sub * 1.5) + 'em'; keepSub.style.marginTop = (sub * .25) + 'em';
+
+    // link: shrinks and is shoved down by the button's bottom edge
+    const bottom = top + height;
+    const sc = 1 - .58 * K.clamp(s * 1.15, 0, 1);
+    let ly = bottom + 14 * (1 - s) + 140 * Math.max(0, s - .58);   // shoved down by the button's bottom edge
+    if (!gone && BASE_TOP + ly > 455 - 16) {                         // ...and off the card
+      gone = true; fall = { y: ly, vy: 160, x: lk.x, vx: 70, r: 0, t: K.now, sc };
+      K.tween(140, p => card.style.transform = `translateY(${3 * p}px) scaleY(${1 - .008 * p})`);
+      K.tween(420, p => card.style.transform = `translateY(${3 * (1 - p)}px) scaleY(${1 - .008 * (1 - p)})`, K.ease.back, 140);
+    }
+    let lx2 = lk.x, rot = 0, op = 1 - .35 * s, sc2 = sc;
+    if (fall) {
+      const age = (K.now - fall.t) / 1000;
+      ly = fall.y + fall.vy * age + 800 * age * age; lx2 = fall.x + fall.vx * age; rot = 120 * age * age + 30 * age;
+      sc2 = fall.sc; op = (1 - .35 * s) * K.clamp(1 - (age - .35) / .3, 0, 1);
+    }
+    cancel.style.top = ly + 'px';
+    cancel.style.transform = `translateX(calc(-50% + ${lx2.toFixed(2)}px)) rotate(${rot.toFixed(1)}deg) scale(${sc2.toFixed(3)})`;
+    cancel.style.opacity = op.toFixed(3);
+  }
+
+  function showDone() {
+    if (doneShown) return; doneShown = true;
+    K.tween(170, p => { form.style.opacity = 1 - p; form.style.transform = `scale(${1 + .03 * p})`; });
+    done.style.pointerEvents = 'auto';
+    K.tween(380, p => { done.style.opacity = p; done.style.transform = `translateY(${10 * (1 - p)}px)`; }, K.ease.out, 190);
+    const ok = done.querySelector('.ok');
+    ok.style.transform = 'scale(0)';
+    K.tween(520, p => ok.style.transform = `scale(${p})`, K.ease.back, 240);
+    const clicks = $('clicks');      // the honest count, ticking up until it gives up
+    K.tween(1700, p => clicks.textContent = p >= 1 ? '∞' : String(Math.round(1 + 998 * p * p)), K.ease.lin, 380);
+  }
+  function reset() {
+    done.style.pointerEvents = 'none';
+    K.tween(180, p => { done.style.opacity = 1 - p; });
+    K.tween(1, () => {      // swap state only once the success screen is gone
+      doneShown = false; gone = false; cancelled = false; fall = null;
+      P = 0; g.x = g.v = 0; lk.x = lk.v = 0; keep.style.scale = ''; card.style.transform = '';
+    }, K.ease.lin, 185);
+    K.tween(300, p => { form.style.opacity = p; form.style.transform = `translateY(${6 * (1 - p)}px)`; }, K.ease.out, 200);
+  }
+  window.__reset = reset;
+  K.start();
+})();
+</script>
+</body>
+</html>

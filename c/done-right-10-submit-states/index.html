@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Form submit states · Done right #10 · @zellap.app</title>
+<meta name="description" content="Idle, loading, success, error. The button keeps its width and its focus, one click sends one request, and a failed send keeps every word you typed.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Form submit states · Done right #10 · @zellap.app">
+<meta property="og:description" content="Idle, loading, success, error. The button keeps its width and its focus, one click sends one request, and a failed send keeps every word you typed.">
+<meta name="theme-color" content="#F4F2EE">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231D1B18'/%3E%3Ctext x='16' y='21.5' font-family='monospace' font-size='14' font-weight='700' fill='%23F4F2EE' text-anchor='middle'%3E%26lt;/%26gt;%3C/text%3E%3C/svg%3E">
+<link rel="preload" href="../../fonts/GeneralSans-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:"Satoshi";src:url("../../fonts/Satoshi-Variable.woff2") format("woff2");font-weight:300 900;font-display:swap}
+@font-face{font-family:"General Sans";src:url("../../fonts/GeneralSans-Variable.woff2") format("woff2");font-weight:200 700;font-display:swap}
+@font-face{font-family:"Geist Mono";src:url("../../fonts/GeistMono-Variable.woff2") format("woff2");font-weight:100 900;font-display:swap}
+:root{
+  --bg:#F4F2EE;--surface:#FFFFFF;--sunk:#EEEBE5;--ink:#1D1B18;--ink-2:#4F4A43;--muted:#6B655C;
+  --hair:rgba(40,32,20,.12);--hair-2:rgba(40,32,20,.2);--ring:#1D1B18;
+  --sans:"General Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --display:"Satoshi","General Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --r:10px;--r-sm:8px;color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+:focus-visible{outline:2.5px solid var(--ring);outline-offset:2px;border-radius:4px}
+.skip{position:absolute;left:12px;top:-60px;background:var(--ink);color:#fff;padding:10px 14px;border-radius:var(--r-sm);z-index:10;text-decoration:none}
+.skip:focus{top:12px}
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.wrap{width:100%;max-width:1200px;margin:0 auto;padding:0 16px}
+@media (min-width:720px){.wrap{padding:0 32px}}
+
+.top{border-bottom:1px solid var(--hair);background:rgba(244,242,238,.92);position:sticky;top:0;z-index:5;
+  -webkit-backdrop-filter:saturate(1.4) blur(10px);backdrop-filter:saturate(1.4) blur(10px)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px}
+.brand{font:500 13px/1 var(--mono);letter-spacing:.01em;text-decoration:none;display:inline-flex;align-items:center;gap:8px;padding:10px 0;white-space:nowrap}
+.brand b{font-weight:600}
+.brand span{color:var(--muted)}
+.brand i{width:8px;height:8px;border-radius:2px;background:var(--ink);display:block}
+.follow-sm{font:600 14px/1 var(--sans);text-decoration:none;display:inline-flex;align-items:center;min-height:44px;padding:0 2px;white-space:nowrap}
+.follow-sm:hover{text-decoration:underline;text-underline-offset:3px}
+
+.eyebrow{font:500 12px/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--c,#999)}
+h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:-.025em;margin:0;text-wrap:balance}
+.follow{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0;font-size:15px;color:var(--ink-2)}
+.follow a{font-weight:600;color:var(--ink);text-underline-offset:3px}
+
+.btn{appearance:none;-webkit-appearance:none;font:600 14px/1 var(--sans);color:var(--ink);background:var(--surface);
+  border:1px solid var(--hair-2);border-radius:var(--r-sm);min-height:44px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  text-decoration:none;cursor:pointer;white-space:nowrap;transition:background-color .15s,border-color .15s}
+.btn:hover{background:var(--sunk)}
+.btn svg{width:16px;height:16px;flex:none}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.primary:hover{background:#3a3631}
+.btn[data-state="done"]{background:#2D6A3E;border-color:#2D6A3E;color:#fff}
+.btn[data-state="error"]{border-color:#B3261E;color:#B3261E}
+
+.foot{border-top:1px solid var(--hair);margin-top:64px;padding:28px 0 40px;color:var(--muted);font-size:14px}
+.foot .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between}
+.foot a{color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+.crumbs{padding:22px 0 0;font:500 13px/1.4 var(--mono);color:var(--muted)}
+.crumbs a{color:var(--ink);text-underline-offset:3px;display:inline-flex;align-items:center;min-height:32px}
+.head{padding:14px 0 18px;display:grid;gap:10px}
+.head h1{font-size:clamp(32px,8vw,52px);line-height:1.04}
+.head p{margin:0;color:var(--ink-2);font-size:17px;max-width:56ch}
+.stage{width:100%;border:1px solid var(--hair);border-radius:var(--r);background:var(--sunk);overflow:hidden;position:relative}
+.stage iframe{display:block;border:0;width:100%;background:transparent;transform-origin:0 0}
+.stage.fit iframe{transform-origin:0 0;position:absolute;left:0;top:0}
+.stage-note{font:500 12px/1.5 var(--mono);color:var(--muted);margin:10px 0 0}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
+.bar .btn{flex:1 1 auto}
+@media (min-width:640px){.bar .btn{flex:0 0 auto}}
+.info{display:grid;gap:4px 24px;grid-template-columns:1fr;margin:20px 0 0;padding:0;font-size:14px;color:var(--ink-2)}
+.info li{list-style:none;display:flex;gap:8px}
+.info li::before{content:"";width:5px;height:5px;margin-top:9px;border-radius:50%;background:var(--muted);flex:none}
+.code{margin-top:36px}
+.code-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.code-head h2{font-size:22px}
+.code-head span{font:500 12px/1 var(--mono);color:var(--muted)}
+pre.src{margin:0;background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);padding:16px;overflow:auto;max-height:70vh;
+  font:400 12.5px/1.65 var(--mono);color:var(--ink);tab-size:2;-moz-tab-size:2}
+pre.src:focus-visible{outline-offset:-2px}
+.pager{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:36px}
+.pager a{display:grid;gap:4px;padding:14px 16px;border:1px solid var(--hair);border-radius:var(--r);background:var(--surface);text-decoration:none;min-height:44px}
+.pager a:hover{border-color:var(--hair-2)}
+.pager a span{font:500 12px/1.2 var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.pager a b{font:700 16px/1.25 var(--display);letter-spacing:-.015em}
+.pager .next{text-align:right;grid-column:2}
+.cta{margin-top:36px;padding:20px;border:1px solid var(--hair);border-radius:var(--r);background:var(--surface);display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between}
+.cta p{margin:0;font:700 18px/1.3 var(--display);letter-spacing:-.015em}
+/* syntax colours (pygments short classes) */
+.src .nt{color:#8A3B12}.src .na{color:#5B4E9E}.src .s,.src .s1,.src .s2,.src .sa,.src .sb,.src .sx,.src .sr,.src .se{color:#2D6A3E}
+.src .c,.src .c1,.src .cm,.src .cs,.src .cp{color:#857E73;font-style:italic}
+.src .k,.src .kd,.src .kc,.src .kn,.src .kr,.src .kt,.src .ow{color:#9B2C5B}
+.src .m,.src .mi,.src .mf,.src .mh,.src .il{color:#B5541C}
+.src .nf,.src .nx .nf,.src .fm{color:#1E5AA8}.src .nb,.src .bp{color:#1E5AA8}
+.src .nc,.src .nd{color:#8A3B12}.src .py,.src .nv{color:#5B4E9E}.src .err{color:inherit;background:none}
+</style>
+</head>
+<body data-page="component">
+<a class="skip" href="#main">Skip to content</a>
+<header class="top"><div class="wrap">
+  <a class="brand" href="../../index.html"><i aria-hidden="true"></i><b>@zellap.app</b><span>· source code</span></a>
+  <a class="follow-sm" href="https://www.instagram.com/zellap.app/" rel="noopener">Follow</a>
+</div></header>
+<main id="main"><div class="wrap">
+  <p class="crumbs"><a href="../../index.html#done-right-10-submit-states">← All components</a></p>
+  <div class="head">
+    <p class="eyebrow"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right #10</p>
+    <h1>Form submit states</h1>
+    <p>Idle, loading, success, error. The button keeps its width and its focus, one click sends one request, and a failed send keeps every word you typed.</p>
+  </div>
+  <div class="stage flow" data-minw="0"><iframe src="component.html" title="Form submit states, live demo" style="height:720px"></iframe></div><p class="stage-note">Live. Try it with mouse, touch and keyboard.</p>
+  <div class="bar">
+      <a class="btn" href="component.html" aria-label="View Form submit states live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="component.html" data-name="Form submit states" aria-label="Copy Form submit states code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="component.html" download="submit-states.html" aria-label="Download Form submit states as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  <ul class="info">
+    <li>One self-contained HTML file: markup, CSS and JS. Open it in a browser and it runs.</li>
+    <li>Fonts load from Fontshare / Google Fonts. Swap in your own if you like.</li>
+  </ul>
+  <section class="code" aria-labelledby="code-h">
+    <div class="code-head"><h2 id="code-h">Source</h2><span>submit-states.html · 242 lines · 9.2 KB</span></div>
+    <pre class="src" tabindex="0" aria-label="Source code of Form submit states"><code><span class="cp">&lt;!doctype html&gt;</span>
+<span class="p">&lt;</span><span class="nt">html</span> <span class="na">lang</span><span class="o">=</span><span class="s">"en"</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">head</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">meta</span> <span class="na">charset</span><span class="o">=</span><span class="s">"utf-8"</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">meta</span> <span class="na">name</span><span class="o">=</span><span class="s">"viewport"</span> <span class="na">content</span><span class="o">=</span><span class="s">"width=device-width, initial-scale=1"</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">title</span><span class="p">&gt;</span>Form submit states · Done right #10 · @zellap.app<span class="p">&lt;/</span><span class="nt">title</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">link</span> <span class="na">rel</span><span class="o">=</span><span class="s">"preconnect"</span> <span class="na">href</span><span class="o">=</span><span class="s">"https://api.fontshare.com"</span> <span class="na">crossorigin</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">link</span> <span class="na">rel</span><span class="o">=</span><span class="s">"stylesheet"</span> <span class="na">href</span><span class="o">=</span><span class="s">"https://api.fontshare.com/v2/css?f[]=satoshi@700&amp;f[]=general-sans@400,500,600&amp;display=swap"</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">link</span> <span class="na">rel</span><span class="o">=</span><span class="s">"stylesheet"</span> <span class="na">href</span><span class="o">=</span><span class="s">"https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&amp;display=swap"</span><span class="p">&gt;</span>
+
+<span class="cm">&lt;!-- Demo page only. Not part of the component. --&gt;</span>
+<span class="p">&lt;</span><span class="nt">style</span><span class="p">&gt;</span>
+<span class="w">  </span><span class="o">*</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">box-sizing</span><span class="p">:</span><span class="w"> </span><span class="kc">border-box</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">body</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">margin</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="k">min-height</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="kt">vh</span><span class="p">;</span><span class="w"> </span><span class="k">display</span><span class="p">:</span><span class="w"> </span><span class="k">grid</span><span class="p">;</span><span class="w"> </span><span class="k">place-items</span><span class="p">:</span><span class="w"> </span><span class="kc">center</span><span class="p">;</span><span class="w"> </span><span class="k">padding</span><span class="p">:</span><span class="w"> </span><span class="mi">48</span><span class="kt">px</span><span class="w"> </span><span class="mi">20</span><span class="kt">px</span><span class="p">;</span>
+<span class="w">    </span><span class="k">background</span><span class="p">:</span><span class="w"> </span><span class="mh">#ECE8E0</span><span class="p">;</span><span class="w"> </span><span class="k">color</span><span class="p">:</span><span class="w"> </span><span class="mh">#1D1B18</span><span class="p">;</span><span class="w"> </span><span class="k">line-height</span><span class="p">:</span><span class="w"> </span><span class="mf">1.5</span><span class="p">;</span>
+<span class="w">    </span><span class="k">font-family</span><span class="p">:</span><span class="w"> </span><span class="s2">"General Sans"</span><span class="p">,</span><span class="w"> </span><span class="n">system-ui</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="n">apple-system</span><span class="p">,</span><span class="w"> </span><span class="s2">"Segoe UI"</span><span class="p">,</span><span class="w"> </span><span class="kc">sans-serif</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">demo</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">width</span><span class="p">:</span><span class="w"> </span><span class="nf">min</span><span class="p">(</span><span class="mi">100</span><span class="kt">%</span><span class="p">,</span><span class="w"> </span><span class="mi">520</span><span class="kt">px</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">demo-eyebrow</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">font</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="w"> </span><span class="mf">.8125</span><span class="kt">rem</span><span class="o">/</span><span class="mi">1</span><span class="w"> </span><span class="s2">"Geist Mono"</span><span class="p">,</span><span class="w"> </span><span class="n">ui-monospace</span><span class="p">,</span><span class="w"> </span><span class="kc">monospace</span><span class="p">;</span><span class="w"> </span><span class="k">letter-spacing</span><span class="p">:</span><span class="w"> </span><span class="mf">.06</span><span class="kt">em</span><span class="p">;</span><span class="w"> </span><span class="k">text-transform</span><span class="p">:</span><span class="w"> </span><span class="kc">uppercase</span><span class="p">;</span><span class="w"> </span><span class="k">color</span><span class="p">:</span><span class="w"> </span><span class="mh">#645E55</span><span class="p">;</span><span class="w"> </span><span class="k">margin</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="mi">12</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">demo</span><span class="w"> </span><span class="nt">h1</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">font</span><span class="p">:</span><span class="w"> </span><span class="mi">700</span><span class="w"> </span><span class="nf">clamp</span><span class="p">(</span><span class="mi">2</span><span class="kt">rem</span><span class="p">,</span><span class="w"> </span><span class="mi">7</span><span class="kt">vw</span><span class="p">,</span><span class="w"> </span><span class="mf">2.75</span><span class="kt">rem</span><span class="p">)</span><span class="o">/</span><span class="mf">1.05</span><span class="w"> </span><span class="n">Satoshi</span><span class="p">,</span><span class="w"> </span><span class="s2">"General Sans"</span><span class="p">,</span><span class="w"> </span><span class="n">system-ui</span><span class="p">,</span><span class="w"> </span><span class="kc">sans-serif</span><span class="p">;</span><span class="w"> </span><span class="k">letter-spacing</span><span class="p">:</span><span class="w"> </span><span class="mf">-.035</span><span class="kt">em</span><span class="p">;</span><span class="w"> </span><span class="k">margin</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">demo-lede</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">color</span><span class="p">:</span><span class="w"> </span><span class="mh">#4F4A43</span><span class="p">;</span><span class="w"> </span><span class="k">margin</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="kt">px</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="mi">28</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">demo-card</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">background</span><span class="p">:</span><span class="w"> </span><span class="mh">#FFFFFF</span><span class="p">;</span><span class="w"> </span><span class="k">border</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="kt">px</span><span class="w"> </span><span class="kc">solid</span><span class="w"> </span><span class="nb">rgba</span><span class="p">(</span><span class="mi">40</span><span class="p">,</span><span class="w"> </span><span class="mi">32</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mf">.12</span><span class="p">);</span><span class="w"> </span><span class="k">border-radius</span><span class="p">:</span><span class="w"> </span><span class="mi">24</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="k">padding</span><span class="p">:</span><span class="w"> </span><span class="mi">28</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="k">box-shadow</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="mi">24</span><span class="kt">px</span><span class="w"> </span><span class="mi">50</span><span class="kt">px</span><span class="w"> </span><span class="mi">-28</span><span class="kt">px</span><span class="w"> </span><span class="nb">rgba</span><span class="p">(</span><span class="mi">40</span><span class="p">,</span><span class="w"> </span><span class="mi">32</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mf">.28</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">demo-notes</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">font</span><span class="p">:</span><span class="w"> </span><span class="mi">400</span><span class="w"> </span><span class="mf">.8125</span><span class="kt">rem</span><span class="o">/</span><span class="mf">1.7</span><span class="w"> </span><span class="s2">"Geist Mono"</span><span class="p">,</span><span class="w"> </span><span class="n">ui-monospace</span><span class="p">,</span><span class="w"> </span><span class="kc">monospace</span><span class="p">;</span><span class="w"> </span><span class="k">color</span><span class="p">:</span><span class="w"> </span><span class="mh">#645E55</span><span class="p">;</span><span class="w"> </span><span class="k">margin-top</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">demo-notes</span><span class="w"> </span><span class="nt">label</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">display</span><span class="p">:</span><span class="w"> </span><span class="kc">inline-flex</span><span class="p">;</span><span class="w"> </span><span class="k">gap</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="k">align-items</span><span class="p">:</span><span class="w"> </span><span class="kc">center</span><span class="p">;</span><span class="w"> </span><span class="k">color</span><span class="p">:</span><span class="w"> </span><span class="mh">#1D1B18</span><span class="p">;</span><span class="w"> </span><span class="k">cursor</span><span class="p">:</span><span class="w"> </span><span class="kc">pointer</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">demo-notes</span><span class="w"> </span><span class="nt">input</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">width</span><span class="p">:</span><span class="w"> </span><span class="mi">18</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="k">height</span><span class="p">:</span><span class="w"> </span><span class="mi">18</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="k">accent-color</span><span class="p">:</span><span class="w"> </span><span class="mh">#1D1B18</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="p">&lt;/</span><span class="nt">style</span><span class="p">&gt;</span>
+
+<span class="cm">&lt;!-- Component: copy this block. --&gt;</span>
+<span class="p">&lt;</span><span class="nt">style</span> <span class="na">id</span><span class="o">=</span><span class="s">"component"</span><span class="p">&gt;</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">display</span><span class="p">:</span><span class="w"> </span><span class="k">grid</span><span class="p">;</span><span class="w"> </span><span class="k">gap</span><span class="p">:</span><span class="w"> </span><span class="mi">18</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="k">color</span><span class="p">:</span><span class="w"> </span><span class="mh">#1D1B18</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-field</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">display</span><span class="p">:</span><span class="w"> </span><span class="k">grid</span><span class="p">;</span><span class="w"> </span><span class="k">gap</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-field</span><span class="w"> </span><span class="nt">label</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">font-weight</span><span class="p">:</span><span class="w"> </span><span class="mi">600</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-field</span><span class="w"> </span><span class="nt">input</span><span class="o">,</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-field</span><span class="w"> </span><span class="nt">textarea</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">width</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="kt">%</span><span class="p">;</span>
+<span class="w">    </span><span class="k">min-height</span><span class="p">:</span><span class="w"> </span><span class="mi">48</span><span class="kt">px</span><span class="p">;</span>
+<span class="w">    </span><span class="k">padding</span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="kt">px</span><span class="w"> </span><span class="mi">14</span><span class="kt">px</span><span class="p">;</span>
+<span class="w">    </span><span class="k">border</span><span class="p">:</span><span class="w"> </span><span class="mf">1.5</span><span class="kt">px</span><span class="w"> </span><span class="kc">solid</span><span class="w"> </span><span class="mh">#857E73</span><span class="p">;</span><span class="w">      </span><span class="c">/* 4.0:1 on white */</span>
+<span class="w">    </span><span class="k">border-radius</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="kt">px</span><span class="p">;</span>
+<span class="w">    </span><span class="k">background</span><span class="p">:</span><span class="w"> </span><span class="mh">#FFFFFF</span><span class="p">;</span>
+<span class="w">    </span><span class="k">color</span><span class="p">:</span><span class="w"> </span><span class="kc">inherit</span><span class="p">;</span>
+<span class="w">    </span><span class="k">font</span><span class="p">:</span><span class="w"> </span><span class="kc">inherit</span><span class="p">;</span>
+<span class="w">    </span><span class="k">resize</span><span class="p">:</span><span class="w"> </span><span class="kc">vertical</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-field</span><span class="w"> </span><span class="p">:</span><span class="nd">focus-visible</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">outline</span><span class="p">:</span><span class="w"> </span><span class="mf">2.5</span><span class="kt">px</span><span class="w"> </span><span class="kc">solid</span><span class="w"> </span><span class="mh">#1D1B18</span><span class="p">;</span><span class="w"> </span><span class="k">outline-offset</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="k">border-color</span><span class="p">:</span><span class="w"> </span><span class="mh">#1D1B18</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-field</span><span class="w"> </span><span class="o">[</span><span class="nt">aria-invalid</span><span class="o">=</span><span class="s2">"true"</span><span class="o">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">border-color</span><span class="p">:</span><span class="w"> </span><span class="mh">#B3261E</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-field</span><span class="w"> </span><span class="o">[</span><span class="nt">readonly</span><span class="o">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">background</span><span class="p">:</span><span class="w"> </span><span class="mh">#F6F3EE</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+
+<span class="w">  </span><span class="p">.</span><span class="nc">send-error</span><span class="o">,</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-alert</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">display</span><span class="p">:</span><span class="w"> </span><span class="kc">flex</span><span class="p">;</span>
+<span class="w">    </span><span class="k">gap</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="kt">px</span><span class="p">;</span>
+<span class="w">    </span><span class="k">margin</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">font-size</span><span class="p">:</span><span class="w"> </span><span class="mf">.875</span><span class="kt">rem</span><span class="p">;</span>
+<span class="w">    </span><span class="k">font-weight</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">;</span>
+<span class="w">    </span><span class="k">color</span><span class="p">:</span><span class="w"> </span><span class="mh">#B3261E</span><span class="p">;</span><span class="w">                   </span><span class="c">/* 6.5:1 on white */</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-error</span><span class="o">[</span><span class="nt">hidden</span><span class="o">],</span><span class="w"> </span><span class="p">.</span><span class="nc">send-alert</span><span class="p">:</span><span class="nd">empty</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">display</span><span class="p">:</span><span class="w"> </span><span class="kc">none</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-error</span><span class="p">::</span><span class="nd">before</span><span class="o">,</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-alert</span><span class="p">::</span><span class="nd">before</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">content</span><span class="p">:</span><span class="w"> </span><span class="s2">"!"</span><span class="p">;</span><span class="w"> </span><span class="k">flex</span><span class="p">:</span><span class="w"> </span><span class="kc">none</span><span class="p">;</span><span class="w"> </span><span class="k">display</span><span class="p">:</span><span class="w"> </span><span class="k">grid</span><span class="p">;</span><span class="w"> </span><span class="k">place-items</span><span class="p">:</span><span class="w"> </span><span class="kc">center</span><span class="p">;</span><span class="w"> </span><span class="k">margin-top</span><span class="p">:</span><span class="w"> </span><span class="mf">.1</span><span class="kt">em</span><span class="p">;</span>
+<span class="w">    </span><span class="k">width</span><span class="p">:</span><span class="w"> </span><span class="mf">1.125</span><span class="kt">rem</span><span class="p">;</span><span class="w"> </span><span class="k">height</span><span class="p">:</span><span class="w"> </span><span class="mf">1.125</span><span class="kt">rem</span><span class="p">;</span><span class="w"> </span><span class="k">border-radius</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="kt">%</span><span class="p">;</span>
+<span class="w">    </span><span class="k">background</span><span class="p">:</span><span class="w"> </span><span class="mh">#B3261E</span><span class="p">;</span><span class="w"> </span><span class="k">color</span><span class="p">:</span><span class="w"> </span><span class="mh">#FFFFFF</span><span class="p">;</span><span class="w"> </span><span class="k">font-weight</span><span class="p">:</span><span class="w"> </span><span class="mi">700</span><span class="p">;</span><span class="w"> </span><span class="k">font-size</span><span class="p">:</span><span class="w"> </span><span class="mf">.75</span><span class="kt">rem</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-alert</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">padding</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="kt">px</span><span class="w"> </span><span class="mi">14</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="k">border</span><span class="p">:</span><span class="w"> </span><span class="mf">1.5</span><span class="kt">px</span><span class="w"> </span><span class="kc">solid</span><span class="w"> </span><span class="mh">#B3261E</span><span class="p">;</span><span class="w"> </span><span class="k">border-radius</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="k">background</span><span class="p">:</span><span class="w"> </span><span class="mh">#FCF1EF</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+
+<span class="w">  </span><span class="c">/* All three labels share one grid cell, so the button never changes width. */</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-btn</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">display</span><span class="p">:</span><span class="w"> </span><span class="kc">inline</span><span class="o">-</span><span class="k">grid</span><span class="p">;</span>
+<span class="w">    </span><span class="k">justify-self</span><span class="p">:</span><span class="w"> </span><span class="kc">start</span><span class="p">;</span>
+<span class="w">    </span><span class="k">min-height</span><span class="p">:</span><span class="w"> </span><span class="mi">48</span><span class="kt">px</span><span class="p">;</span>
+<span class="w">    </span><span class="k">padding</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="mi">22</span><span class="kt">px</span><span class="p">;</span>
+<span class="w">    </span><span class="k">border</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">border-radius</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="kt">px</span><span class="p">;</span>
+<span class="w">    </span><span class="k">background</span><span class="p">:</span><span class="w"> </span><span class="mh">#1D1B18</span><span class="p">;</span>
+<span class="w">    </span><span class="k">color</span><span class="p">:</span><span class="w"> </span><span class="mh">#FFFFFF</span><span class="p">;</span>
+<span class="w">    </span><span class="k">font</span><span class="p">:</span><span class="w"> </span><span class="kc">inherit</span><span class="p">;</span>
+<span class="w">    </span><span class="k">font-weight</span><span class="p">:</span><span class="w"> </span><span class="mi">600</span><span class="p">;</span>
+<span class="w">    </span><span class="k">cursor</span><span class="p">:</span><span class="w"> </span><span class="kc">pointer</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-label</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">grid-area</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">    </span><span class="k">display</span><span class="p">:</span><span class="w"> </span><span class="kc">inline-flex</span><span class="p">;</span>
+<span class="w">    </span><span class="k">align-items</span><span class="p">:</span><span class="w"> </span><span class="kc">center</span><span class="p">;</span>
+<span class="w">    </span><span class="k">justify-content</span><span class="p">:</span><span class="w"> </span><span class="kc">center</span><span class="p">;</span>
+<span class="w">    </span><span class="k">gap</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="kt">px</span><span class="p">;</span>
+<span class="w">    </span><span class="k">visibility</span><span class="p">:</span><span class="w"> </span><span class="kc">hidden</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send</span><span class="o">[</span><span class="nt">data-state</span><span class="o">=</span><span class="s2">"idle"</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="nt">data-for</span><span class="o">=</span><span class="s2">"idle"</span><span class="o">],</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send</span><span class="o">[</span><span class="nt">data-state</span><span class="o">=</span><span class="s2">"error"</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="nt">data-for</span><span class="o">=</span><span class="s2">"idle"</span><span class="o">],</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send</span><span class="o">[</span><span class="nt">data-state</span><span class="o">=</span><span class="s2">"loading"</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="nt">data-for</span><span class="o">=</span><span class="s2">"loading"</span><span class="o">],</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send</span><span class="o">[</span><span class="nt">data-state</span><span class="o">=</span><span class="s2">"success"</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="nt">data-for</span><span class="o">=</span><span class="s2">"success"</span><span class="o">]</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">visibility</span><span class="p">:</span><span class="w"> </span><span class="kc">visible</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send</span><span class="o">[</span><span class="nt">data-state</span><span class="o">=</span><span class="s2">"success"</span><span class="o">]</span><span class="w"> </span><span class="p">.</span><span class="nc">send-btn</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">background</span><span class="p">:</span><span class="w"> </span><span class="mh">#2D6A3E</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-btn</span><span class="p">:</span><span class="nd">hover</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">background</span><span class="p">:</span><span class="w"> </span><span class="mh">#3A3631</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-btn</span><span class="o">[</span><span class="nt">aria-disabled</span><span class="o">=</span><span class="s2">"true"</span><span class="o">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">cursor</span><span class="p">:</span><span class="w"> </span><span class="kc">progress</span><span class="p">;</span><span class="w"> </span><span class="k">background</span><span class="p">:</span><span class="w"> </span><span class="mh">#1D1B18</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-btn</span><span class="p">:</span><span class="nd">focus-visible</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">outline</span><span class="p">:</span><span class="w"> </span><span class="mf">2.5</span><span class="kt">px</span><span class="w"> </span><span class="kc">solid</span><span class="w"> </span><span class="mh">#1D1B18</span><span class="p">;</span><span class="w"> </span><span class="k">outline-offset</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-btn</span><span class="w"> </span><span class="nt">svg</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">width</span><span class="p">:</span><span class="w"> </span><span class="mi">18</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="k">height</span><span class="p">:</span><span class="w"> </span><span class="mi">18</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+
+<span class="w">  </span><span class="p">.</span><span class="nc">send-spin</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">width</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="kt">px</span><span class="p">;</span>
+<span class="w">    </span><span class="k">height</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="kt">px</span><span class="p">;</span>
+<span class="w">    </span><span class="k">border</span><span class="p">:</span><span class="w"> </span><span class="mf">2.5</span><span class="kt">px</span><span class="w"> </span><span class="kc">solid</span><span class="w"> </span><span class="nb">rgba</span><span class="p">(</span><span class="mi">255</span><span class="p">,</span><span class="w"> </span><span class="mi">255</span><span class="p">,</span><span class="w"> </span><span class="mi">255</span><span class="p">,</span><span class="w"> </span><span class="mf">.35</span><span class="p">);</span>
+<span class="w">    </span><span class="k">border-top-color</span><span class="p">:</span><span class="w"> </span><span class="mh">#FFFFFF</span><span class="p">;</span>
+<span class="w">    </span><span class="k">border-radius</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="kt">%</span><span class="p">;</span>
+<span class="w">    </span><span class="k">animation</span><span class="p">:</span><span class="w"> </span><span class="n">send-spin</span><span class="w"> </span><span class="mf">.8</span><span class="kt">s</span><span class="w"> </span><span class="kc">linear</span><span class="w"> </span><span class="kc">infinite</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="p">@</span><span class="k">keyframes</span><span class="w"> </span><span class="nt">send-spin</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">to</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">transform</span><span class="p">:</span><span class="w"> </span><span class="nb">rotate</span><span class="p">(</span><span class="mi">1</span><span class="kt">turn</span><span class="p">);</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+
+<span class="w">  </span><span class="p">.</span><span class="nc">send-status</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">margin</span><span class="p">:</span><span class="w"> </span><span class="mi">-6</span><span class="kt">px</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="k">font-size</span><span class="p">:</span><span class="w"> </span><span class="mf">.9375</span><span class="kt">rem</span><span class="p">;</span><span class="w"> </span><span class="k">color</span><span class="p">:</span><span class="w"> </span><span class="mh">#5A544B</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send-status</span><span class="p">:</span><span class="nd">empty</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">display</span><span class="p">:</span><span class="w"> </span><span class="kc">none</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">.</span><span class="nc">send</span><span class="o">[</span><span class="nt">data-state</span><span class="o">=</span><span class="s2">"success"</span><span class="o">]</span><span class="w"> </span><span class="p">.</span><span class="nc">send-status</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">color</span><span class="p">:</span><span class="w"> </span><span class="mh">#2D6A3E</span><span class="p">;</span><span class="w"> </span><span class="k">font-weight</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+
+<span class="w">  </span><span class="p">@</span><span class="k">media</span><span class="w"> </span><span class="o">(</span><span class="nt">prefers-reduced-motion</span><span class="o">:</span><span class="w"> </span><span class="nt">reduce</span><span class="o">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="p">.</span><span class="nc">send-spin</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">animation</span><span class="p">:</span><span class="w"> </span><span class="kc">none</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">&lt;/</span><span class="nt">style</span><span class="p">&gt;</span>
+<span class="p">&lt;/</span><span class="nt">head</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">body</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">main</span> <span class="na">class</span><span class="o">=</span><span class="s">"demo"</span><span class="p">&gt;</span>
+  <span class="p">&lt;</span><span class="nt">p</span> <span class="na">class</span><span class="o">=</span><span class="s">"demo-eyebrow"</span><span class="p">&gt;</span>Done right #10 · @zellap.app<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+  <span class="p">&lt;</span><span class="nt">h1</span><span class="p">&gt;</span>Form submit states<span class="p">&lt;/</span><span class="nt">h1</span><span class="p">&gt;</span>
+  <span class="p">&lt;</span><span class="nt">p</span> <span class="na">class</span><span class="o">=</span><span class="s">"demo-lede"</span><span class="p">&gt;</span>Idle, loading, success, error. The button keeps its width and its focus, one click sends one request, and a failed send keeps every word you typed.<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+
+  <span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">"demo-card"</span><span class="p">&gt;</span>
+    <span class="p">&lt;</span><span class="nt">form</span> <span class="na">class</span><span class="o">=</span><span class="s">"send"</span> <span class="na">action</span><span class="o">=</span><span class="s">"/api/contact"</span> <span class="na">method</span><span class="o">=</span><span class="s">"post"</span> <span class="na">novalidate</span> <span class="na">data-state</span><span class="o">=</span><span class="s">"idle"</span>
+          <span class="na">data-ok</span><span class="o">=</span><span class="s">"Message sent. We reply within one working day."</span><span class="p">&gt;</span>
+      <span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">"send-field"</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">label</span> <span class="na">for</span><span class="o">=</span><span class="s">"email"</span><span class="p">&gt;</span>Email<span class="p">&lt;/</span><span class="nt">label</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">input</span> <span class="na">id</span><span class="o">=</span><span class="s">"email"</span> <span class="na">name</span><span class="o">=</span><span class="s">"email"</span> <span class="na">type</span><span class="o">=</span><span class="s">"email"</span> <span class="na">autocomplete</span><span class="o">=</span><span class="s">"email"</span> <span class="na">required</span>
+               <span class="na">aria-describedby</span><span class="o">=</span><span class="s">"email-error"</span>
+               <span class="na">data-missing</span><span class="o">=</span><span class="s">"Enter your email address."</span>
+               <span class="na">data-bad</span><span class="o">=</span><span class="s">"Enter an email like name@example.com."</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">p</span> <span class="na">class</span><span class="o">=</span><span class="s">"send-error"</span> <span class="na">id</span><span class="o">=</span><span class="s">"email-error"</span> <span class="na">hidden</span><span class="p">&gt;&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+      <span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+      <span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">"send-field"</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">label</span> <span class="na">for</span><span class="o">=</span><span class="s">"message"</span><span class="p">&gt;</span>Message<span class="p">&lt;/</span><span class="nt">label</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">textarea</span> <span class="na">id</span><span class="o">=</span><span class="s">"message"</span> <span class="na">name</span><span class="o">=</span><span class="s">"message"</span> <span class="na">rows</span><span class="o">=</span><span class="s">"3"</span> <span class="na">required</span>
+                  <span class="na">aria-describedby</span><span class="o">=</span><span class="s">"message-error"</span>
+                  <span class="na">data-missing</span><span class="o">=</span><span class="s">"Write a message first."</span><span class="p">&gt;&lt;/</span><span class="nt">textarea</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">p</span> <span class="na">class</span><span class="o">=</span><span class="s">"send-error"</span> <span class="na">id</span><span class="o">=</span><span class="s">"message-error"</span> <span class="na">hidden</span><span class="p">&gt;&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+      <span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+      <span class="p">&lt;</span><span class="nt">p</span> <span class="na">class</span><span class="o">=</span><span class="s">"send-alert"</span> <span class="na">role</span><span class="o">=</span><span class="s">"alert"</span><span class="p">&gt;&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+      <span class="p">&lt;</span><span class="nt">button</span> <span class="na">class</span><span class="o">=</span><span class="s">"send-btn"</span> <span class="na">type</span><span class="o">=</span><span class="s">"submit"</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">span</span> <span class="na">class</span><span class="o">=</span><span class="s">"send-label"</span> <span class="na">data-for</span><span class="o">=</span><span class="s">"idle"</span><span class="p">&gt;</span>Send message<span class="p">&lt;/</span><span class="nt">span</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">span</span> <span class="na">class</span><span class="o">=</span><span class="s">"send-label"</span> <span class="na">data-for</span><span class="o">=</span><span class="s">"loading"</span><span class="p">&gt;</span>
+          <span class="p">&lt;</span><span class="nt">span</span> <span class="na">class</span><span class="o">=</span><span class="s">"send-spin"</span> <span class="na">aria-hidden</span><span class="o">=</span><span class="s">"true"</span><span class="p">&gt;&lt;/</span><span class="nt">span</span><span class="p">&gt;</span>
+          Sending…
+        <span class="p">&lt;/</span><span class="nt">span</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">span</span> <span class="na">class</span><span class="o">=</span><span class="s">"send-label"</span> <span class="na">data-for</span><span class="o">=</span><span class="s">"success"</span><span class="p">&gt;</span>
+          <span class="p">&lt;</span><span class="nt">svg</span> <span class="na">viewBox</span><span class="o">=</span><span class="s">"0 0 24 24"</span> <span class="na">aria-hidden</span><span class="o">=</span><span class="s">"true"</span><span class="p">&gt;&lt;</span><span class="nt">path</span> <span class="na">d</span><span class="o">=</span><span class="s">"M5 12.5l4.5 4.5L19 7.5"</span> <span class="na">fill</span><span class="o">=</span><span class="s">"none"</span> <span class="na">stroke</span><span class="o">=</span><span class="s">"currentColor"</span> <span class="na">stroke-width</span><span class="o">=</span><span class="s">"3"</span> <span class="na">stroke-linecap</span><span class="o">=</span><span class="s">"round"</span> <span class="na">stroke-linejoin</span><span class="o">=</span><span class="s">"round"</span><span class="p">/&gt;&lt;/</span><span class="nt">svg</span><span class="p">&gt;</span>
+          Sent
+        <span class="p">&lt;/</span><span class="nt">span</span><span class="p">&gt;</span>
+      <span class="p">&lt;/</span><span class="nt">button</span><span class="p">&gt;</span>
+      <span class="p">&lt;</span><span class="nt">p</span> <span class="na">class</span><span class="o">=</span><span class="s">"send-status"</span> <span class="na">role</span><span class="o">=</span><span class="s">"status"</span><span class="p">&gt;&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+    <span class="p">&lt;/</span><span class="nt">form</span><span class="p">&gt;</span>
+  <span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+
+  <span class="p">&lt;</span><span class="nt">p</span> <span class="na">class</span><span class="o">=</span><span class="s">"demo-notes"</span><span class="p">&gt;</span>
+    <span class="p">&lt;</span><span class="nt">label</span><span class="p">&gt;&lt;</span><span class="nt">input</span> <span class="na">type</span><span class="o">=</span><span class="s">"checkbox"</span> <span class="na">id</span><span class="o">=</span><span class="s">"fail"</span><span class="p">&gt;</span> Make the server fail<span class="p">&lt;/</span><span class="nt">label</span><span class="p">&gt;&lt;</span><span class="nt">br</span><span class="p">&gt;</span>
+    Fake server: 1.2 s per request. Submit empty to see the field errors.
+  <span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+<span class="p">&lt;/</span><span class="nt">main</span><span class="p">&gt;</span>
+
+<span class="cm">&lt;!-- Demo page only: a fake server. Delete this and the component uses fetch(). --&gt;</span>
+<span class="p">&lt;</span><span class="nt">script</span><span class="p">&gt;</span>
+<span class="w">  </span><span class="nb">window</span><span class="p">.</span><span class="nx">sendRequest</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nb">Promise</span><span class="p">((</span><span class="nx">resolve</span><span class="p">,</span><span class="w"> </span><span class="nx">reject</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">fail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">'fail'</span><span class="p">).</span><span class="nx">checked</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">setTimeout</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">(</span><span class="nx">fail</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="nx">reject</span><span class="p">(</span><span class="ow">new</span><span class="w"> </span><span class="ne">Error</span><span class="p">(</span><span class="s1">'500'</span><span class="p">))</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="nx">resolve</span><span class="p">()),</span><span class="w"> </span><span class="mf">1200</span><span class="p">);</span>
+<span class="w">  </span><span class="p">});</span>
+<span class="p">&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+
+<span class="cm">&lt;!-- Component: copy this block. --&gt;</span>
+<span class="p">&lt;</span><span class="nt">script</span> <span class="na">id</span><span class="o">=</span><span class="s">"component"</span><span class="p">&gt;</span>
+<span class="w">  </span><span class="c1">// Your API call. Resolve on success, throw on failure.</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">send</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">form</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nb">window</span><span class="p">.</span><span class="nx">sendRequest</span>
+<span class="w">    </span><span class="o">?</span><span class="w"> </span><span class="nb">window</span><span class="p">.</span><span class="nx">sendRequest</span><span class="p">(</span><span class="nx">form</span><span class="p">)</span>
+<span class="w">    </span><span class="o">:</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="nx">form</span><span class="p">.</span><span class="nx">action</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">method</span><span class="o">:</span><span class="w"> </span><span class="s1">'POST'</span><span class="p">,</span><span class="w"> </span><span class="nx">body</span><span class="o">:</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">FormData</span><span class="p">(</span><span class="nx">form</span><span class="p">)</span><span class="w"> </span><span class="p">})</span>
+<span class="w">        </span><span class="p">.</span><span class="nx">then</span><span class="p">((</span><span class="nx">r</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">r</span><span class="p">.</span><span class="nx">ok</span><span class="p">)</span><span class="w"> </span><span class="k">throw</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="ne">Error</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">status</span><span class="p">);</span><span class="w"> </span><span class="p">});</span>
+
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="nx">form</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">querySelectorAll</span><span class="p">(</span><span class="s1">'.send'</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">btn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">form</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s1">'.send-btn'</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">alert</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">form</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s1">'.send-alert'</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">form</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s1">'.send-status'</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">fields</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[...</span><span class="nx">form</span><span class="p">.</span><span class="nx">querySelectorAll</span><span class="p">(</span><span class="s1">'input, textarea'</span><span class="p">)];</span>
+
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">check</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">field</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">field</span><span class="p">.</span><span class="nx">validity</span><span class="p">;</span>
+<span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">msg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">v</span><span class="p">.</span><span class="nx">valueMissing</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="nx">field</span><span class="p">.</span><span class="nx">dataset</span><span class="p">.</span><span class="nx">missing</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="nx">v</span><span class="p">.</span><span class="nx">typeMismatch</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="nx">field</span><span class="p">.</span><span class="nx">dataset</span><span class="p">.</span><span class="nx">bad</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s1">''</span><span class="p">;</span>
+<span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">error</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="nx">field</span><span class="p">.</span><span class="nx">getAttribute</span><span class="p">(</span><span class="s1">'aria-describedby'</span><span class="p">));</span>
+<span class="w">      </span><span class="nx">error</span><span class="p">.</span><span class="nx">textContent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">msg</span><span class="p">;</span>
+<span class="w">      </span><span class="nx">error</span><span class="p">.</span><span class="nx">hidden</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">!</span><span class="nx">msg</span><span class="p">;</span>
+<span class="w">      </span><span class="nx">field</span><span class="p">.</span><span class="nx">setAttribute</span><span class="p">(</span><span class="s1">'aria-invalid'</span><span class="p">,</span><span class="w"> </span><span class="nb">String</span><span class="p">(</span><span class="o">!!</span><span class="nx">msg</span><span class="p">));</span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="o">!</span><span class="nx">msg</span><span class="p">;</span>
+<span class="w">    </span><span class="p">};</span>
+<span class="w">    </span><span class="c1">// Once a field shows an error, re-check it as they type.</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="nx">field</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="nx">fields</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">field</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s1">'input'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">field</span><span class="p">.</span><span class="nx">getAttribute</span><span class="p">(</span><span class="s1">'aria-invalid'</span><span class="p">)</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">'true'</span><span class="p">)</span><span class="w"> </span><span class="nx">check</span><span class="p">(</span><span class="nx">field</span><span class="p">);</span>
+<span class="w">      </span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">set</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">state</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">busy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">state</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">'loading'</span><span class="p">;</span>
+<span class="w">      </span><span class="nx">form</span><span class="p">.</span><span class="nx">dataset</span><span class="p">.</span><span class="nx">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">state</span><span class="p">;</span>
+<span class="w">      </span><span class="c1">// aria-disabled, not disabled: the button keeps focus.</span>
+<span class="w">      </span><span class="nx">btn</span><span class="p">.</span><span class="nx">setAttribute</span><span class="p">(</span><span class="s1">'aria-disabled'</span><span class="p">,</span><span class="w"> </span><span class="nb">String</span><span class="p">(</span><span class="nx">busy</span><span class="p">));</span>
+<span class="w">      </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="nx">field</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="nx">fields</span><span class="p">)</span><span class="w"> </span><span class="nx">field</span><span class="p">.</span><span class="nx">readOnly</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">busy</span><span class="p">;</span>
+<span class="w">    </span><span class="p">};</span>
+
+<span class="w">    </span><span class="nx">form</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s1">'submit'</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">e</span><span class="p">.</span><span class="nx">preventDefault</span><span class="p">();</span>
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">form</span><span class="p">.</span><span class="nx">dataset</span><span class="p">.</span><span class="nx">state</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">'loading'</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span><span class="w"> </span><span class="c1">// one send</span>
+<span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">bad</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">fields</span><span class="p">.</span><span class="nx">filter</span><span class="p">((</span><span class="nx">field</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="o">!</span><span class="nx">check</span><span class="p">(</span><span class="nx">field</span><span class="p">));</span>
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">bad</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">bad</span><span class="p">[</span><span class="mf">0</span><span class="p">].</span><span class="nx">focus</span><span class="p">();</span>
+
+<span class="w">      </span><span class="nx">alert</span><span class="p">.</span><span class="nx">textContent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">''</span><span class="p">;</span>
+<span class="w">      </span><span class="nx">set</span><span class="p">(</span><span class="s1">'loading'</span><span class="p">);</span>
+<span class="w">      </span><span class="nx">status</span><span class="p">.</span><span class="nx">textContent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'Sending your message…'</span><span class="p">;</span>
+<span class="w">      </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">await</span><span class="w"> </span><span class="nx">send</span><span class="p">(</span><span class="nx">form</span><span class="p">);</span>
+<span class="w">        </span><span class="nx">form</span><span class="p">.</span><span class="nx">reset</span><span class="p">();</span>
+<span class="w">        </span><span class="nx">set</span><span class="p">(</span><span class="s1">'success'</span><span class="p">);</span>
+<span class="w">        </span><span class="nx">status</span><span class="p">.</span><span class="nx">textContent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">form</span><span class="p">.</span><span class="nx">dataset</span><span class="p">.</span><span class="nx">ok</span><span class="p">;</span>
+<span class="w">        </span><span class="nx">setTimeout</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">form</span><span class="p">.</span><span class="nx">dataset</span><span class="p">.</span><span class="nx">state</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">'success'</span><span class="p">)</span><span class="w"> </span><span class="nx">set</span><span class="p">(</span><span class="s1">'idle'</span><span class="p">);</span>
+<span class="w">        </span><span class="p">},</span><span class="w"> </span><span class="mf">4000</span><span class="p">);</span>
+<span class="w">      </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">set</span><span class="p">(</span><span class="s1">'error'</span><span class="p">);</span><span class="w">                 </span><span class="c1">// every word they typed stays</span>
+<span class="w">        </span><span class="nx">status</span><span class="p">.</span><span class="nx">textContent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">''</span><span class="p">;</span>
+<span class="w">        </span><span class="nx">alert</span><span class="p">.</span><span class="nx">textContent</span><span class="w"> </span><span class="o">=</span>
+<span class="w">          </span><span class="s2">"Couldn't send. Your message is still here. Try again."</span><span class="p">;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">});</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+<span class="p">&lt;/</span><span class="nt">body</span><span class="p">&gt;</span>
+<span class="p">&lt;/</span><span class="nt">html</span><span class="p">&gt;</span>
+</code></pre>
+  </section>
+  <nav class="pager" aria-label="More in this series"><a class="prev" href="../done-right-09-price-filter/"><span>← Done right #9</span><b>Dual-range price filter</b></a><a class="next" href="../done-right-11-sortable-list/"><span>Done right #11 →</span><b>Sortable list</b></a></nav>
+  <div class="cta"><p>New component every day.</p><a class="btn primary" href="https://www.instagram.com/zellap.app/" rel="noopener">Follow @zellap.app</a></div>
+</div></main>
+<footer class="foot"><div class="wrap">
+  <span>27 components · one HTML file each · no build step</span>
+  <span><a href="../../index.html">All components</a> · <a href="https://www.instagram.com/zellap.app/" rel="noopener">Instagram</a></span>
+</div></footer>
+<p id="status" class="sr-only" role="status" aria-live="polite"></p>
+<script>
+(() => {
+  const live = document.getElementById('status');
+  const say = msg => { if (live) { live.textContent = ''; setTimeout(() => live.textContent = msg, 30); } };
+  const cache = new Map();
+  const getText = url => {
+    if (!cache.has(url)) cache.set(url, fetch(url, { cache: 'force-cache' }).then(r => {
+      if (!r.ok) throw new Error(r.status); return r.text();
+    }).catch(e => { cache.delete(url); throw e; }));
+    return cache.get(url);
+  };
+  const legacyCopy = text => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove(); return ok;
+  };
+  async function copy(url) {
+    const p = getText(url);
+    // ClipboardItem with a pending promise keeps the user gesture alive while fetching (Safari needs this)
+    if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'text/plain': p.then(t => new Blob([t], { type: 'text/plain' })) })]);
+        return true;
+      } catch (e) {}
+    }
+    const text = await p;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+    }
+    return legacyCopy(text);
+  }
+  const label = (btn, text) => { const s = btn.querySelector('.lbl'); if (s) s.textContent = text; };
+  document.addEventListener('click', async e => {
+    const btn = e.target.closest('[data-copy]');
+    if (!btn) return;
+    const name = btn.dataset.name || 'Code';
+    clearTimeout(btn._t);
+    let ok = false;
+    try { ok = await copy(btn.dataset.copy); } catch (err) { ok = false; }
+    btn.dataset.state = ok ? 'done' : 'error';
+    label(btn, ok ? 'Copied' : 'Copy failed');
+    say(ok ? name + ' source copied to clipboard.' : 'Could not copy. Use Download instead.');
+    btn._t = setTimeout(() => { delete btn.dataset.state; label(btn, 'Copy code'); }, 1800);
+  });
+  // warm the cache on intent, so the copy itself is instant
+  ['pointerenter', 'focusin', 'touchstart'].forEach(t => document.addEventListener(t, e => {
+    const btn = e.target.closest && e.target.closest('[data-copy]');
+    if (btn) getText(btn.dataset.copy).catch(() => {});
+  }, { capture: true, passive: true }));
+  window.__warm = getText;
+
+  // scaled iframes: the frame keeps its virtual viewport (--vw x --vh) and scales to the box width
+  const fit = box => {
+    const f = box.querySelector('iframe'); if (!f) return;
+    const vw = +box.dataset.vw, vh = +box.dataset.vh, max = box.dataset.max === '1';
+    let s = box.clientWidth / vw; if (max) s = Math.min(1, s);
+    f.style.width = vw + 'px'; f.style.height = vh + 'px'; f.style.transform = 'scale(' + s + ')';
+    box.style.height = Math.round(vh * s) + 'px';
+  };
+  const ro = 'ResizeObserver' in window ? new ResizeObserver(es => es.forEach(en => fit(en.target))) : null;
+  document.querySelectorAll('[data-vw]').forEach(b => { fit(b); ro && ro.observe(b); });
+  addEventListener('resize', () => document.querySelectorAll('[data-vw]').forEach(fit));
+
+  // gallery thumbnails: mount live iframes only near the viewport, unmount far away (keeps phones cool)
+  const thumbs = document.querySelectorAll('.thumb[data-src]');
+  const mount = box => {
+    if (box.querySelector('iframe')) return;
+    const f = document.createElement('iframe');
+    f.className = 'frame'; f.src = box.dataset.src; f.title = ''; f.tabIndex = -1;
+    f.setAttribute('aria-hidden', 'true'); f.setAttribute('scrolling', 'no'); f.setAttribute('loading', 'lazy');
+    box.prepend(f); fit(box);
+    f.addEventListener('load', () => { const ph = box.querySelector('.ph'); if (ph) ph.hidden = true; });
+  };
+  const unmount = box => { const f = box.querySelector('iframe'); if (f) { f.remove(); const ph = box.querySelector('.ph'); if (ph) ph.hidden = false; } };
+  if ('IntersectionObserver' in window) {
+    const near = new IntersectionObserver(es => es.forEach(en => en.isIntersecting && mount(en.target)), { rootMargin: '300px 0px' });
+    const far = new IntersectionObserver(es => es.forEach(en => !en.isIntersecting && unmount(en.target)), { rootMargin: '1600px 0px' });
+    thumbs.forEach(t => { near.observe(t); far.observe(t); });
+  } else thumbs.forEach(mount);
+
+  // component page, responsive components: auto-height; below data-minw the frame keeps that width and scales down
+  const flow = document.querySelector('.stage.flow iframe');
+  if (flow) {
+    const box = flow.parentElement, minw = +box.dataset.minw || 0;
+    let lastW = 0;
+    const size = () => {
+      try {
+        const d = flow.contentDocument; if (!d || !d.body) return;
+        const w = box.clientWidth, vw = Math.max(w, minw), s = w / vw;
+        if (w !== lastW) { lastW = w; flow.style.width = vw + 'px'; flow.style.height = '200px'; }
+        flow.style.transform = s < 1 ? 'scale(' + s + ')' : '';
+        const h = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight);
+        if (h && Math.abs(h - flow.offsetHeight) > 1) flow.style.height = h + 'px';
+        box.style.height = Math.ceil(flow.offsetHeight * s) + 'px';
+      } catch (e) {}
+    };
+    flow.addEventListener('load', () => {
+      size();
+      try { if ('ResizeObserver' in window) new ResizeObserver(size).observe(flow.contentDocument.body); } catch (e) {}
+      setTimeout(size, 400);
+    });
+    addEventListener('resize', size);
+  }
+  const src = document.querySelector('[data-copy]');
+  if (document.body.dataset.page === 'component' && src) getText(src.dataset.copy).catch(() => {});
+})();
+</script>
+</body>
+</html>

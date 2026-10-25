@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Source code · @zellap.app</title>
+<meta name="description" content="Source code for 27 UI components from @zellap.app: Cursed UI, Interaction and Done right. One HTML file each. View, copy or download.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Source code · @zellap.app">
+<meta property="og:description" content="Source code for 27 UI components from @zellap.app: Cursed UI, Interaction and Done right. One HTML file each. View, copy or download.">
+<meta name="theme-color" content="#F4F2EE">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231D1B18'/%3E%3Ctext x='16' y='21.5' font-family='monospace' font-size='14' font-weight='700' fill='%23F4F2EE' text-anchor='middle'%3E%26lt;/%26gt;%3C/text%3E%3C/svg%3E">
+<link rel="preload" href="fonts/GeneralSans-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:"Satoshi";src:url("fonts/Satoshi-Variable.woff2") format("woff2");font-weight:300 900;font-display:swap}
+@font-face{font-family:"General Sans";src:url("fonts/GeneralSans-Variable.woff2") format("woff2");font-weight:200 700;font-display:swap}
+@font-face{font-family:"Geist Mono";src:url("fonts/GeistMono-Variable.woff2") format("woff2");font-weight:100 900;font-display:swap}
+:root{
+  --bg:#F4F2EE;--surface:#FFFFFF;--sunk:#EEEBE5;--ink:#1D1B18;--ink-2:#4F4A43;--muted:#6B655C;
+  --hair:rgba(40,32,20,.12);--hair-2:rgba(40,32,20,.2);--ring:#1D1B18;
+  --sans:"General Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --display:"Satoshi","General Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --r:10px;--r-sm:8px;color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+:focus-visible{outline:2.5px solid var(--ring);outline-offset:2px;border-radius:4px}
+.skip{position:absolute;left:12px;top:-60px;background:var(--ink);color:#fff;padding:10px 14px;border-radius:var(--r-sm);z-index:10;text-decoration:none}
+.skip:focus{top:12px}
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.wrap{width:100%;max-width:1200px;margin:0 auto;padding:0 16px}
+@media (min-width:720px){.wrap{padding:0 32px}}
+
+.top{border-bottom:1px solid var(--hair);background:rgba(244,242,238,.92);position:sticky;top:0;z-index:5;
+  -webkit-backdrop-filter:saturate(1.4) blur(10px);backdrop-filter:saturate(1.4) blur(10px)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px}
+.brand{font:500 13px/1 var(--mono);letter-spacing:.01em;text-decoration:none;display:inline-flex;align-items:center;gap:8px;padding:10px 0;white-space:nowrap}
+.brand b{font-weight:600}
+.brand span{color:var(--muted)}
+.brand i{width:8px;height:8px;border-radius:2px;background:var(--ink);display:block}
+.follow-sm{font:600 14px/1 var(--sans);text-decoration:none;display:inline-flex;align-items:center;min-height:44px;padding:0 2px;white-space:nowrap}
+.follow-sm:hover{text-decoration:underline;text-underline-offset:3px}
+
+.eyebrow{font:500 12px/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--c,#999)}
+h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:-.025em;margin:0;text-wrap:balance}
+.follow{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0;font-size:15px;color:var(--ink-2)}
+.follow a{font-weight:600;color:var(--ink);text-underline-offset:3px}
+
+.btn{appearance:none;-webkit-appearance:none;font:600 14px/1 var(--sans);color:var(--ink);background:var(--surface);
+  border:1px solid var(--hair-2);border-radius:var(--r-sm);min-height:44px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  text-decoration:none;cursor:pointer;white-space:nowrap;transition:background-color .15s,border-color .15s}
+.btn:hover{background:var(--sunk)}
+.btn svg{width:16px;height:16px;flex:none}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.primary:hover{background:#3a3631}
+.btn[data-state="done"]{background:#2D6A3E;border-color:#2D6A3E;color:#fff}
+.btn[data-state="error"]{border-color:#B3261E;color:#B3261E}
+
+.foot{border-top:1px solid var(--hair);margin-top:64px;padding:28px 0 40px;color:var(--muted);font-size:14px}
+.foot .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between}
+.foot a{color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+.hero{padding:40px 0 8px}
+.hero h1{font-size:clamp(34px,8.4vw,60px);line-height:1.02;margin:14px 0 14px;max-width:14ch}
+.hero p.lede{font-size:17px;color:var(--ink-2);max-width:52ch;margin:0 0 18px}
+.jump{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 0;padding:0;list-style:none}
+.jump a{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border:1px solid var(--hair-2);border-radius:99px;
+  text-decoration:none;font:500 14px/1 var(--sans);background:var(--surface)}
+.jump a span{font:500 12px/1 var(--mono);color:var(--muted)}
+.series{padding-top:44px;scroll-margin-top:64px}
+.series-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px;padding-bottom:14px;margin-bottom:18px;border-bottom:1px solid var(--hair)}
+.series-head h2{font-size:clamp(24px,5.4vw,32px);display:flex;align-items:center;gap:10px}
+.series-head h2 .dot{width:10px;height:10px}
+.series-head p{margin:0;color:var(--muted);font-size:15px;max-width:60ch}
+.grid{display:grid;gap:16px;grid-template-columns:1fr;list-style:none;margin:0;padding:0}
+@media (min-width:640px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:1024px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}}
+.card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;position:relative}
+.thumb{width:100%;position:relative;border-bottom:1px solid var(--hair);background:var(--sunk);overflow:hidden}
+.thumb .frame{position:absolute;left:0;top:0;transform-origin:0 0;border:0;pointer-events:none;background:transparent}
+.thumb::after{content:"";position:absolute;inset:auto 0 0 0;height:28px;background:linear-gradient(rgba(238,235,229,0),rgba(238,235,229,.6));pointer-events:none}
+.thumb .ph{position:absolute;inset:0;display:grid;place-items:center;font:500 12px/1 var(--mono);color:var(--muted)}
+.thumb .ph[hidden]{display:none}
+.thumb-link{position:absolute;inset:0;z-index:1}
+.meta{padding:16px 16px 0;display:grid;gap:6px}
+.meta h3{font-size:21px;line-height:1.15}
+.meta h3 a{text-decoration:none}
+.meta h3 a:hover{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
+.meta p{margin:0;color:var(--ink-2);font-size:14.5px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:16px;margin-top:auto}
+.actions .btn{padding:0 8px;font-size:13.5px}
+@media (max-width:359px){.actions{grid-template-columns:1fr 1fr}.actions .btn:first-child{grid-column:1/-1}}
+</style>
+</head>
+<body data-page="gallery"><a class="skip" href="#main">Skip to content</a>
+<header class="top"><div class="wrap">
+  <a class="brand" href="index.html"><i aria-hidden="true"></i><b>@zellap.app</b><span>· source code</span></a>
+  <a class="follow-sm" href="https://www.instagram.com/zellap.app/" rel="noopener">Follow</a>
+</div></header>
+<main id="main">
+<section class="hero"><div class="wrap">
+  <p class="eyebrow">Source code · 27 components</p>
+  <h1>Every component, one HTML file.</h1>
+  <p class="lede">The source behind each Cursed UI, Interaction and Done right post. Open it live, copy the code, or download the file. No build step, no dependencies.</p>
+  <p class="follow">New component every day → <a href="https://www.instagram.com/zellap.app/" rel="noopener">follow @zellap.app</a></p>
+  <nav aria-label="Series"><ul class="jump"><li><a href="#cursed"><i class="dot" style="--c:#E0962E" aria-hidden="true"></i>Cursed UI <span>7</span></a></li><li><a href="#interaction"><i class="dot" style="--c:#D9502B" aria-hidden="true"></i>Interaction <span>7</span></a></li><li><a href="#done-right"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right <span>13</span></a></li></ul></nav>
+</div></section>
+<section class="series" id="cursed" aria-labelledby="h-cursed"><div class="wrap">
+  <div class="series-head"><h2 id="h-cursed"><i class="dot" style="--c:#E0962E" aria-hidden="true"></i>Cursed UI</h2><p>Bad UX on purpose. Interfaces that fight back, built with real code.</p></div>
+  <ul class="grid">
+  <li class="card" id="cursed-01-honest-rating">
+    <div class="thumb" data-src="c/cursed-01-honest-rating/component.html" data-vw="560" data-vh="700" style="aspect-ratio:560/700">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/cursed-01-honest-rating/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#E0962E" aria-hidden="true"></i>Cursed UI #1</p>
+      <h3><a href="c/cursed-01-honest-rating/">Honest Rating</a></h3>
+      <p>Our app has never had a 1‑star review.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/cursed-01-honest-rating/component.html" aria-label="View Honest Rating live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/cursed-01-honest-rating/component.html" data-name="Honest Rating" aria-label="Copy Honest Rating code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/cursed-01-honest-rating/component.html" download="honest-rating.html" aria-label="Download Honest Rating as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="cursed-02-cancel-plan">
+    <div class="thumb" data-src="c/cursed-02-cancel-plan/component.html" data-vw="560" data-vh="700" style="aspect-ratio:560/700">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/cursed-02-cancel-plan/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#E0962E" aria-hidden="true"></i>Cursed UI #2</p>
+      <h3><a href="c/cursed-02-cancel-plan/">Cancel Plan</a></h3>
+      <p>Cancelling takes one click.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/cursed-02-cancel-plan/component.html" aria-label="View Cancel Plan live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/cursed-02-cancel-plan/component.html" data-name="Cancel Plan" aria-label="Copy Cancel Plan code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/cursed-02-cancel-plan/component.html" download="cancel-plan.html" aria-label="Download Cancel Plan as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="cursed-03-split-badge">
+    <div class="thumb" data-src="c/cursed-03-split-badge/component.html" data-vw="560" data-vh="700" style="aspect-ratio:560/700">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/cursed-03-split-badge/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#E0962E" aria-hidden="true"></i>Cursed UI #3</p>
+      <h3><a href="c/cursed-03-split-badge/">Split Badge</a></h3>
+      <p>Try clearing this notification.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/cursed-03-split-badge/component.html" aria-label="View Split Badge live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/cursed-03-split-badge/component.html" data-name="Split Badge" aria-label="Copy Split Badge code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/cursed-03-split-badge/component.html" download="split-badge.html" aria-label="Download Split Badge as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="cursed-04-gum-toggle">
+    <div class="thumb" data-src="c/cursed-04-gum-toggle/component.html" data-vw="560" data-vh="700" style="aspect-ratio:560/700">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/cursed-04-gum-toggle/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#E0962E" aria-hidden="true"></i>Cursed UI #4</p>
+      <h3><a href="c/cursed-04-gum-toggle/">Gum Toggle</a></h3>
+      <p>Just let me unsubscribe.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/cursed-04-gum-toggle/component.html" aria-label="View Gum Toggle live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/cursed-04-gum-toggle/component.html" data-name="Gum Toggle" aria-label="Copy Gum Toggle code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/cursed-04-gum-toggle/component.html" download="gum-toggle.html" aria-label="Download Gum Toggle as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="cursed-05-tilted-slider">
+    <div class="thumb" data-src="c/cursed-05-tilted-slider/component.html" data-vw="560" data-vh="700" style="aspect-ratio:560/700">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/cursed-05-tilted-slider/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#E0962E" aria-hidden="true"></i>Cursed UI #5</p>
+      <h3><a href="c/cursed-05-tilted-slider/">Tilted Price Slider</a></h3>
+      <p>Just set a max price.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/cursed-05-tilted-slider/component.html" aria-label="View Tilted Price Slider live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/cursed-05-tilted-slider/component.html" data-name="Tilted Price Slider" aria-label="Copy Tilted Price Slider code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/cursed-05-tilted-slider/component.html" download="tilted-slider.html" aria-label="Download Tilted Price Slider as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="cursed-06-sorted-back">
+    <div class="thumb" data-src="c/cursed-06-sorted-back/component.html" data-vw="560" data-vh="700" style="aspect-ratio:560/700">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/cursed-06-sorted-back/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#E0962E" aria-hidden="true"></i>Cursed UI #6</p>
+      <h3><a href="c/cursed-06-sorted-back/">Sorted Back</a></h3>
+      <p>The list has other plans.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/cursed-06-sorted-back/component.html" aria-label="View Sorted Back live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/cursed-06-sorted-back/component.html" data-name="Sorted Back" aria-label="Copy Sorted Back code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/cursed-06-sorted-back/component.html" download="sorted-back.html" aria-label="Download Sorted Back as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="cursed-07-undo-undo">
+    <div class="thumb" data-src="c/cursed-07-undo-undo/component.html" data-vw="560" data-vh="700" style="aspect-ratio:560/700">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/cursed-07-undo-undo/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#E0962E" aria-hidden="true"></i>Cursed UI #7</p>
+      <h3><a href="c/cursed-07-undo-undo/">Undo Undo</a></h3>
+      <p>Undo undoes your undo.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/cursed-07-undo-undo/component.html" aria-label="View Undo Undo live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/cursed-07-undo-undo/component.html" data-name="Undo Undo" aria-label="Copy Undo Undo code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/cursed-07-undo-undo/component.html" download="undo-undo.html" aria-label="Download Undo Undo as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li>
+  </ul>
+</div></section>
+<section class="series" id="interaction" aria-labelledby="h-interaction"><div class="wrap">
+  <div class="series-head"><h2 id="h-interaction"><i class="dot" style="--c:#D9502B" aria-hidden="true"></i>Interaction</h2><p>Small, tactile micro-interactions with real physics.</p></div>
+  <ul class="grid">
+  <li class="card" id="interaction-01-pluck-slider">
+    <div class="thumb" data-src="c/interaction-01-pluck-slider/component.html" data-vw="1000" data-vh="880" style="aspect-ratio:1000/880">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/interaction-01-pluck-slider/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#D9502B" aria-hidden="true"></i>Interaction #1</p>
+      <h3><a href="c/interaction-01-pluck-slider/">Pluck Slider</a></h3>
+      <p>A slider you can pluck.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/interaction-01-pluck-slider/component.html" aria-label="View Pluck Slider live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/interaction-01-pluck-slider/component.html" data-name="Pluck Slider" aria-label="Copy Pluck Slider code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/interaction-01-pluck-slider/component.html" download="pluck-slider.html" aria-label="Download Pluck Slider as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="interaction-02-odometer-stepper">
+    <div class="thumb" data-src="c/interaction-02-odometer-stepper/component.html" data-vw="1000" data-vh="880" style="aspect-ratio:1000/880">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/interaction-02-odometer-stepper/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#D9502B" aria-hidden="true"></i>Interaction #2</p>
+      <h3><a href="c/interaction-02-odometer-stepper/">Odometer Stepper</a></h3>
+      <p>Numbers that click into place.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/interaction-02-odometer-stepper/component.html" aria-label="View Odometer Stepper live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/interaction-02-odometer-stepper/component.html" data-name="Odometer Stepper" aria-label="Copy Odometer Stepper code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/interaction-02-odometer-stepper/component.html" download="odometer-stepper.html" aria-label="Download Odometer Stepper as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="interaction-03-split-flap-copy">
+    <div class="thumb" data-src="c/interaction-03-split-flap-copy/component.html" data-vw="1000" data-vh="880" style="aspect-ratio:1000/880">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/interaction-03-split-flap-copy/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#D9502B" aria-hidden="true"></i>Interaction #3</p>
+      <h3><a href="c/interaction-03-split-flap-copy/">Split-Flap Copy</a></h3>
+      <p>A copy button that flaps.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/interaction-03-split-flap-copy/component.html" aria-label="View Split-Flap Copy live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/interaction-03-split-flap-copy/component.html" data-name="Split-Flap Copy" aria-label="Copy Split-Flap Copy code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/interaction-03-split-flap-copy/component.html" download="split-flap-copy.html" aria-label="Download Split-Flap Copy as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="interaction-04-bookmark-ribbon">
+    <div class="thumb" data-src="c/interaction-04-bookmark-ribbon/component.html" data-vw="1000" data-vh="880" style="aspect-ratio:1000/880">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/interaction-04-bookmark-ribbon/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#D9502B" aria-hidden="true"></i>Interaction #4</p>
+      <h3><a href="c/interaction-04-bookmark-ribbon/">Bookmark Ribbon</a></h3>
+      <p>Pull the ribbon to save.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/interaction-04-bookmark-ribbon/component.html" aria-label="View Bookmark Ribbon live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/interaction-04-bookmark-ribbon/component.html" data-name="Bookmark Ribbon" aria-label="Copy Bookmark Ribbon code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/interaction-04-bookmark-ribbon/component.html" download="bookmark-ribbon.html" aria-label="Download Bookmark Ribbon as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="interaction-05-wax-seal">
+    <div class="thumb" data-src="c/interaction-05-wax-seal/component.html" data-vw="1000" data-vh="880" style="aspect-ratio:1000/880">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/interaction-05-wax-seal/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#D9502B" aria-hidden="true"></i>Interaction #5</p>
+      <h3><a href="c/interaction-05-wax-seal/">Wax Seal Submit</a></h3>
+      <p>Seal it to send.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/interaction-05-wax-seal/component.html" aria-label="View Wax Seal Submit live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/interaction-05-wax-seal/component.html" data-name="Wax Seal Submit" aria-label="Copy Wax Seal Submit code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/interaction-05-wax-seal/component.html" download="wax-seal.html" aria-label="Download Wax Seal Submit as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="interaction-06-sticky-peel">
+    <div class="thumb" data-src="c/interaction-06-sticky-peel/component.html" data-vw="1000" data-vh="880" style="aspect-ratio:1000/880">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/interaction-06-sticky-peel/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#D9502B" aria-hidden="true"></i>Interaction #6</p>
+      <h3><a href="c/interaction-06-sticky-peel/">Sticky Note Peel</a></h3>
+      <p>Peel it off to dismiss.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/interaction-06-sticky-peel/component.html" aria-label="View Sticky Note Peel live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/interaction-06-sticky-peel/component.html" data-name="Sticky Note Peel" aria-label="Copy Sticky Note Peel code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/interaction-06-sticky-peel/component.html" download="sticky-peel.html" aria-label="Download Sticky Note Peel as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="interaction-07-tape-measure">
+    <div class="thumb" data-src="c/interaction-07-tape-measure/component.html" data-vw="1000" data-vh="880" style="aspect-ratio:1000/880">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/interaction-07-tape-measure/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#D9502B" aria-hidden="true"></i>Interaction #7</p>
+      <h3><a href="c/interaction-07-tape-measure/">Tape Measure Range</a></h3>
+      <p>Pull the tape. Let it snap.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/interaction-07-tape-measure/component.html" aria-label="View Tape Measure Range live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/interaction-07-tape-measure/component.html" data-name="Tape Measure Range" aria-label="Copy Tape Measure Range code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/interaction-07-tape-measure/component.html" download="tape-measure.html" aria-label="Download Tape Measure Range as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li>
+  </ul>
+</div></section>
+<section class="series" id="done-right" aria-labelledby="h-done-right"><div class="wrap">
+  <div class="series-head"><h2 id="h-done-right"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right</h2><p>Everyday components built properly: keyboard, screen readers, reduced motion.</p></div>
+  <ul class="grid">
+  <li class="card" id="done-right-01-star-rating">
+    <div class="thumb" data-src="c/done-right-01-star-rating/component.html" data-vw="640" data-vh="720" style="aspect-ratio:640/720">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/done-right-01-star-rating/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right #1</p>
+      <h3><a href="c/done-right-01-star-rating/">Star rating input</a></h3>
+      <p>A native radio group with half stars. Keyboard, screen readers and touch all work, and the fill is pure CSS.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/done-right-01-star-rating/component.html" aria-label="View Star rating input live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/done-right-01-star-rating/component.html" data-name="Star rating input" aria-label="Copy Star rating input code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/done-right-01-star-rating/component.html" download="star-rating.html" aria-label="Download Star rating input as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="done-right-02-range-slider">
+    <div class="thumb" data-src="c/done-right-02-range-slider/component.html" data-vw="640" data-vh="720" style="aspect-ratio:640/720">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/done-right-02-range-slider/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right #2</p>
+      <h3><a href="c/done-right-02-range-slider/">Range slider</a></h3>
+      <p>A native input type=&quot;range&quot;, styled. The value has a unit for screen readers, the ticks line up, and the hit area is 44px tall.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/done-right-02-range-slider/component.html" aria-label="View Range slider live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/done-right-02-range-slider/component.html" data-name="Range slider" aria-label="Copy Range slider code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/done-right-02-range-slider/component.html" download="range-slider.html" aria-label="Download Range slider as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="done-right-03-cancel-flow">
+    <div class="thumb" data-src="c/done-right-03-cancel-flow/component.html" data-vw="640" data-vh="720" style="aspect-ratio:640/720">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/done-right-03-cancel-flow/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right #3</p>
+      <h3><a href="c/done-right-03-cancel-flow/">Honest cancel flow</a></h3>
+      <p>One click to the decision, every consequence in plain words, two buttons of equal weight, and a clear result. No guilt, no maze.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/done-right-03-cancel-flow/component.html" aria-label="View Honest cancel flow live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/done-right-03-cancel-flow/component.html" data-name="Honest cancel flow" aria-label="Copy Honest cancel flow code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/done-right-03-cancel-flow/component.html" download="cancel-flow.html" aria-label="Download Honest cancel flow as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="done-right-04-number-stepper">
+    <div class="thumb" data-src="c/done-right-04-number-stepper/component.html" data-vw="640" data-vh="720" style="aspect-ratio:640/720">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/done-right-04-number-stepper/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right #4</p>
+      <h3><a href="c/done-right-04-number-stepper/">Number stepper</a></h3>
+      <p>A text input with the spinbutton role, real limits, and buttons that never steal focus. Type, use the arrow keys, or tap.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/done-right-04-number-stepper/component.html" aria-label="View Number stepper live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/done-right-04-number-stepper/component.html" data-name="Number stepper" aria-label="Copy Number stepper code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/done-right-04-number-stepper/component.html" download="number-stepper.html" aria-label="Download Number stepper as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="done-right-05-notification-badge">
+    <div class="thumb" data-src="c/done-right-05-notification-badge/component.html" data-vw="640" data-vh="720" style="aspect-ratio:640/720">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/done-right-05-notification-badge/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right #5</p>
+      <h3><a href="c/done-right-05-notification-badge/">Notification badge</a></h3>
+      <p>The count is part of the button&#x27;s name, the badge caps at 99+, and new notifications are announced once per burst, not once per ping.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/done-right-05-notification-badge/component.html" aria-label="View Notification badge live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/done-right-05-notification-badge/component.html" data-name="Notification badge" aria-label="Copy Notification badge code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/done-right-05-notification-badge/component.html" download="notification-badge.html" aria-label="Download Notification badge as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="done-right-06-copy-button">
+    <div class="thumb" data-src="c/done-right-06-copy-button/component.html" data-vw="640" data-vh="720" style="aspect-ratio:640/720">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/done-right-06-copy-button/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right #6</p>
+      <h3><a href="c/done-right-06-copy-button/">Copy button</a></h3>
+      <p>Clipboard API first, a fallback for old browsers and blocked permissions, a label that never jumps in width, and a status message for screen readers.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/done-right-06-copy-button/component.html" aria-label="View Copy button live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/done-right-06-copy-button/component.html" data-name="Copy button" aria-label="Copy Copy button code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/done-right-06-copy-button/component.html" download="copy-button.html" aria-label="Download Copy button as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="done-right-07-toggle-switch">
+    <div class="thumb" data-src="c/done-right-07-toggle-switch/component.html" data-vw="640" data-vh="720" style="aspect-ratio:640/720">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/done-right-07-toggle-switch/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right #7</p>
+      <h3><a href="c/done-right-07-toggle-switch/">Toggle switch</a></h3>
+      <p>A button with role=&quot;switch&quot; and aria-checked. The label stays the same, the state is more than a colour, and the motion respects your settings.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/done-right-07-toggle-switch/component.html" aria-label="View Toggle switch live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/done-right-07-toggle-switch/component.html" data-name="Toggle switch" aria-label="Copy Toggle switch code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/done-right-07-toggle-switch/component.html" download="toggle-switch.html" aria-label="Download Toggle switch as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="done-right-08-save-button">
+    <div class="thumb" data-src="c/done-right-08-save-button/component.html" data-vw="640" data-vh="720" style="aspect-ratio:640/720">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/done-right-08-save-button/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right #8</p>
+      <h3><a href="c/done-right-08-save-button/">Save button</a></h3>
+      <p>It fills the moment you tap, then asks the server. If the server says no, it rolls back and tells you in words. Fast taps never race.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/done-right-08-save-button/component.html" aria-label="View Save button live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/done-right-08-save-button/component.html" data-name="Save button" aria-label="Copy Save button code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/done-right-08-save-button/component.html" download="save-button.html" aria-label="Download Save button as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="done-right-09-price-filter">
+    <div class="thumb" data-src="c/done-right-09-price-filter/component.html" data-vw="640" data-vh="720" style="aspect-ratio:640/720">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/done-right-09-price-filter/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right #9</p>
+      <h3><a href="c/done-right-09-price-filter/">Dual-range price filter</a></h3>
+      <p>Two real range inputs on one track. They never cross, the one that can move stays on top, you can type exact prices, and the result count is announced once you stop.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/done-right-09-price-filter/component.html" aria-label="View Dual-range price filter live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/done-right-09-price-filter/component.html" data-name="Dual-range price filter" aria-label="Copy Dual-range price filter code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/done-right-09-price-filter/component.html" download="price-filter.html" aria-label="Download Dual-range price filter as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="done-right-10-submit-states">
+    <div class="thumb" data-src="c/done-right-10-submit-states/component.html" data-vw="640" data-vh="720" style="aspect-ratio:640/720">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/done-right-10-submit-states/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right #10</p>
+      <h3><a href="c/done-right-10-submit-states/">Form submit states</a></h3>
+      <p>Idle, loading, success, error. The button keeps its width and its focus, one click sends one request, and a failed send keeps every word you typed.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/done-right-10-submit-states/component.html" aria-label="View Form submit states live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/done-right-10-submit-states/component.html" data-name="Form submit states" aria-label="Copy Form submit states code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/done-right-10-submit-states/component.html" download="submit-states.html" aria-label="Download Form submit states as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="done-right-11-sortable-list">
+    <div class="thumb" data-src="c/done-right-11-sortable-list/component.html" data-vw="640" data-vh="720" style="aspect-ratio:640/720">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/done-right-11-sortable-list/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right #11</p>
+      <h3><a href="c/done-right-11-sortable-list/">Sortable list</a></h3>
+      <p>Drag it, use the arrow buttons, or do it all from the keyboard. Every move is announced, Escape puts it back, and focus never wanders off.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/done-right-11-sortable-list/component.html" aria-label="View Sortable list live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/done-right-11-sortable-list/component.html" data-name="Sortable list" aria-label="Copy Sortable list code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/done-right-11-sortable-list/component.html" download="sortable-list.html" aria-label="Download Sortable list as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="done-right-12-dismissible-notices">
+    <div class="thumb" data-src="c/done-right-12-dismissible-notices/component.html" data-vw="640" data-vh="720" style="aspect-ratio:640/720">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/done-right-12-dismissible-notices/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right #12</p>
+      <h3><a href="c/done-right-12-dismissible-notices/">Dismissible notices</a></h3>
+      <p>The close button says what it closes, focus lands somewhere sensible, a dismissed notice stays dismissed, and the one about your failed payment doesn&#x27;t get an × at all.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/done-right-12-dismissible-notices/component.html" aria-label="View Dismissible notices live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/done-right-12-dismissible-notices/component.html" data-name="Dismissible notices" aria-label="Copy Dismissible notices code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/done-right-12-dismissible-notices/component.html" download="dismissible-notices.html" aria-label="Download Dismissible notices as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="done-right-13-undo-vs-confirm">
+    <div class="thumb" data-src="c/done-right-13-undo-vs-confirm/component.html" data-vw="640" data-vh="720" style="aspect-ratio:640/720">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/done-right-13-undo-vs-confirm/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right #13</p>
+      <h3><a href="c/done-right-13-undo-vs-confirm/">Undo toast vs confirm dialog</a></h3>
+      <p>Can it be undone? Then just do it and offer Undo. Can&#x27;t it? Then ask first, with the real verb on the button. Never both, never neither.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/done-right-13-undo-vs-confirm/component.html" aria-label="View Undo toast vs confirm dialog live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/done-right-13-undo-vs-confirm/component.html" data-name="Undo toast vs confirm dialog" aria-label="Copy Undo toast vs confirm dialog code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/done-right-13-undo-vs-confirm/component.html" download="undo-vs-confirm.html" aria-label="Download Undo toast vs confirm dialog as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li>
+  </ul>
+</div></section>
+</main><footer class="foot"><div class="wrap">
+  <span>27 components · one HTML file each · no build step</span>
+  <span><a href="index.html">All components</a> · <a href="https://www.instagram.com/zellap.app/" rel="noopener">Instagram</a></span>
+</div></footer>
+<p id="status" class="sr-only" role="status" aria-live="polite"></p>
+<script>
+(() => {
+  const live = document.getElementById('status');
+  const say = msg => { if (live) { live.textContent = ''; setTimeout(() => live.textContent = msg, 30); } };
+  const cache = new Map();
+  const getText = url => {
+    if (!cache.has(url)) cache.set(url, fetch(url, { cache: 'force-cache' }).then(r => {
+      if (!r.ok) throw new Error(r.status); return r.text();
+    }).catch(e => { cache.delete(url); throw e; }));
+    return cache.get(url);
+  };
+  const legacyCopy = text => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove(); return ok;
+  };
+  async function copy(url) {
+    const p = getText(url);
+    // ClipboardItem with a pending promise keeps the user gesture alive while fetching (Safari needs this)
+    if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'text/plain': p.then(t => new Blob([t], { type: 'text/plain' })) })]);
+        return true;
+      } catch (e) {}
+    }
+    const text = await p;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+    }
+    return legacyCopy(text);
+  }
+  const label = (btn, text) => { const s = btn.querySelector('.lbl'); if (s) s.textContent = text; };
+  document.addEventListener('click', async e => {
+    const btn = e.target.closest('[data-copy]');
+    if (!btn) return;
+    const name = btn.dataset.name || 'Code';
+    clearTimeout(btn._t);
+    let ok = false;
+    try { ok = await copy(btn.dataset.copy); } catch (err) { ok = false; }
+    btn.dataset.state = ok ? 'done' : 'error';
+    label(btn, ok ? 'Copied' : 'Copy failed');
+    say(ok ? name + ' source copied to clipboard.' : 'Could not copy. Use Download instead.');
+    btn._t = setTimeout(() => { delete btn.dataset.state; label(btn, 'Copy code'); }, 1800);
+  });
+  // warm the cache on intent, so the copy itself is instant
+  ['pointerenter', 'focusin', 'touchstart'].forEach(t => document.addEventListener(t, e => {
+    const btn = e.target.closest && e.target.closest('[data-copy]');
+    if (btn) getText(btn.dataset.copy).catch(() => {});
+  }, { capture: true, passive: true }));
+  window.__warm = getText;
+
+  // scaled iframes: the frame keeps its virtual viewport (--vw x --vh) and scales to the box width
+  const fit = box => {
+    const f = box.querySelector('iframe'); if (!f) return;
+    const vw = +box.dataset.vw, vh = +box.dataset.vh, max = box.dataset.max === '1';
+    let s = box.clientWidth / vw; if (max) s = Math.min(1, s);
+    f.style.width = vw + 'px'; f.style.height = vh + 'px'; f.style.transform = 'scale(' + s + ')';
+    box.style.height = Math.round(vh * s) + 'px';
+  };
+  const ro = 'ResizeObserver' in window ? new ResizeObserver(es => es.forEach(en => fit(en.target))) : null;
+  document.querySelectorAll('[data-vw]').forEach(b => { fit(b); ro && ro.observe(b); });
+  addEventListener('resize', () => document.querySelectorAll('[data-vw]').forEach(fit));
+
+  // gallery thumbnails: mount live iframes only near the viewport, unmount far away (keeps phones cool)
+  const thumbs = document.querySelectorAll('.thumb[data-src]');
+  const mount = box => {
+    if (box.querySelector('iframe')) return;
+    const f = document.createElement('iframe');
+    f.className = 'frame'; f.src = box.dataset.src; f.title = ''; f.tabIndex = -1;
+    f.setAttribute('aria-hidden', 'true'); f.setAttribute('scrolling', 'no'); f.setAttribute('loading', 'lazy');
+    box.prepend(f); fit(box);
+    f.addEventListener('load', () => { const ph = box.querySelector('.ph'); if (ph) ph.hidden = true; });
+  };
+  const unmount = box => { const f = box.querySelector('iframe'); if (f) { f.remove(); const ph = box.querySelector('.ph'); if (ph) ph.hidden = false; } };
+  if ('IntersectionObserver' in window) {
+    const near = new IntersectionObserver(es => es.forEach(en => en.isIntersecting && mount(en.target)), { rootMargin: '300px 0px' });
+    const far = new IntersectionObserver(es => es.forEach(en => !en.isIntersecting && unmount(en.target)), { rootMargin: '1600px 0px' });
+    thumbs.forEach(t => { near.observe(t); far.observe(t); });
+  } else thumbs.forEach(mount);
+
+  // component page, responsive components: auto-height; below data-minw the frame keeps that width and scales down
+  const flow = document.querySelector('.stage.flow iframe');
+  if (flow) {
+    const box = flow.parentElement, minw = +box.dataset.minw || 0;
+    let lastW = 0;
+    const size = () => {
+      try {
+        const d = flow.contentDocument; if (!d || !d.body) return;
+        const w = box.clientWidth, vw = Math.max(w, minw), s = w / vw;
+        if (w !== lastW) { lastW = w; flow.style.width = vw + 'px'; flow.style.height = '200px'; }
+        flow.style.transform = s < 1 ? 'scale(' + s + ')' : '';
+        const h = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight);
+        if (h && Math.abs(h - flow.offsetHeight) > 1) flow.style.height = h + 'px';
+        box.style.height = Math.ceil(flow.offsetHeight * s) + 'px';
+      } catch (e) {}
+    };
+    flow.addEventListener('load', () => {
+      size();
+      try { if ('ResizeObserver' in window) new ResizeObserver(size).observe(flow.contentDocument.body); } catch (e) {}
+      setTimeout(size, 400);
+    });
+    addEventListener('resize', size);
+  }
+  const src = document.querySelector('[data-copy]');
+  if (document.body.dataset.page === 'component' && src) getText(src.dataset.copy).catch(() => {});
+})();
+</script>
+</body>
+</html>

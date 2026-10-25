@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dual-range price filter · Done right #9 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 520px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-card { background: #FFFFFF; border: 1px solid rgba(40, 32, 20, .12); border-radius: 24px; padding: 28px; box-shadow: 0 24px 50px -28px rgba(40, 32, 20, .28); }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+
+  .price {
+    --thumb: 28px;
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    color: #1D1B18;
+  }
+  .price-legend { padding: 0; margin-bottom: 4px; font-weight: 600; font-size: 1.0625rem; }
+
+  /* Two native range inputs stacked on one track. */
+  .price-track { position: relative; height: 44px; }
+  .price-track::before,
+  .price-fill {
+    content: "";
+    position: absolute;
+    top: 50%;
+    height: 6px;
+    margin-top: -3px;
+    border-radius: 99px;
+  }
+  .price-track::before {
+    left: calc(var(--thumb) / 2);
+    right: calc(var(--thumb) / 2);
+    background: #948D82;              /* 3.3:1 on white */
+  }
+  .price-fill {
+    left: calc(var(--thumb) / 2 + var(--a) * (100% - var(--thumb)));
+    right: calc(var(--thumb) / 2 + (1 - var(--b)) * (100% - var(--thumb)));
+    background: #1D1B18;
+  }
+
+  .price-range {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    appearance: none;
+    background: none;
+    pointer-events: none;     /* the track ignores clicks… */
+  }
+  .price-range::-webkit-slider-runnable-track { height: 6px; background: none; }
+  .price-range::-moz-range-track { height: 6px; background: none; }
+  .price-range::-webkit-slider-thumb {
+    pointer-events: auto;     /* …only the thumbs catch them */
+    appearance: none;
+    width: var(--thumb);
+    height: var(--thumb);
+    margin-top: calc((6px - var(--thumb)) / 2);
+    border: 2px solid #1D1B18;
+    border-radius: 50%;
+    background: #FFFFFF;
+    box-shadow: 0 2px 6px rgba(29, 27, 24, .25);
+    cursor: grab;
+  }
+  .price-range::-moz-range-thumb {
+    pointer-events: auto;
+    box-sizing: border-box;
+    width: var(--thumb);
+    height: var(--thumb);
+    border: 2px solid #1D1B18;
+    border-radius: 50%;
+    background: #FFFFFF;
+    box-shadow: 0 2px 6px rgba(29, 27, 24, .25);
+    cursor: grab;
+  }
+  .price-range:hover::-webkit-slider-thumb {
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(29, 27, 24, .25), 0 0 0 7px rgba(29, 27, 24, .08);
+  }
+  .price-range:hover::-moz-range-thumb {
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(29, 27, 24, .25), 0 0 0 7px rgba(29, 27, 24, .08);
+  }
+  .price-range:focus-visible { outline: none; }
+  .price-range:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 5.5px #1D1B18;
+  }
+  .price-range:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 5.5px #1D1B18;
+  }
+
+  /* Exact numbers, for people who know their budget. */
+  .price-fields { display: flex; align-items: flex-end; gap: 12px; }
+  .price-field { display: grid; gap: 4px; flex: 1; font-size: .875rem; font-weight: 500; color: #5A544B; }
+  .price-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 48px;
+    padding: 0 14px;
+    border: 1.5px solid #857E73;      /* 4.0:1 on white */
+    border-radius: 12px;
+    background: #FFFFFF;
+    color: #1D1B18;
+    font-size: 1.0625rem;
+    font-weight: 600;
+  }
+  .price-box:has(input:focus-visible) { border-color: #1D1B18; outline: 2.5px solid #1D1B18; outline-offset: 2px; }
+  .price-num {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+  }
+  .price-num:focus { outline: none; }
+  .price-dash { padding-bottom: 12px; color: #5A544B; }
+
+  .price-apply {
+    min-height: 48px;
+    margin-top: 6px;
+    border: 0;
+    border-radius: 12px;
+    background: #1D1B18;
+    color: #FFFFFF;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .price-apply:hover { background: #3A3631; }
+  .price-apply:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 3px; }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #9 · @zellap.app</p>
+  <h1>Dual-range price filter</h1>
+  <p class="demo-lede">Two real range inputs on one track. They never cross, the one that can move stays on top, you can type exact prices, and the result count is announced once you stop.</p>
+
+  <div class="demo-card">
+    <fieldset class="price" data-gap="10" data-noun="jacket"
+              data-prices="29,35,39,45,49,55,59,65,69,75,79,89,95,99,110,119,125,129,139,149,159,165,179,189,199,215,229,239,249,269,279,299,319,349,379,399">
+      <legend class="price-legend">Price</legend>
+      <div class="price-track">
+        <span class="price-fill" aria-hidden="true"></span>
+        <input class="price-range" type="range"
+               aria-label="Minimum price"
+               min="0" max="400" step="5" value="60">
+        <input class="price-range" type="range"
+               aria-label="Maximum price"
+               min="0" max="400" step="5" value="240">
+      </div>
+      <div class="price-fields">
+        <label class="price-field">Min price
+          <span class="price-box"><span aria-hidden="true">€</span>
+            <input class="price-num" inputmode="numeric" value="60"></span>
+        </label>
+        <span class="price-dash" aria-hidden="true">–</span>
+        <label class="price-field">Max price
+          <span class="price-box"><span aria-hidden="true">€</span>
+            <input class="price-num" inputmode="numeric" value="240"></span>
+        </label>
+      </div>
+      <button class="price-apply" type="button">Show jackets</button>
+      <p class="price-live sr-only" role="status"></p>
+    </fieldset>
+  </div>
+
+  <p class="demo-notes">Tab to a thumb and use the arrow keys, or type a price and press Enter.<br>Push the thumbs together: they stop €10 apart.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  for (const box of document.querySelectorAll('.price')) {
+    const [lo, hi] = box.querySelectorAll('.price-range');
+    const [loNum, hiNum] = box.querySelectorAll('.price-num');
+    const track = box.querySelector('.price-track');
+    const apply = box.querySelector('.price-apply');
+    const live = box.querySelector('.price-live');
+    const prices = box.dataset.prices.split(',').map(Number);
+    const gap = Number(box.dataset.gap);
+    const min = Number(lo.min), max = Number(lo.max);
+    let timer;
+
+    const render = (moved, announce = true) => {
+      // The thumbs never cross: they stop one gap apart.
+      const top = hi.value - gap, bottom = +lo.value + gap;
+      if (moved === lo && lo.value > top) lo.value = top;
+      if (moved === hi && hi.value < bottom) hi.value = bottom;
+      const a = +lo.value, b = +hi.value;
+      lo.setAttribute('aria-valuetext', `€${a}`);
+      hi.setAttribute('aria-valuetext', `€${b}`);
+      loNum.value = a;
+      hiNum.value = b;
+      track.style.setProperty('--a', (a - min) / (max - min));
+      track.style.setProperty('--b', (b - min) / (max - min));
+      // Together at the top end? Min on top, so it can move.
+      lo.style.zIndex = a > (min + max) / 2 ? 2 : '';
+
+      const n = prices.filter((p) => p >= a && p <= b).length;
+      const noun = `${box.dataset.noun}${n === 1 ? '' : 's'}`;
+      apply.textContent = `Show ${n} ${noun}`;
+      // Announce once, after the user stops. Not on every step.
+      clearTimeout(timer);
+      if (announce) timer = setTimeout(() => {
+        live.textContent = `${n} ${noun} from €${a} to €${b}`;
+      }, 700);
+    };
+
+    for (const range of [lo, hi]) {
+      range.addEventListener('input', () => render(range));
+    }
+    for (const [num, range] of [[loNum, lo], [hiNum, hi]]) {
+      num.addEventListener('change', () => {
+        const n = parseInt(num.value, 10);
+        if (!Number.isNaN(n)) range.value = n; // range clamps + snaps
+        render(range);
+      });
+    }
+    render(null, false);
+  }
+</script>
+</body>
+</html>

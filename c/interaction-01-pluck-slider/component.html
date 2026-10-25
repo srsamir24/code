@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pluck Slider</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #ECE8E0;
+    --card: #FAF8F4;
+    --ink: #1D1B18;
+    --ink-2: #57524A;
+    --muted: #9A948A;
+    --hair: rgba(40, 32, 20, .10);
+    --hair-strong: rgba(40, 32, 20, .16);
+    --accent: #D9502B;
+    --code-bg: #1E1C19;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "General Sans", ui-sans-serif, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  /* soft overhead light on the paper */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(1200px 900px at 50% 38%, rgba(255,255,255,.55), transparent 70%),
+      radial-gradient(900px 700px at 50% 110%, rgba(120,100,70,.10), transparent 70%);
+  }
+
+  .stage { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+
+  /* ---------- the component ---------- */
+  .card {
+    position: relative;
+    width: 800px;
+    padding: 56px 50px 44px;
+    background: linear-gradient(180deg, #FCFBF8 0%, var(--card) 100%);
+    border-radius: 36px;
+    border: 1px solid var(--hair);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.9),
+      0 1px 1px rgba(40,30,15,.04),
+      0 6px 12px -4px rgba(40,30,15,.06),
+      0 30px 60px -20px rgba(40,30,15,.16),
+      0 70px 120px -40px rgba(40,30,15,.18);
+  }
+  .head { display: flex; align-items: flex-end; justify-content: space-between; padding: 0 14px; }
+  .label { font-size: 30px; font-weight: 500; letter-spacing: -.01em; color: var(--ink-2); }
+  .label small { display: block; font-size: 22px; font-weight: 400; color: var(--muted); margin-top: 6px; letter-spacing: 0; }
+  .value {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-weight: 300; font-size: 150px; line-height: .8; letter-spacing: -.06em;
+    font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+  .value sup { font-size: 30px; letter-spacing: 0; font-weight: 400; color: var(--muted); vertical-align: top; position: relative; top: 8px; margin-left: 8px; }
+  .hz { font-family: "Geist Mono", monospace; font-size: 26px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .hz b { font-weight: 500; color: var(--accent); }
+
+  svg.string { display: block; width: 700px; height: 440px; margin-top: 18px; touch-action: none; cursor: grab; overflow: visible; }
+  svg.string.held { cursor: grabbing; }
+
+  /* ---------- reel overlays ---------- */
+  .reel .stage { width: 1080px; height: 1920px; display: block; }
+  .reel .card { position: absolute; left: 140px; top: 590px; transform-origin: 50% 0; scale: 1.05; }
+  .hook, .handle, .chip, .end, .codecard, #cursor, .big, .tint { display: none; pointer-events: none; }
+  .reel .big, .reel .tint { display: block; }
+  .tint { position: absolute; inset: 0; opacity: 0;
+    background: radial-gradient(900px 1300px at 50% 46%, transparent 50%, rgba(150,95,50,.10) 100%), rgba(230,170,110,.035); }
+  .big { position: absolute; left: 0; right: 0; top: 1440px; text-align: center; opacity: 0;
+    font-family: "Geist Mono", monospace; font-weight: 300; font-size: 132px; letter-spacing: -.05em; color: var(--accent); line-height: 1; }
+  .big small { font-size: 30px; letter-spacing: .02em; color: var(--ink-2); font-weight: 400; display: block; margin-top: 10px; }
+  .reel body { user-select: none; -webkit-user-select: none; }
+  .reel .hook, .reel .handle, .reel .chip, .reel .end, .reel .codecard, .reel #cursor { display: block; }
+  .handle {
+    position: absolute; left: 0; right: 0; top: 168px; text-align: center;
+    font-family: "Geist Mono", monospace; font-size: 28px; color: var(--muted); letter-spacing: .02em;
+  }
+  .hook {
+    position: absolute; left: 90px; right: 90px; top: 222px; text-align: center;
+    font-size: 84px; font-weight: 600; letter-spacing: -.035em; line-height: 1.02; color: var(--ink);
+    text-wrap: balance;
+  }
+  .hook em { font-style: normal; color: var(--accent); }
+  .chip {
+    position: absolute; left: 0; right: 0; top: 1400px; text-align: center;
+  }
+  .chip span {
+    display: inline-flex; align-items: center; gap: 14px;
+    font-family: "Geist Mono", monospace; font-size: 28px; color: var(--ink-2);
+    padding: 14px 26px; border-radius: 999px; border: 1px solid var(--hair-strong);
+    background: rgba(250,248,244,.7);
+  }
+  .chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .end {
+    position: absolute; left: 130px; right: 130px; top: 1150px; text-align: center; opacity: 0;
+    font-size: 40px; font-weight: 500; letter-spacing: -.02em; line-height: 1.25; color: var(--ink);
+  }
+  .end span { color: var(--muted); }
+  .codecard {
+    position: absolute; left: 130px; top: 620px; width: 820px; opacity: 0;
+    background: var(--code-bg); color: #E9E4DA; border-radius: 36px;
+    border: 1px solid rgba(255,255,255,.06);
+    box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 40px 90px -30px rgba(30,20,10,.45), 0 10px 24px -8px rgba(30,20,10,.25);
+    padding: 44px 48px 52px;
+  }
+  .codecard .file { display: flex; justify-content: space-between; font-family: "Geist Mono", monospace; font-size: 24px; color: #8C857A; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 30px; }
+  .codecard pre { font-family: "Geist Mono", monospace; font-size: 32px; line-height: 1.6; white-space: pre; }
+  .c { color: #7F786C; } .k { color: #E8A27F; } .n { color: #F2C66D; } .o { color: #9C958A; } .h { color: #fff; background: rgba(217,80,43,.28); border-radius: 6px; padding: 0 4px; margin: 0 -4px; }
+
+  #cursor { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 10; pointer-events: none; }
+  #cursor .tip { position: absolute; left: -42px; top: -42px; width: 84px; height: 84px; border-radius: 50%;
+    background: rgba(29,27,24,.10); border: 2px solid rgba(29,27,24,.45);
+    box-shadow: 0 6px 16px rgba(30,20,10,.18); transition: none; }
+  #cursor.down .tip { transform: scale(.92); background: rgba(29,27,24,.16); border-color: rgba(29,27,24,.7); }
+
+  @media (prefers-reduced-motion: reduce) { svg.string { cursor: pointer; } }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="tint" id="tint"></div>
+  <div class="handle">@zellap.app</div>
+  <h1 class="hook">A slider you can <em>pluck.</em></h1>
+
+  <div class="card" id="card">
+    <div class="head">
+      <div class="label">String tension<small class="hz">fundamental <b id="hz">0.0</b> Hz</small></div>
+      <div class="value"><span id="val">35</span><sup>%</sup></div>
+    </div>
+    <svg class="string" id="svg" viewBox="0 0 700 440" role="slider" aria-label="String tension" aria-valuemin="0" aria-valuemax="100" aria-valuenow="35" tabindex="0">
+      <defs>
+        <filter id="soft" x="-10%" y="-200%" width="120%" height="500%"><feGaussianBlur stdDeviation="7"/></filter>
+        <filter id="softer" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>
+        <radialGradient id="bead" cx="38%" cy="32%" r="75%">
+          <stop offset="0" stop-color="#F28A63"/>
+          <stop offset=".55" stop-color="#D9502B"/>
+          <stop offset="1" stop-color="#A9361A"/>
+        </radialGradient>
+        <radialGradient id="peg" cx="40%" cy="35%" r="70%">
+          <stop offset="0" stop-color="#FFFFFF"/>
+          <stop offset=".6" stop-color="#D8D2C7"/>
+          <stop offset="1" stop-color="#A8A196"/>
+        </radialGradient>
+      </defs>
+      <g id="ticks"></g>
+      <path id="shadow" fill="none" stroke="rgba(50,35,15,.22)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" filter="url(#soft)" transform="translate(0 16)"/>
+      <path id="str" fill="none" stroke="#2A2622" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path id="shine" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -0.8)"/>
+      <g id="pegs"></g>
+      <ellipse id="beadShadow" rx="24" ry="10" fill="rgba(60,30,10,.28)" filter="url(#softer)"/>
+      <g id="beadG">
+        <circle r="23" fill="url(#bead)"/>
+        <circle r="22.5" fill="none" stroke="rgba(120,30,10,.35)" stroke-width="1"/>
+        <ellipse cx="-6" cy="-9" rx="8" ry="5" fill="rgba(255,255,255,.45)"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="codecard" id="code">
+    <div class="file"><span>pluck.js</span><span>the whole trick</span></div>
+<pre><span class="c">// each point, every tick:</span>
+<span class="k">let</span> bend = y[i<span class="o">-</span><span class="n">1</span>] <span class="o">-</span> <span class="n">2</span><span class="o">*</span>y[i] <span class="o">+</span> y[i<span class="o">+</span><span class="n">1</span>];
+v[i] <span class="o">+=</span> bend <span class="o">*</span> <span id="hl">tension</span> <span class="o">*</span> dt;
+v[i] <span class="o">*=</span> <span class="n">0.9993</span>;   <span class="c">// friction</span>
+y[i] <span class="o">+=</span> v[i] <span class="o">*</span> dt;</pre>
+  </div>
+
+  <div class="chip" id="chip"><span><i></i><b id="chipText" style="font-weight:400">1× real time</b></span></div>
+  <div class="big" id="big">0.5×<small>slow motion</small></div>
+  <p class="end" id="end">Code in the caption.<br><span>Follow for one a week.</span></p>
+  <div id="cursor"><div class="tip"></div></div>
+</div>
+
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const CAPTURE = params.has('capture');
+  if (CAPTURE) document.documentElement.classList.add('reel');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+  // ---------- geometry ----------
+  const W = 700, X0 = 26, X1 = 674, REST = 196, MAXD = 200;
+  const N = 121;                      // points on the string
+  const DX = (X1 - X0) / (N - 1);
+  const DT = 1 / 1440;                // fixed physics step (seconds)
+  const FRICTION = 0.9993;            // per step
+  const y = new Float32Array(N), v = new Float32Array(N);
+
+  const $ = id => document.getElementById(id);
+  const svg = $('svg'), str = $('str'), shadow = $('shadow'), shine = $('shine');
+  const beadG = $('beadG'), beadShadow = $('beadShadow'), valEl = $('val'), hzEl = $('hz');
+
+  let value = +(params.get('v') || 35);   // 0..100
+  let held = false, pluckY = 0;
+
+  // tension -> wave speed (px/s). More tension, faster ring.
+  const speed = () => 2100 + value * 26;
+  const tension = () => (speed() / DX) ** 2;          // c² / dx²
+  const beadX = () => X0 + (X1 - X0) * value / 100;
+
+  // pegs + ticks
+  const NS = 'http://www.w3.org/2000/svg';
+  for (const x of [X0 - 4, X1 + 4]) {
+    const g = document.createElementNS(NS, 'g');
+    g.innerHTML = `<circle cx="${x}" cy="${REST + 7}" r="14" fill="rgba(60,40,15,.18)" filter="url(#softer)"/>
+      <circle cx="${x}" cy="${REST}" r="12" fill="url(#peg)" stroke="rgba(60,50,35,.35)" stroke-width="1"/>
+      <line x1="${x - 6}" y1="${REST - 4}" x2="${x + 6}" y2="${REST + 4}" stroke="rgba(60,50,35,.45)" stroke-width="1.4" stroke-linecap="round"/>`;
+    $('pegs').appendChild(g);
+  }
+  const ticks = [];
+  for (let i = 0; i <= 50; i++) {
+    const l = document.createElementNS(NS, 'line');
+    const x = X0 + (X1 - X0) * i / 50;
+    l.setAttribute('x1', x); l.setAttribute('x2', x);
+    l.setAttribute('stroke', i % 10 === 0 ? 'rgba(40,32,20,.42)' : 'rgba(40,32,20,.20)');
+    l.setAttribute('stroke-width', i % 10 === 0 ? 1.4 : 1);
+    l.setAttribute('stroke-linecap', 'round');
+    $('ticks').appendChild(l); ticks.push({ l, x, major: i % 10 === 0 });
+  }
+  for (const [t, x] of [['0', X0], ['50', (X0 + X1) / 2], ['100', X1]]) {
+    const tx = document.createElementNS(NS, 'text');
+    tx.setAttribute('x', x); tx.setAttribute('y', 438); tx.setAttribute('text-anchor', 'middle');
+    tx.setAttribute('font-family', 'Geist Mono'); tx.setAttribute('font-size', 21); tx.setAttribute('fill', '#9A948A');
+    tx.textContent = t; $('ticks').appendChild(tx);
+  }
+
+  // ---------- physics ----------
+  function holdShape(seconds) {
+    // finger holds the string: ease toward two straight segments from the pegs to the finger
+    // (easing, not snapping, so grabbing a ringing string damps it instead of teleporting it)
+    const bx = beadX(), k = 1 - Math.exp(-seconds / 0.03);
+    for (let i = 0; i < N; i++) {
+      const x = X0 + i * DX;
+      const target = x <= bx ? pluckY * (x - X0) / (bx - X0) : pluckY * (X1 - x) / (X1 - bx);
+      y[i] += (target - y[i]) * k;
+      v[i] = 0;
+    }
+  }
+  function step(seconds) {
+    if (held) { holdShape(seconds); return; }
+    const T = tension();
+    const steps = Math.round(seconds / DT);
+    if (reduce.matches) {                    // no ringing: ease straight back
+      const k = Math.pow(0.82, seconds * 60);
+      for (let i = 0; i < N; i++) { y[i] *= k; v[i] = 0; }
+      return;
+    }
+    for (let s = 0; s < steps; s++) {
+      for (let i = 1; i < N - 1; i++) {
+        const bend = y[i - 1] - 2 * y[i] + y[i + 1];
+        v[i] += bend * T * DT;
+        v[i] *= FRICTION;
+      }
+      for (let i = 1; i < N - 1; i++) y[i] += v[i] * DT;
+    }
+  }
+  function sampleY(x) {
+    const f = (x - X0) / DX, i = Math.min(N - 2, Math.max(0, Math.floor(f))), t = f - i;
+    return y[i] * (1 - t) + y[i + 1] * t;
+  }
+
+  // ---------- render ----------
+  function render() {
+    let d = '';
+    for (let i = 0; i < N; i++) d += (i ? 'L' : 'M') + (X0 + i * DX).toFixed(2) + ' ' + (REST + y[i]).toFixed(2);
+    str.setAttribute('d', d); shadow.setAttribute('d', d); shine.setAttribute('d', d);
+    const bx = beadX(), by = REST + sampleY(bx);
+    beadG.setAttribute('transform', `translate(${bx.toFixed(2)} ${by.toFixed(2)})`);
+    beadShadow.setAttribute('cx', bx.toFixed(2)); beadShadow.setAttribute('cy', (by + 18).toFixed(2));
+    for (const t of ticks) {
+      const near = Math.exp(-(((t.x - bx) / 34) ** 2));
+      const h = (t.major ? 16 : 9) + near * 12;
+      t.l.setAttribute('y1', (410 - h).toFixed(2)); t.l.setAttribute('y2', '410');
+      t.l.setAttribute('stroke-opacity', (0.6 + near * 0.4).toFixed(3));
+    }
+    const pct = Math.round(value);
+    valEl.textContent = String(pct).padStart(2, '0');
+    svg.setAttribute('aria-valuenow', pct);
+    hzEl.textContent = (speed() / (2 * (X1 - X0))).toFixed(2);
+  }
+
+  // ---------- input ----------
+  function local(e) {
+    const r = svg.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * 440 / r.height };
+  }
+  function drag(e) {
+    const p = local(e);
+    value = Math.min(100, Math.max(0, (p.x - X0) / (X1 - X0) * 100));
+    value = Math.min(97, Math.max(3, value));             // keep the pluck point off the pegs
+    const dy = p.y - REST;
+    pluckY = Math.max(-MAXD, Math.min(MAXD, dy));          // the string stays under the finger
+  }
+  svg.addEventListener('pointerdown', e => {
+    e.preventDefault(); held = true; svg.classList.add('held');
+    svg.setPointerCapture(e.pointerId); drag(e);
+  });
+  svg.addEventListener('pointermove', e => { if (held) drag(e); });
+  const release = () => { if (!held) return; held = false; svg.classList.remove('held'); };
+  svg.addEventListener('pointerup', release);
+  svg.addEventListener('pointercancel', release);
+  svg.addEventListener('keydown', e => {                    // keyboard: nudge + a small pluck
+    const d = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[e.key];
+    if (!d) return; e.preventDefault();
+    value = Math.min(97, Math.max(3, value + d * (e.shiftKey ? 10 : 1)));
+    const i = Math.round((beadX() - X0) / DX); v[i] += 900 * d;
+  });
+
+  // ---------- capture-mode cursor (screenshots have no OS pointer) ----------
+  const cur = $('cursor');
+  if (CAPTURE) {
+    cur.style.transform = 'translate(-200px,-200px)';
+    addEventListener('pointerdown', () => cur.classList.add('down'), true);
+    addEventListener('pointerup', () => cur.classList.remove('down'), true);
+  }
+
+  // ---------- loop ----------
+  render();
+  if (!CAPTURE) {
+    let last = performance.now(), acc = 0;
+    const frame = now => {
+      acc += Math.min(0.05, (now - last) / 1000); last = now;
+      const whole = Math.floor(acc / DT) * DT; acc -= whole;
+      step(whole); render(); requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  } else {
+    // the recorder drives time frame by frame, so every frame is exact
+    window.__tick = sec => { step(sec); render(); };
+    window.__geom = () => {
+      const r = svg.getBoundingClientRect();
+      return { left: r.left, top: r.top, scale: r.width / W, X0, X1, REST, value };
+    };
+    window.__overlay = o => {
+      // sequential, never two text layers at once: card out, then code in (and back)
+      $('card').style.opacity = o.card;
+      $('card').style.transform = `translateY(${(1 - o.card) * -18}px)`;
+      $('code').style.opacity = o.code;
+      $('code').style.transform = `translateY(${(1 - o.code) * 22}px)`;
+      $('chip').style.opacity = o.card * (1 - o.big);
+      $('end').style.opacity = o.code;
+      $('big').style.opacity = o.big; $('big').style.transform = `scale(${0.94 + 0.06 * o.big})`;
+      $('tint').style.opacity = o.tint;
+      $('hl').className = o.hl ? 'h' : '';
+      cur.style.opacity = o.card;
+      $('chipText').textContent = o.chip;
+      if (o.cx !== undefined) cur.style.transform = `translate(${o.cx}px, ${o.cy}px)`;
+      if (o.hook !== undefined) document.querySelector('.hook').style.opacity = o.hook;
+    };
+  }
+})();
+</script>
+</body>
+</html>

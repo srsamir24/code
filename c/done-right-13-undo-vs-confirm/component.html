@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Undo toast vs confirm dialog · Done right #13 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px 120px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 560px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-card { background: #FFFFFF; border: 1px solid rgba(40, 32, 20, .12); border-radius: 24px; padding: 24px; box-shadow: 0 24px 50px -28px rgba(40, 32, 20, .28); }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+
+  .files { color: #1D1B18; }
+  .files-title { margin: 0 0 12px; font-size: 1.0625rem; font-weight: 600; }
+  .files-title:focus { outline: none; }
+  .files-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .file {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 6px 6px 16px;
+    border: 1px solid #DDD6CB;
+    border-radius: 14px;
+    background: #FFFFFF;
+  }
+  .file-name { flex: 1; min-width: 0; font-weight: 500; overflow-wrap: anywhere; }
+
+  .file-btn,
+  .confirm-actions button,
+  .toast-undo {
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1.5px solid #857E73;      /* 4.0:1 on white */
+    border-radius: 10px;
+    background: #FFFFFF;
+    color: #1D1B18;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .file-btn:hover, .confirm-actions button:hover { background: #F2EFEA; }
+  /* Destructive = red text AND the words "forever". */
+  .is-danger { border-color: #B3261E; color: #B3261E; }
+  .is-danger:hover { background: #FCF0EE; }
+  .file-btn:focus-visible,
+  .confirm-actions button:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 2px; }
+
+  /* Undo toast: bottom of the screen, never steals focus. */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    translate: -50% 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    padding: 8px 8px 8px 18px;
+    border-radius: 14px;
+    background: #1D1B18;
+    color: #FFFFFF;
+    box-shadow: 0 18px 40px -16px rgba(29, 27, 24, .55);
+  }
+  .toast[hidden] { display: none; }
+  .toast-text { margin: 0; }
+  .toast-undo { border-color: #FFFFFF; background: #1D1B18; color: #FFFFFF; display: inline-flex; align-items: center; gap: 10px; }
+  .toast-undo:hover { background: #3A3631; }
+  .toast-undo:focus-visible { outline: 2.5px solid #FFFFFF; outline-offset: 2px; }
+  .toast kbd { font: 500 .75rem/1 ui-monospace, monospace; padding: 3px 5px; border: 1px solid rgba(255, 255, 255, .5); border-radius: 5px; }
+
+  /* Confirm dialog: only for what can't be undone. */
+  .confirm {
+    width: min(100% - 32px, 440px);
+    padding: 24px;
+    border: 0;
+    border-radius: 18px;
+    background: #FFFFFF;
+    color: #1D1B18;
+    box-shadow: 0 30px 80px -20px rgba(29, 27, 24, .45);
+  }
+  .confirm::backdrop { background: rgba(29, 27, 24, .45); }
+  .confirm-title { margin: 0; font-size: 1.25rem; line-height: 1.3; font-weight: 600; overflow-wrap: anywhere; }
+  .confirm-what { margin: 8px 0 20px; color: #4F4A43; }
+  .confirm-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+  .confirm-actions [value="delete"] { background: #B3261E; border-color: #B3261E; color: #FFFFFF; }
+  .confirm-actions [value="delete"]:hover { background: #8F1D17; }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #13 · @zellap.app</p>
+  <h1>Undo toast vs confirm dialog</h1>
+  <p class="demo-lede">Can it be undone? Then just do it and offer Undo. Can't it? Then ask first, with the real verb on the button. Never both, never neither.</p>
+
+  <div class="demo-card">
+    <div class="files" data-undo-ms="8000">
+      <h2 class="files-title" id="files-title" tabindex="-1">Files</h2>
+      <ul class="files-list" aria-labelledby="files-title">
+        <li class="file" data-name="Q3 report.pdf">
+          <span class="file-name">Q3 report.pdf</span>
+          <button class="file-btn" type="button" data-act="archive"
+                  aria-label="Archive Q3 report.pdf">Archive</button>
+          <button class="file-btn is-danger" type="button" data-act="delete"
+                  aria-haspopup="dialog"
+                  aria-label="Delete Q3 report.pdf forever">Delete…</button>
+        </li>
+        <li class="file" data-name="Brand guide.fig">
+          <span class="file-name">Brand guide.fig</span>
+          <button class="file-btn" type="button" data-act="archive"
+                  aria-label="Archive Brand guide.fig">Archive</button>
+          <button class="file-btn is-danger" type="button" data-act="delete"
+                  aria-haspopup="dialog"
+                  aria-label="Delete Brand guide.fig forever">Delete…</button>
+        </li>
+        <li class="file" data-name="Invoice 0142.pdf">
+          <span class="file-name">Invoice 0142.pdf</span>
+          <button class="file-btn" type="button" data-act="archive"
+                  aria-label="Archive Invoice 0142.pdf">Archive</button>
+          <button class="file-btn is-danger" type="button" data-act="delete"
+                  aria-haspopup="dialog"
+                  aria-label="Delete Invoice 0142.pdf forever">Delete…</button>
+        </li>
+      </ul>
+
+      <p class="files-live sr-only" role="status"></p>
+
+      <div class="toast" hidden>
+        <p class="toast-text"></p>
+        <button class="toast-undo" type="button" aria-keyshortcuts="Control+Z">
+          Undo <kbd aria-hidden="true">Ctrl Z</kbd>
+        </button>
+      </div>
+
+      <dialog class="confirm" aria-labelledby="confirm-title"
+              aria-describedby="confirm-what">
+        <form method="dialog">
+          <h2 class="confirm-title" id="confirm-title">
+            Delete “<span class="confirm-name"></span>” forever?
+          </h2>
+          <p class="confirm-what" id="confirm-what">
+            It skips the archive. This can't be undone.
+          </p>
+          <div class="confirm-actions">
+            <button value="keep" autofocus>Keep file</button>
+            <button value="delete">Delete forever</button>
+          </div>
+        </form>
+      </dialog>
+    </div>
+  </div>
+
+  <p class="demo-notes">Archive: happens at once, Undo for 8 s (paused while you hover or focus it), or Ctrl+Z.<br>Delete: can't be undone, so it asks first.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  for (const root of document.querySelectorAll('.files')) {
+    const list = root.querySelector('.files-list');
+    const title = root.querySelector('.files-title');
+    const live = root.querySelector('.files-live');
+    const toast = root.querySelector('.toast');
+    const toastText = toast.querySelector('.toast-text');
+    const dialog = root.querySelector('.confirm');
+    const ms = Number(root.dataset.undoMs);
+    const nameOf = (row) => row.dataset.name;
+    let last = null;          // the archived row + where it was
+    let target = null;        // the row the dialog is about
+
+    // Focus: the next file, else the previous, else the heading.
+    const focusAfter = (row) => {
+      const rows = [...list.children];
+      const i = rows.indexOf(row);
+      const next = rows[i + 1] || rows[i - 1];
+      (next ? next.querySelector('[data-act="archive"]') : title).focus();
+    };
+
+    // The undo window waits while the toast is hovered or focused.
+    let timer = null, left = 0, since = 0;
+    let hover = false, inside = false;
+    const tick = () => {
+      const hold = hover || inside;
+      if (hold && timer) {
+        clearTimeout(timer);
+        timer = null;
+        left -= Date.now() - since;
+      } else if (!hold && !timer && !toast.hidden) {
+        since = Date.now();
+        timer = setTimeout(commit, left);
+      }
+    };
+    const hide = () => {
+      clearTimeout(timer);
+      timer = null;
+      hover = inside = false;
+      toast.hidden = true;
+    };
+    const commit = () => {
+      hide();
+      if (last) root.dispatchEvent(
+        new CustomEvent('archive', { detail: nameOf(last.row) }));
+      last = null;
+    };
+    toast.addEventListener('mouseenter', () => { hover = true; tick(); });
+    toast.addEventListener('mouseleave', () => { hover = false; tick(); });
+    toast.addEventListener('focusin', () => { inside = true; tick(); });
+    toast.addEventListener('focusout', () => { inside = false; tick(); });
+
+    // Reversible: do it now, offer Undo.
+    const archive = (row) => {
+      const name = nameOf(row);
+      if (last) commit();
+      last = { row, index: [...list.children].indexOf(row) };
+      focusAfter(row);
+      row.remove();
+      toastText.textContent = `Archived “${name}”`;
+      live.textContent = `Archived ${name}. Press Control Z to undo.`;
+      toast.hidden = false;
+      left = ms;
+      tick();
+    };
+    const undo = () => {
+      if (!last) return;
+      const { row, index } = last;
+      last = null;
+      list.insertBefore(row, list.children[index] || null);
+      row.querySelector('[data-act="archive"]').focus();
+      hide();
+      live.textContent = `Restored ${nameOf(row)}.`;
+    };
+    toast.querySelector('.toast-undo').addEventListener('click', undo);
+    document.addEventListener('keydown', (e) => {
+      if (!last || !(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return;
+      if (e.target.closest('input, textarea, [contenteditable]')) return;
+      e.preventDefault();
+      undo();
+    });
+
+    // Irreversible: ask first, with the real verb.
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-act]');
+      if (!btn) return;
+      const row = btn.closest('.file');
+      if (btn.dataset.act === 'archive') return archive(row);
+      target = row;
+      dialog.querySelector('.confirm-name').textContent = nameOf(row);
+      dialog.returnValue = '';
+      dialog.showModal();
+    });
+    // "Keep file" and Esc change nothing. Only "delete" deletes.
+    dialog.addEventListener('close', () => {
+      const row = target;
+      target = null;
+      if (dialog.returnValue !== 'delete') return;
+      if (last) commit();
+      focusAfter(row);
+      row.remove();
+      root.dispatchEvent(new CustomEvent('delete', { detail: nameOf(row) }));
+      live.textContent = `Deleted ${nameOf(row)} forever.`;
+    });
+  }
+</script>
+</body>
+</html>

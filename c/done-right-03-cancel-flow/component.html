@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Honest cancel flow · Done right #3 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 540px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  /* The plan card in Settings */
+  .plan {
+    display: grid;
+    gap: 12px;
+    padding: 24px;
+    border: 1px solid rgba(40, 32, 20, .14);
+    border-radius: 20px;
+    background: #FFFFFF;
+    color: #1D1B18;
+  }
+  .plan-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .plan-name { margin: 0; font-size: 1.125rem; font-weight: 600; }
+  .plan-meta { margin: 2px 0 0; color: #4F4A43; font-size: .9375rem; font-variant-numeric: tabular-nums; }
+  .plan[data-state="cancelled"] .plan-meta { color: #8A3A12; }
+  .plan-status { margin: 0; font-size: .9375rem; color: #2D6A3E; font-weight: 500; }
+  .plan-status:empty { display: none; }
+
+  /* Every button in the flow looks the same. Same size, same weight. */
+  .plan-btn,
+  .cancel-btn {
+    min-height: 48px;
+    padding: 0 20px;
+    border: 1.5px solid #1D1B18;
+    border-radius: 12px;
+    background: #FFFFFF;
+    color: #1D1B18;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .plan-btn:hover,
+  .cancel-btn:hover { background: #F2EFEA; }
+  .plan-btn:focus-visible,
+  .cancel-btn:focus-visible {
+    outline: 2.5px solid #1D1B18;
+    outline-offset: 3px;
+  }
+
+  /* The dialog */
+  .cancel {
+    width: min(100% - 32px, 460px);
+    padding: 0;
+    border: 0;
+    border-radius: 20px;
+    background: #FFFFFF;
+    color: #1D1B18;
+    box-shadow: 0 30px 80px -20px rgba(29, 27, 24, .45);
+  }
+  .cancel::backdrop { background: rgba(29, 27, 24, .45); }
+  .cancel-body { display: grid; gap: 20px; padding: 28px; }
+  .cancel-title { margin: 0; font-size: 1.375rem; line-height: 1.25; font-weight: 600; letter-spacing: -.01em; }
+  .cancel-title:focus { outline: none; }
+
+  .cancel-what { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; color: #4F4A43; }
+  .cancel-what li { position: relative; padding-left: 20px; }
+  .cancel-what li::before {
+    content: ""; position: absolute; left: 4px; top: 9px;
+    width: 7px; height: 7px; border-radius: 50%; background: #1D1B18;
+  }
+  .cancel-what b { color: #1D1B18; font-weight: 600; }
+
+  .cancel-reason { display: grid; gap: 6px; font-weight: 500; font-size: .9375rem; }
+  .cancel-reason span { color: #5A544B; font-weight: 400; }
+  .cancel-reason select {
+    min-height: 44px; padding: 0 12px;
+    border: 1px solid #857E73; border-radius: 10px;
+    background: #FFFFFF; color: #1D1B18; font: inherit;
+  }
+  .cancel-reason select:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 2px; }
+
+  .cancel-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #3 · @zellap.app</p>
+  <h1>An honest cancel flow</h1>
+  <p class="demo-lede">One click to the decision, every consequence in plain words, two buttons of equal weight, and a clear result. No guilt, no maze.</p>
+
+  <section class="plan" aria-labelledby="plan-title"
+           data-dialog="cancel-pro" data-until="14 Nov 2026">
+    <div class="plan-row">
+      <div>
+        <h2 class="plan-name" id="plan-title">Pro plan</h2>
+        <p class="plan-meta">€12 / month · renews 14 Nov 2026</p>
+      </div>
+      <button class="plan-btn" type="button" aria-haspopup="dialog">
+        Cancel plan
+      </button>
+    </div>
+    <p class="plan-status" role="status"></p>
+  </section>
+
+  <dialog class="cancel" id="cancel-pro"
+          aria-labelledby="cancel-pro-title"
+          aria-describedby="cancel-pro-what">
+    <form class="cancel-body" method="dialog">
+      <h2 class="cancel-title" id="cancel-pro-title"
+          tabindex="-1" autofocus>Cancel your Pro plan?</h2>
+      <ul class="cancel-what" id="cancel-pro-what">
+        <li><b>You keep Pro until 14 Nov 2026.</b>
+          You already paid for it.</li>
+        <li><b>You won't be charged again.</b></li>
+        <li><b>Nothing is deleted.</b>
+          Projects turn read-only after 14 Nov.</li>
+        <li><b>Changed your mind?</b>
+          Resubscribe any time, same button.</li>
+      </ul>
+      <label class="cancel-reason">
+        <span><b>Why are you leaving?</b> Optional</span>
+        <select name="reason">
+          <option value="">Skip</option>
+          <option>Too expensive</option>
+          <option>Missing a feature</option>
+          <option>Switching to another tool</option>
+          <option>Just taking a break</option>
+        </select>
+      </label>
+      <div class="cancel-actions">
+        <button class="cancel-btn" value="keep">Keep Pro</button>
+        <button class="cancel-btn" value="cancel">Cancel plan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <p class="demo-notes">Esc or "Keep Pro" changes nothing. "Cancel plan" says what happened, right where you clicked.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  for (const plan of document.querySelectorAll('.plan')) {
+    const dialog = document.getElementById(plan.dataset.dialog);
+    const button = plan.querySelector('.plan-btn');
+    const meta = plan.querySelector('.plan-meta');
+    const status = plan.querySelector('.plan-status');
+    const until = plan.dataset.until;
+    const renews = meta.textContent;
+
+    button.addEventListener('click', () => {
+      if (plan.dataset.state === 'cancelled') {
+        // Undo is one click, in the same place.
+        delete plan.dataset.state;
+        meta.textContent = renews;
+        button.textContent = 'Cancel plan';
+        status.textContent = `Welcome back. Pro renews ${until}.`;
+        return;
+      }
+      dialog.returnValue = '';
+      dialog.showModal();
+    });
+
+    // Keep Pro and Esc change nothing. Only "cancel" does.
+    dialog.addEventListener('close', () => {
+      if (dialog.returnValue !== 'cancel') return;
+      plan.dataset.state = 'cancelled';
+      meta.textContent = `Cancelled · Pro until ${until}`;
+      button.textContent = 'Resubscribe';
+      status.textContent = 'Plan cancelled. No more charges.';
+    });
+  }
+</script>
+</body>
+</html>

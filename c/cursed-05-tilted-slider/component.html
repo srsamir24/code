@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tilted Price Slider</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<style>/* inlined from ../_kit/reel.css */
+/* Shared shell for the Cursed UI pages: palette, backdrop, hook/outro, reel canvas, cursor. */
+:root{
+  --bg:#f3f2ee; --ink:#121214; --ink-2:#5f5f66; --ink-3:#8d8c92;
+  --line:rgba(18,18,20,.085); --line-2:#e6e3dc;
+  --gold-1:#ffd772; --gold-2:#f2a43a; --gold-ink:#a8681a;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Satoshi",ui-sans-serif,sans-serif; -webkit-font-smoothing:antialiased;
+  overflow:hidden; -webkit-user-select:none; user-select:none;
+}
+.backdrop{position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(60% 45% at 50% 46%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bg),var(--bg));
+}
+.backdrop::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(18,18,20,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(18,18,20,.045) 1px,transparent 1px);
+  background-size:28px 28px; background-position:center;
+  -webkit-mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+          mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+}
+.stage{position:relative;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
+
+.tag{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 9px;border-radius:99px;
+  background:#fff;border:1px solid var(--line);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);
+  box-shadow:0 4px 10px -6px rgba(40,34,20,.18)}
+.tag i,.outro i{display:block;width:7px;height:7px;border-radius:50%;background:linear-gradient(var(--gold-1),var(--gold-2))}
+.hook{font-weight:900;font-size:27px;line-height:1.12;letter-spacing:-.025em;text-align:center;max-width:430px;text-wrap:balance}
+.handle{display:block;margin-top:10px;font-weight:500;font-size:12.5px;letter-spacing:.01em;color:var(--ink-3)}
+.outro{font-weight:900;font-size:30px;letter-spacing:-.025em;color:var(--ink);opacity:0;text-align:center}
+.outro span{display:inline-flex;align-items:center;gap:10px}
+.outro i{width:14px;height:14px}
+.outro b{display:inline-block;font-weight:900;background:var(--ink);color:#fff;border-radius:10px;padding:1px 10px 3px;margin:0 1px;letter-spacing:.01em}
+.outro small{display:block;margin-top:14px;font-weight:700;font-size:19px;letter-spacing:-.01em;color:#34343a}
+.outro small em{font-style:normal;font-weight:500;color:var(--ink-2)}
+
+.card{position:relative;width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:30px;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 40px 70px -32px rgba(40,34,20,.22),0 10px 24px -12px rgba(0,0,0,.08);
+}
+.app{display:flex;align-items:center;gap:12px}
+.icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.x{margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-3)}
+
+/* reel mode: fixed 540x960 phone canvas (recorded at 2x = 1080x1920) */
+body.reel .stage{display:block;width:540px;height:960px;margin:0 auto;padding:0}
+body.reel .tag{position:absolute;top:154px;left:50%;transform:translateX(-50%)}
+body.reel .hook{position:absolute;top:198px;left:50%;transform:translateX(-50%);width:450px;font-size:30px}
+body.reel .card{position:absolute;top:318px;left:60px}
+body.reel .outro{position:absolute;top:192px;left:0;right:0;font-size:25px}
+body:not(.reel) .outro{display:none}
+body.reel, body.reel *{cursor:none !important}
+#cursor{position:fixed;left:0;top:0;width:0;height:0;z-index:99;pointer-events:none;display:none}
+body.reel #cursor{display:block}
+#cursor svg{position:absolute;left:0;top:0;overflow:visible;filter:drop-shadow(0 3px 5px rgba(0,0,0,.25))}
+#ring{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;border:2px solid rgba(18,18,20,.5);opacity:0}
+</style>
+<style>
+  .card{padding:24px 28px 22px}
+  h1{margin-top:12px;font-weight:700;font-size:28px;letter-spacing:-.025em;line-height:1.1}
+  .filter{margin-top:14px;border:1px solid var(--line-2);border-radius:18px;padding:14px 16px 6px;background:linear-gradient(180deg,#fff,#fbfaf7)}
+  .fhead{display:flex;align-items:center;gap:10px}
+  .fhead small{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+  .val{font-weight:700;font-size:24px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;display:inline-block;transform-origin:0 60%}
+  .fhead .val{margin-left:4px}
+  /* a spirit level, because the track is not level */
+  .level{margin-left:auto;position:relative;width:96px;height:26px;border-radius:13px;background:linear-gradient(180deg,#eaf3d9,#d7e8b8);
+    box-shadow:inset 0 0 0 1px rgba(80,110,30,.22),inset 0 2px 3px rgba(80,110,30,.15)}
+  .level::before,.level::after{content:"";position:absolute;top:2px;bottom:2px;width:1px;background:rgba(80,110,30,.35)}
+  .level::before{left:36px}.level::after{right:36px}
+  .level::before,.level::after{top:3px;bottom:3px;width:1.5px}
+  .bubble{position:absolute;top:4px;left:37px;width:22px;height:18px;border-radius:9px;background:radial-gradient(circle at 40% 35%,#fff,#f4f9ea 60%,#e3efc9);
+    box-shadow:0 0 0 1px rgba(80,110,30,.2)}
+  .area{position:relative;height:150px;margin:0 -4px}
+  .rail{position:absolute;left:50%;top:50%;height:8px;border-radius:4px;background:#ebe8e1;transform-origin:50% 50%;
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.08)}
+  .fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:linear-gradient(90deg,var(--gold-1),var(--gold-2))}
+  .end{position:absolute;font-size:14px;font-weight:700;color:var(--ink-2);white-space:nowrap}
+  .end.lo{left:-14px;top:16px}
+  .end.hi{right:-14px;top:-32px}
+  .stop{position:absolute;right:-5px;top:-7px;width:5px;height:22px;border-radius:2px;background:#cfcac0}
+  .knob{position:absolute;left:0;top:0;width:32px;height:32px;margin:-16px 0 0 -16px;border-radius:50%;background:#fff;cursor:grab;
+    box-shadow:0 0 0 1px rgba(18,18,20,.07),0 4px 10px -2px rgba(40,34,20,.28)}
+  .knob::after{content:"";position:absolute;inset:10px;border-radius:50%;background:linear-gradient(var(--gold-1),var(--gold-2))}
+  .res{margin-top:14px;display:flex;align-items:baseline;justify-content:space-between}
+  .res b{font-weight:700;font-size:15px;letter-spacing:-.01em}
+  .res span{font-size:13.5px;color:var(--ink-3);font-weight:500}
+  .prods{margin-top:8px;border:1px solid var(--line-2);border-radius:16px}
+  .prod{display:flex;align-items:center;gap:12px;height:48px;padding:0 14px}
+  .prod+.prod{border-top:1px solid var(--line)}
+  .thumb{width:36px;height:36px;border-radius:10px;flex:none;display:grid;place-items:center;background:#f2efe8}
+  .prod div{flex:1;min-width:0}
+  .prod b{display:block;font-weight:700;font-size:14.5px;letter-spacing:-.01em;white-space:nowrap}
+  .prod span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500}
+  .prod strong{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="stage">
+  <div class="tag"><i></i>Cursed UI #5</div>
+  <header class="hook">Just set a max price.<span class="handle">@zellap.app</span></header>
+
+  <main class="card" id="card">
+    <div class="app">
+      <div class="icon" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="5.2" fill="#fff"/><ellipse cx="13" cy="13" rx="11" ry="4.6" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.4" transform="rotate(-24 13 13)"/><circle cx="22.6" cy="8.6" r="2" fill="#f2a43a"/></svg>
+      </div>
+      <div><b>Orbit Store</b><span>Audio &middot; Headphones</span></div>
+      <div class="x" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+    </div>
+    <h1>Headphones</h1>
+
+    <section class="filter">
+      <div class="fhead"><small>Max price</small><span class="val" id="val">$2,000</span><span class="level" aria-hidden="true"><span class="bubble" id="bubble"></span></span></div>
+      <div class="area" id="area">
+        <div class="rail" id="rail"><div class="fill" id="fill"></div><span class="end lo">$0</span><span class="end hi">$2,000</span><span class="stop"></span></div>
+        <div class="knob" id="knob" role="slider" tabindex="0" aria-label="Max price" aria-valuemin="0" aria-valuemax="2000" aria-valuenow="2000"></div>
+      </div>
+    </section>
+
+    <div class="res"><b id="count">1,284 results</b><span>Price: high to low</span></div>
+    <div class="prods" id="prods"></div>
+  </main>
+
+  <footer class="outro" id="outro"><span><i></i>Comment <b>CODE</b> for the source</span><small>Follow for more cursed UI <em>&middot; @zellap.app</em></small></footer>
+</div>
+
+<script>/* inlined from ../_kit/reel.js */
+/* Shared runtime for the Cursed UI pages.
+   - a simulation clock (K.now, ms) advanced by K.tick(ms): rAF in the browser, stepped by the recorder (?manual)
+   - tweens, easing, the hook <-> outro swap (window.__outro), and the reel cursor driven by real pointer events */
+window.ReelKit = function (opts) {
+  const qs = new URLSearchParams(location.search);
+  const REEL = qs.has('reel'), MANUAL = qs.has('manual');
+  if (REEL) document.body.classList.add('reel');
+
+  const K = { REEL, MANUAL, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  /* critically-ish damped spring step: z = damping ratio */
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+
+  /* ---------- cursor ---------- */
+  document.body.insertAdjacentHTML('beforeend', `<div id="cursor">
+    <div id="ring"></div>
+    <svg id="c-arrow" width="26" height="34" viewBox="0 0 26 34"><path d="M2 2 L2 26 L8.2 20.4 L12.4 30.4 L16.6 28.6 L12.5 18.9 L20.8 18.6 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg id="c-hand" width="30" height="34" viewBox="0 0 30 34" style="display:none;left:-9px;top:-2px"><path d="M10 15V5.2a2.6 2.6 0 0 1 5.2 0V13 M15.2 12.6a2.5 2.5 0 0 1 5 0v1.8 M20.2 13.6a2.5 2.5 0 0 1 5 0v6.2c0 6.6-4 11.2-10 11.2-4.6 0-6.7-2.2-9.4-6.5L3 19.6a2.5 2.5 0 0 1 4.2-2.7L10 20.8V15" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg id="c-grab" width="30" height="30" viewBox="0 0 30 30" style="display:none;left:-15px;top:-13px"><path d="M8.2 11.4a2.4 2.4 0 0 1 4.8 0v-1a2.4 2.4 0 0 1 4.8 0v1a2.4 2.4 0 0 1 4.8 0v1.4a2.4 2.4 0 0 1 4.6.9v4.8c0 5.6-3.8 9.4-9.4 9.4-4.2 0-6.4-1.8-8.6-5.2l-2.4-3.8a2.3 2.3 0 0 1 3.4-3z M13 11.4v4 M17.8 11.4v4 M22.6 12.8v3" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  </div>`);
+  const $ = id => document.getElementById(id);
+  const cur = $('cursor'), ring = $('ring'), shapes = { arrow: $('c-arrow'), hand: $('c-hand'), grab: $('c-grab') };
+  let curScale = 1;
+  function moveCursor() {
+    if (!REEL) return;
+    const el = document.elementFromPoint(K.px, K.py);
+    const kind = (opts.cursorKind && opts.cursorKind(el)) || 'arrow';
+    for (const k in shapes) shapes[k].style.display = k === kind ? '' : 'none';
+    cur.style.transform = `translate(${K.px}px,${K.py}px) scale(${curScale})`;
+  }
+  K.moveCursor = moveCursor;
+  window.addEventListener('pointermove', e => { K.px = e.clientX; K.py = e.clientY; moveCursor(); });
+  window.addEventListener('pointerleave', () => { K.px = K.py = -999; });
+  window.addEventListener('pointerdown', () => {
+    K.down = true;
+    if (!REEL) return;
+    K.tween(90, p => { curScale = 1 - .14 * p; moveCursor(); });
+    K.tween(300, p => { curScale = .86 + .14 * p; moveCursor(); }, K.ease.back, 120);
+    K.tween(480, p => { ring.style.opacity = (1 - p) * .9; ring.style.transform = `scale(${.4 + p * 1.1})`; });
+  });
+  window.addEventListener('pointerup', () => { K.down = false; moveCursor(); });
+
+  /* ---------- hook <-> outro ---------- */
+  let outroOn = false;
+  window.__outro = on => {
+    if (on === outroOn) return; outroOn = on;
+    const hook = document.querySelector('.hook'), outro = document.querySelector('.outro');
+    K.tween(440, p => { const q = on ? p : 1 - p;
+      hook.style.opacity = K.clamp(1 - q / .45, 0, 1);   // strictly sequential: never two lines at once
+      const o = K.clamp((q - .55) / .45, 0, 1);
+      outro.style.opacity = o; outro.style.transform = `translateY(${(1 - o) * 10}px)`; }, K.ease.lin);
+  };
+
+  /* ---------- clock ---------- */
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  window.__tick = tick;
+  K.start = () => {
+    if (!MANUAL) {
+      let last = performance.now();
+      requestAnimationFrame(function loop(t) { tick(Math.min(50, t - last)); last = t; requestAnimationFrame(loop); });
+    } else tick(16);
+  };
+  return K;
+};
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const area = $('area'), rail = $('rail'), fill = $('fill'), knob = $('knob'), valEl = $('val'), card = $('card');
+
+  const K = ReelKit({
+    cursorKind: el => dragging ? 'grab' : (el === knob || nearKnob()) ? 'hand' : 'arrow',
+    update, render
+  });
+
+  const L = 250, MAX = 2000, G = 9200;
+  const BASE = 9, TOP = 27; const STEPS = [14, 19, 23, 27];            // degrees: the track tips further every time it slams the stop
+  const PRODUCTS = [
+    ['Ti Edition', 'Over-ear, titanium', 1999], ['Reference One', 'Open-back studio', 1290], ['Studio Pro', 'Over-ear, ANC', 549],
+    ['Air Over', 'Over-ear, wireless', 249], ['Studio Lite', 'On-ear, wireless', 129], ['Pod Mini', 'In-ear, wireless', 79], ['Buds Basic', 'In-ear, wired', 39]];
+
+  const h = { s: L, v: 0 };                      // handle position along the track (px from the $0 end)
+  const tilt = { x: BASE, v: 0 }; let tiltTarget = BASE;
+  const pop = { x: 0, v: 0 }, shake = { x: 0, v: 0 };
+  let dragging = false, grabOff = 0, levelling = false;
+  const ends = [...document.querySelectorAll('.end')];
+
+  const value = s => Math.round(K.clamp(s / L, 0, 1) * MAX / 10) * 10;
+  const money = n => '$' + n.toLocaleString('en-US');
+  function geom() {
+    const r = area.getBoundingClientRect(), a = tilt.x * Math.PI / 180;
+    return { cx: r.left + r.width / 2, cy: r.top + r.height / 2 + 4, dx: Math.cos(a), dy: Math.sin(a) };
+  }
+  function pt(s) { const g = geom(); return [g.cx + (s - L / 2) * g.dx, g.cy + (s - L / 2) * g.dy]; }
+  function proj(x, y) { const g = geom(); return (x - g.cx) * g.dx + (y - g.cy) * g.dy + L / 2; }
+  function nearKnob() { const [x, y] = pt(h.s); return Math.hypot(K.px - x, K.py - y) < 22; }
+
+  window.addEventListener('pointerdown', e => {
+    const [x, y] = pt(h.s);
+    if (Math.hypot(e.clientX - x, e.clientY - y) < 22) { dragging = true; grabOff = h.s - proj(e.clientX, e.clientY); h.v = 0; K.moveCursor(); }
+  });
+  window.addEventListener('pointerup', () => { if (dragging) { dragging = false; K.moveCursor(); } });
+  // keyboard: arrows move it, gravity still wins
+  knob.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') h.s = Math.max(0, h.s - L / 20); if (e.key === 'ArrowRight') h.s = Math.min(L, h.s + L / 20); });
+  window.__slip = () => { if (!dragging) return; dragging = false; h.v = 160; K.moveCursor(); };
+
+  let shown = -1;
+  function list(max) {
+    const under = PRODUCTS.filter(p => p[2] <= max).slice(0, 2);
+    const key = under.map(p => p[0]).join();
+    if (key === shown) return; shown = key;
+    $('prods').innerHTML = under.map(([n, d, p], i) => `<div class="prod"><span class="thumb"><svg width="22" height="22" viewBox="0 0 22 22"><path d="M4 13V11a7 7 0 0 1 14 0v2" fill="none" stroke="${i ? '#8d8c92' : '#a8681a'}" stroke-width="1.8" stroke-linecap="round"/><rect x="2.5" y="12" width="4.5" height="7" rx="2" fill="${i ? '#8d8c92' : '#f2a43a'}"/><rect x="15" y="12" width="4.5" height="7" rx="2" fill="${i ? '#8d8c92' : '#f2a43a'}"/></svg></span><div><b>${n}</b><span>${d}</span></div><strong>${money(p)}</strong></div>`).join('');
+  }
+
+  function update(dt) {
+    const a = tilt.x * Math.PI / 180;
+    if (dragging) {
+      // the grip strains downhill a little; the steeper the track, the harder it pulls
+      const want = K.clamp(proj(K.px, K.py) + grabOff, 0, L) + G * Math.sin(a) / 900;
+      h.v = (want - h.s) / dt * .5; h.s = K.clamp(h.s + (want - h.s) * .5, 0, L);
+    } else {
+      h.v += G * Math.sin(a) * dt;
+      h.s += h.v * dt;
+      if (h.s >= L) {
+        h.s = L;
+        if (h.v > 140) thunk(h.v);
+        h.v = -h.v * .28; if (Math.abs(h.v) < 40) h.v = 0;
+      }
+      if (h.s < 0) { h.s = 0; h.v = 0; }
+    }
+    if (!levelling) K.spring(tilt, tiltTarget, 210, .5, dt);
+    K.spring(pop, 0, 260, .35, dt);
+    K.spring(shake, 0, 520, .18, dt);
+  }
+  function thunk(v) {
+    const f = K.clamp(v / 900, .3, 1);
+    tiltTarget = STEPS.find(d => d > tiltTarget + .5) || TOP;
+    tilt.v += 90 * f; pop.v += 9 * f; shake.v += 260 * f;
+  }
+
+  function render() {
+    const s = h.s, n = value(s);
+    rail.style.width = L + 'px';
+    rail.style.transform = `translate(-50%,-50%) translateY(4px) rotate(${tilt.x.toFixed(3)}deg)`;
+    fill.style.width = s + 'px';
+    const [x, y] = pt(s), r = area.getBoundingClientRect();
+    knob.style.transform = `translate(${(x - r.left).toFixed(2)}px,${(y - r.top).toFixed(2)}px) scale(${dragging ? 1.08 : 1})`;
+    knob.style.cursor = dragging ? 'grabbing' : 'grab';
+    knob.setAttribute('aria-valuenow', n);
+    valEl.textContent = money(n);
+    valEl.style.transform = `scale(${(1 + pop.x * .03).toFixed(3)})`;
+    valEl.style.color = n >= MAX ? '' : '#a8681a';
+    $('bubble').style.left = (37 - K.clamp(tilt.x / 27, -1, 1) * 34) + 'px';   // the bubble runs to the high side
+    for (const e of ends) e.style.transform = `rotate(${(-tilt.x).toFixed(2)}deg)`;
+    const c = Math.round(1284 * Math.pow(n / MAX, 1.6));
+    $('count').textContent = c.toLocaleString('en-US') + (c === 1 ? ' result' : ' results');
+    list(n);
+    card.style.transform = `rotate(${(shake.x * .004).toFixed(3)}deg)`;
+  }
+
+  window.__knob = () => pt(h.s);
+  window.__knobAt = v => pt(L * v / MAX);
+  // one eased move back to level-ish, no spring bounce
+  window.__reset = () => { const a = tilt.x; levelling = true; tiltTarget = BASE;
+    K.tween(400, p => { tilt.x = K.lerp(a, BASE, p); tilt.v = 0; if (p >= 1) levelling = false; }, K.ease.inOut); };
+
+  render();
+  K.start();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tape Measure Range</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>/* inlined from ../_shared/reel.css */
+/* Shared look for "Interaction #N" pages: paper tokens + the Reel overlay layer.
+   The overlay layer only shows with ?capture (html.reel). Fonts: General Sans + Geist Mono. */
+:root {
+  --paper: #ECE8E0;
+  --card: #FAF8F4;
+  --ink: #1D1B18;
+  --ink-2: #57524A;
+  --muted: #9A948A;
+  --hair: rgba(40, 32, 20, .10);
+  --hair-strong: rgba(40, 32, 20, .16);
+  --accent: #D9502B;
+  --code-bg: #1E1C19;
+  --sans: "General Sans", ui-sans-serif, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(1200px 900px at 50% 38%, rgba(255,255,255,.55), transparent 70%),
+    radial-gradient(900px 700px at 50% 110%, rgba(120,100,70,.10), transparent 70%);
+}
+.stage { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+
+.card {
+  position: relative;
+  background: linear-gradient(180deg, #FCFBF8 0%, var(--card) 100%);
+  border-radius: 36px;
+  border: 1px solid var(--hair);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 1px 1px rgba(40,30,15,.04),
+    0 6px 12px -4px rgba(40,30,15,.06),
+    0 30px 60px -20px rgba(40,30,15,.16),
+    0 70px 120px -40px rgba(40,30,15,.18);
+}
+
+/* ---------- reel overlays (capture mode only) ---------- */
+.hook, .handle, .chip, .end, .codecard, #cursor, .big, .tint { display: none; pointer-events: none; }
+.reel body { user-select: none; -webkit-user-select: none; }
+.reel .stage { width: 1080px; height: 1920px; display: block; }
+.reel .card { position: absolute; left: var(--card-left, 80px); top: var(--card-top, 640px); scale: var(--card-scale, 1.1); transform-origin: 0 0; }
+.reel .hook, .reel .handle, .reel .chip, .reel .end, .reel .codecard, .reel #cursor, .reel .big, .reel .tint { display: block; }
+
+.tint { position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(900px 1300px at 50% 46%, transparent 50%, rgba(150,95,50,.10) 100%), rgba(230,170,110,.035); }
+.handle {
+  position: absolute; left: 0; right: 0; top: 300px; text-align: center;
+  font-family: var(--mono); font-size: 30px; color: var(--muted); letter-spacing: .02em;
+}
+.handle b { font-weight: 500; color: var(--accent); }
+.hook {
+  position: absolute; left: 80px; right: 80px; top: 356px; text-align: center;
+  font-size: 96px; font-weight: 600; letter-spacing: -.035em; line-height: 1.02; color: var(--ink);
+  text-wrap: balance;
+}
+.hook em { font-style: normal; color: var(--accent); }
+.chip { position: absolute; left: 0; right: 0; top: var(--chip-top, 1400px); text-align: center; }
+.chip span {
+  display: inline-flex; align-items: center; gap: 14px;
+  font-family: var(--mono); font-size: 28px; color: var(--ink-2);
+  padding: 14px 26px; border-radius: 999px; border: 1px solid var(--hair-strong);
+  background: rgba(250,248,244,.7);
+}
+.chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+.chip b { font-weight: 400; }
+.big { position: absolute; left: 0; right: 0; top: var(--big-top, 1440px); text-align: center; opacity: 0;
+  font-family: var(--mono); font-weight: 300; font-size: 132px; letter-spacing: -.05em; color: var(--accent); line-height: 1; }
+.big small { font-size: 30px; letter-spacing: .02em; color: var(--ink-2); font-weight: 400; display: block; margin-top: 10px; }
+.end {
+  position: absolute; left: 120px; right: 120px; top: var(--end-top, 1160px); text-align: center; opacity: 0;
+  font-size: 42px; font-weight: 500; letter-spacing: -.02em; line-height: 1.25; color: var(--ink);
+}
+.end b { font-weight: 600; color: var(--accent); }
+.end span { color: var(--muted); }
+.codecard {
+  position: absolute; left: 70px; top: var(--code-top, 640px); width: 890px; opacity: 0;
+  background: var(--code-bg); color: #E9E4DA; border-radius: 36px;
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 40px 90px -30px rgba(30,20,10,.45), 0 10px 24px -8px rgba(30,20,10,.25);
+  padding: 44px 46px 50px;
+}
+.codecard .file { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 25px; color: #8C857A; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 30px; }
+.codecard pre { font-family: var(--mono); font-size: 30px; line-height: 1.7; white-space: pre; margin: 0 -18px; }
+.codecard .ln { display: block; padding: 0 18px; border-radius: 10px; transition: none; }
+.codecard .ln.on { background: rgba(255,255,255,.07); box-shadow: inset 4px 0 0 var(--accent); }
+.c { color: #A39C90; } .k { color: #E8A27F; } .n { color: #F2C66D; } .o { color: #9C958A; }
+.hl.on { color: #fff; background: rgba(217,80,43,.30); border-radius: 6px; padding: 0 4px; margin: 0 -4px; }
+
+#cursor { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 50; pointer-events: none; }
+#cursor .tip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  background: rgba(29,27,24,.16); border: 2.5px solid rgba(29,27,24,.62);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.75), 0 8px 18px rgba(30,20,10,.22); }
+#cursor.down .tip { transform: scale(.88); background: rgba(29,27,24,.26); border-color: rgba(29,27,24,.8); }
+#cursor .rip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  border: 3px solid var(--accent); opacity: 0; }
+</style>
+<style>
+  :root { --card-top: 670px; --card-left: 68px; --card-scale: 1.18; --chip-top: 1410px; --big-top: 1400px; --code-top: 640px; --end-top: 1180px; }
+  .card { width: 800px; height: 540px; }
+  .head { position: absolute; left: 56px; right: 56px; top: 50px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .lbl { font-size: 34px; font-weight: 500; letter-spacing: -.015em; color: var(--ink); }
+  .sub { margin-top: 8px; font-family: var(--mono); font-size: 22px; color: var(--muted); }
+  .read { font-family: var(--mono); font-weight: 300; font-size: 104px; letter-spacing: -.06em; line-height: .9; color: var(--ink);
+          font-variant-numeric: tabular-nums; text-align: right; }
+  .read small { font-size: 30px; letter-spacing: 0; color: var(--ink-2); font-weight: 400; margin-left: 10px; }
+  .read.live { color: var(--accent); }
+  .foot { position: absolute; left: 56px; right: 56px; bottom: 44px; display: flex; justify-content: space-between;
+          font-family: var(--mono); font-size: 22px; color: var(--muted); border-top: 1px solid var(--hair); padding-top: 22px; }
+  canvas#cv { position: absolute; left: 0; top: 0; width: 800px; height: 540px; touch-action: none; }
+  .hookbtn { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .hookbtn:focus-visible ~ canvas { outline: 3px solid var(--accent); outline-offset: -3px; border-radius: 36px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="tint" id="tint"></div>
+  <div class="handle"><b>Interaction #7</b> · @zellap.app</div>
+  <h1 class="hook">Pull the tape. Let it <em>snap.</em></h1>
+
+  <div class="card" id="card">
+    <div class="head">
+      <div><div class="lbl" id="lbl">Shelf width</div><div class="sub">range · 0–150 cm</div></div>
+      <div class="read" id="read"><span id="num">128</span><small>cm</small></div>
+    </div>
+    <div class="hookbtn" id="slider" role="slider" tabindex="0" aria-labelledby="lbl"
+         aria-valuemin="0" aria-valuemax="150" aria-valuenow="128" aria-valuetext="128 cm"></div>
+    <canvas id="cv" width="1600" height="1080"></canvas>
+    <div class="foot"><span id="hint">drag the hook →</span><span>1 tick = 1 cm</span></div>
+  </div>
+
+  <div class="codecard" id="code">
+    <div class="file"><span>tape.js</span><span>every tick, dt = 1/1440 s</span></div>
+<pre><span class="ln"><span class="k">if</span> (held) { len <span class="o">=</span> finger <span class="o">-</span> mouth; <span class="k">return</span>; }</span><span class="ln">v <span class="o">-=</span> (<span class="hl"><span class="n">7000</span> <span class="o">+</span> <span class="n">14</span> <span class="o">*</span> len</span>) <span class="o">*</span> dt; <span class="c">// spring motor</span></span><span class="ln">len <span class="o">+=</span> v <span class="o">*</span> dt;</span><span class="ln">whip <span class="o">=</span> Math.<span class="k">min</span>(<span class="n">1</span>, <span class="o">-</span>v <span class="o">/</span> <span class="n">3000</span>) <span class="o">*</span> <span class="n">22</span>;</span><span class="ln"><span class="k">if</span> (len <span class="o">&lt;</span> <span class="n">0</span>) {               <span class="c">// snap!</span></span><span class="ln">  caseV <span class="o">=</span> <span class="hl">v <span class="o">*</span> <span class="n">0.1</span></span>; len <span class="o">=</span> v <span class="o">=</span> <span class="n">0</span>; }</span></pre>
+  </div>
+
+  <div class="chip" id="chip"><span><i></i><b id="chipText">1× real time</b></span></div>
+  <div class="big" id="big">0.5×<small>slow motion</small></div>
+  <p class="end" id="end">Comment <b>CODE</b> for the source.<br><span>Follow for more.</span></p>
+  <div id="cursor"><div class="tip"></div></div>
+  <span class="sr" role="status" aria-live="polite" id="live"></span>
+</div>
+
+<script>/* inlined from ../_shared/reel.js */
+// Shared runtime for "Interaction #N" pages.
+// Normal use: a fixed-step rAF loop drives the component (stable at any refresh rate).
+// ?capture: the recorder drives time frame by frame via __tick(dt), and the overlay via __overlay(o).
+window.Reel = function ({ step, render, DT = 1 / 1440, geom = () => ({}) }) {
+  const CAPTURE = new URLSearchParams(location.search).has('capture');
+  if (CAPTURE) document.documentElement.classList.add('reel');
+  const $ = id => document.getElementById(id);
+  const advance = seconds => {           // whole fixed steps only, so the sim never depends on frame timing
+    const n = Math.round(seconds / DT);
+    for (let i = 0; i < n; i++) step(DT);
+  };
+  render();
+  if (!CAPTURE) {
+    let last = performance.now(), acc = 0;
+    const frame = now => {
+      acc += Math.min(0.05, (now - last) / 1000); last = now;
+      while (acc >= DT) { step(DT); acc -= DT; }
+      render(); requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    return CAPTURE;
+  }
+  const cur = $('cursor');
+  cur.style.transform = 'translate(-200px,-200px)';
+  // a press ring that grows out of the fingertip, on simulated time (so it slows down in slow motion too)
+  const rip = document.createElement('i'); rip.className = 'rip'; cur.appendChild(rip);
+  let ripT = 9;
+  addEventListener('pointerdown', () => { cur.classList.add('down'); ripT = 0; }, true);
+  addEventListener('pointerup', () => cur.classList.remove('down'), true);
+  const drawRip = () => {
+    const u = Math.min(1, ripT / 0.45), e = 1 - (1 - u) ** 3;
+    rip.style.transform = `scale(${(0.9 + 0.9 * e).toFixed(4)})`;
+    rip.style.opacity = (u < 1 ? 0.55 * (1 - u) : 0).toFixed(3);
+  };
+  drawRip();
+  window.__tick = sec => { advance(sec); ripT += sec; drawRip(); render(); };
+  window.__geom = geom;
+  window.__overlay = o => {
+    // sequential, never two text layers at once: card out, then code in (and back)
+    const card = $('card'), code = $('code');
+    card.style.opacity = o.card;
+    card.style.transform = `translateY(${(1 - o.card) * -18}px)`;
+    code.style.opacity = o.code;
+    code.style.transform = `translateY(${(1 - o.code) * 22}px)`;
+    $('chip').style.opacity = o.chipA ?? o.card * (1 - o.big);
+    $('end').style.opacity = o.code;
+    $('big').style.opacity = o.big; $('big').style.transform = `scale(${0.94 + 0.06 * o.big})`;
+    $('tint').style.opacity = o.tint;
+    document.querySelectorAll('.hl').forEach(el => el.classList.toggle('on', !!o.hl));
+    document.querySelectorAll('#code .ln').forEach((el, i) => el.classList.toggle('on', i === o.line));
+    cur.style.opacity = o.cursor ?? o.card;
+    $('chipText').textContent = o.chip;
+    if (o.cx !== undefined) cur.style.transform = `translate(${o.cx}px, ${o.cy}px)`;
+  };
+  return CAPTURE;
+};
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const card = $('card'), cv = $('cv'), ctx = cv.getContext('2d');
+  const MOUTH = 168, TY = 268, TH = 40, PX = 4, MAX = 150;       // tape mouth x, tape centre y, tape height, px per cm, max cm
+  const RY = TY + 40;
+  const ACC = 7000, ACC_L = 14;                                    // spring motor: px/s² + per px of tape out
+  const K_CASE = 900, K_ROT = 700, K_HOOK = 1600;
+
+  let value = 128, len = 0, v = 0, drag = null, hookA = 0, hookW = 0;
+  let caseX = 0, caseV = 0, caseR = 0, caseW = 0, whip = 0, phase = 0, snapT = 9, markX = MOUTH + value * PX, oldX = 0, oldA = 0, markDrop = 0;
+
+  // ---------- input ----------
+  const local = e => { const r = card.getBoundingClientRect(), k = 800 / r.width; return { x: (e.clientX - r.left) * k, y: (e.clientY - r.top) * k }; };
+  const hookX = () => MOUTH + len;
+  function setValue(cm) {
+    value = Math.max(0, Math.min(MAX, Math.round(cm)));
+    $('slider').setAttribute('aria-valuenow', value);
+    $('slider').setAttribute('aria-valuetext', value + ' cm');
+    $('live').textContent = value + ' cm';
+    oldX = markX; oldA = 1; markX = MOUTH + value * PX; markDrop = 1;   // the old mark fades where it was, the new one drops in
+  }
+  cv.addEventListener('pointerdown', e => {
+    const p = local(e);
+    if (Math.abs(p.x - (hookX() + 6)) > 46 || Math.abs(p.y - TY) > 60) return;
+    e.preventDefault(); cv.setPointerCapture(e.pointerId);
+    drag = { off: p.x - hookX(), x: p.x };
+  });
+  cv.addEventListener('pointermove', e => { if (drag) drag.x = local(e).x; });
+  function release() {
+    if (!drag) return;
+    drag = null;
+    setValue(len / PX);                                 // the measurement sticks, the tape goes home
+    v = 0;
+  }
+  cv.addEventListener('pointerup', release);
+  cv.addEventListener('pointercancel', release);
+  $('slider').addEventListener('keydown', e => {      // keyboard: arrows nudge the value, Home/End jump
+    const step = e.shiftKey ? 10 : 1;
+    const map = { ArrowRight: value + step, ArrowUp: value + step, ArrowLeft: value - step, ArrowDown: value - step, Home: 0, End: MAX };
+    if (!(e.key in map)) return;
+    e.preventDefault(); setValue(map[e.key]);
+  });
+
+  // ---------- physics ----------
+  function step(dt) {
+    snapT += dt;
+    // marker slides to the latched value, and drops in
+    markDrop *= Math.exp(-dt / 0.07); oldA = Math.max(0, oldA - dt / 0.16);
+    // case recoil + wobble, hook rattle
+    caseV += -caseX * K_CASE * dt; caseV *= 0.9975; caseX += caseV * dt;
+    caseW += -caseR * K_ROT * dt;  caseW *= 0.9975; caseR += caseW * dt;
+    hookW += -hookA * K_HOOK * dt; hookW *= 0.996;  hookA += hookW * dt;
+    phase += 34 * dt;
+    if (drag) {                                         // the finger owns the hook
+      const raw = drag.x - drag.off - MOUTH;
+      len = Math.max(0, raw > MAX * PX ? MAX * PX + (raw - MAX * PX) * 0.15 : raw);
+      whip *= Math.exp(-dt / 0.05);
+      return;
+    }
+    if (len <= 0) { len = 0; whip *= Math.exp(-dt / 0.05); return; }
+    if (reduce.matches) { len = 0; v = 0; whip = 0; return; }
+    v -= (ACC + ACC_L * len) * dt;                      // spring motor
+    len += v * dt;
+    const target = Math.min(1, -v / 3000) ** 1.5 * 22;  // the faster it zips in, the harder it whips
+    whip += (target - whip) * (1 - Math.exp(-dt / 0.04));
+    if (len <= 0) {                                     // snap!
+      const I = -v;
+      caseV -= I * 0.1; caseW += I * 0.0006; hookW -= I * 0.003;
+      len = 0; v = 0; snapT = 0;
+    }
+  }
+
+  // ---------- render ----------
+  ctx.scale(2, 2);
+  const dy = x => {                                     // whip: a wave carried by the tape, zero at the mouth
+    if (whip < 0.01) return 0;
+    const L = Math.max(1, len), u = (x - MOUTH) / L;
+    const env = Math.min(1, (x - MOUTH) / 80) * (0.45 + 0.55 * u);
+    return whip * env * Math.sin((hookX() - x) * 2 * Math.PI / 230 + phase) - whip * 0.5 * u * u;
+  };
+  function ruler() {
+    ctx.save();
+    for (let c = 0; c <= MAX; c++) {
+      const x = MOUTH + c * PX + 0.5;
+      const h = c % 10 === 0 ? 30 : c % 5 === 0 ? 19 : 10;
+      ctx.strokeStyle = c % 10 === 0 ? 'rgba(40,32,20,.42)' : 'rgba(40,32,20,.20)';
+      ctx.lineWidth = c % 10 === 0 ? 1.6 : 1.1;
+      ctx.beginPath(); ctx.moveTo(x, RY); ctx.lineTo(x, RY + h); ctx.stroke();
+    }
+    ctx.font = '400 24px "Geist Mono"'; ctx.fillStyle = '#6F695F'; ctx.textAlign = 'center';
+    for (let c = 0; c <= MAX; c += 20) ctx.fillText(c, MOUTH + c * PX, RY + 62);
+    ctx.strokeStyle = 'rgba(40,32,20,.16)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(MOUTH, RY + .5); ctx.lineTo(MOUTH + MAX * PX, RY + .5); ctx.stroke();
+    // the mark the tape left
+    const pin = (x, lift, a) => {
+      ctx.globalAlpha = a; ctx.fillStyle = '#D9502B';
+      ctx.fillRect(x - 1.5, RY, 3, 32);
+      ctx.beginPath(); ctx.moveTo(x - 9, RY - 6 - lift); ctx.lineTo(x + 9, RY - 6 - lift); ctx.lineTo(x, RY + 6 - lift); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+    };
+    if (oldA > 0 && Math.abs(oldX - markX) > 1) pin(oldX, 0, oldA);
+    const d = markDrop, lift = d * 30 - Math.sin(Math.min(1, d) * Math.PI) * 6;   // falls in, dips past, settles
+    pin(markX, lift, Math.min(1, (1 - d) * 4));
+    ctx.restore();
+  }
+  function tape() {
+    const hx = hookX();
+    if (len < 0.5) return;
+    const N = Math.max(2, Math.ceil(len / 4)), top = [], bot = [];
+    for (let i = 0; i <= N; i++) {
+      const x = MOUTH + (len * i) / N, y = TY + dy(x);
+      top.push([x, y - TH / 2]); bot.push([x, y + TH / 2]);
+    }
+    const poly = () => { ctx.beginPath(); top.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); bot.slice().reverse().forEach(([x, y]) => ctx.lineTo(x, y)); ctx.closePath(); };
+    // shadow: the more it whips, the further it lifts
+    ctx.save();
+    ctx.shadowColor = 'rgba(60,40,10,.26)'; ctx.shadowBlur = 10 + whip * 0.6; ctx.shadowOffsetY = 7 + whip * 0.4;
+    ctx.fillStyle = '#E2BC45'; poly(); ctx.fill();
+    ctx.restore();
+    const g = ctx.createLinearGradient(0, TY - TH / 2, 0, TY + TH / 2);
+    g.addColorStop(0, '#F4D873'); g.addColorStop(0.18, '#EDCB55'); g.addColorStop(0.75, '#E2BC45'); g.addColorStop(1, '#C99F2C');
+    ctx.fillStyle = g; poly(); ctx.fill();
+    // printed ticks + numbers, counted from the hook
+    ctx.save(); poly(); ctx.clip();
+    ctx.strokeStyle = '#2A2318'; ctx.fillStyle = '#2A2318'; ctx.textAlign = 'center';
+    ctx.font = '500 18px "Geist Mono"';
+    for (let u = 0; u * PX <= len; u++) {
+      const x = hx - u * PX, y = TY + dy(x) - TH / 2;
+      const h = u % 10 === 0 ? 17 : u % 5 === 0 ? 11 : 6;
+      ctx.lineWidth = u % 10 === 0 ? 1.5 : 1;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + h); ctx.stroke();
+      if (u % 10 === 0 && u > 0) { ctx.fillStyle = u % 50 === 0 ? '#C0391B' : '#2A2318'; ctx.fillText(u, x, y + 35); }
+    }
+    ctx.restore();
+  }
+  function hook() {
+    const hx = hookX(), y = TY + dy(hx);
+    ctx.save(); ctx.translate(hx, y); ctx.rotate(hookA + Math.atan((dy(hx) - dy(hx - 6)) / 6) * (len > 1 ? 1 : 0));
+    ctx.shadowColor = 'rgba(40,30,15,.30)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 4;
+    const g = ctx.createLinearGradient(0, 0, 14, 0);
+    g.addColorStop(0, '#8E8A84'); g.addColorStop(0.45, '#D9D6D0'); g.addColorStop(1, '#7B7771');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.roundRect(0, -TH / 2 - 6, 13, TH + 32, [3, 3, 6, 6]); ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = 'rgba(30,25,20,.45)';
+    for (const ry of [-8, 8]) { ctx.beginPath(); ctx.arc(6.5, ry, 2.3, 0, 7); ctx.fill(); }
+    ctx.restore();
+  }
+  function tcase() {
+    ctx.save();
+    ctx.translate(caseX + 92, TY); ctx.rotate(caseR);
+    ctx.shadowColor = 'rgba(40,25,10,.30)'; ctx.shadowBlur = 26; ctx.shadowOffsetY = 14;
+    const g = ctx.createLinearGradient(-76, -80, 70, 80);
+    g.addColorStop(0, '#E8673F'); g.addColorStop(0.55, '#D9502B'); g.addColorStop(1, '#B23E1E');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(-78, -78, 154, 156, 38); ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(-76, -76, 150, 152, 36); ctx.stroke();
+    // grip
+    ctx.fillStyle = '#2A2521'; ctx.beginPath(); ctx.arc(-2, 0, 50, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.lineWidth = 3;
+    for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(-2 + Math.cos(a) * 36, Math.sin(a) * 36); ctx.lineTo(-2 + Math.cos(a) * 48, Math.sin(a) * 48); ctx.stroke(); }
+    const s = ctx.createRadialGradient(-10, -10, 2, -2, 0, 22);
+    s.addColorStop(0, '#E6E2DB'); s.addColorStop(1, '#8D8880');
+    ctx.fillStyle = s; ctx.beginPath(); ctx.arc(-2, 0, 20, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(40,30,20,.5)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(-11, 0); ctx.lineTo(7, 0); ctx.stroke();
+    // lock button + mouth
+    ctx.fillStyle = '#2A2521'; ctx.beginPath(); ctx.roundRect(-26, -90, 40, 16, 6); ctx.fill();
+    ctx.fillStyle = '#1D1B18'; ctx.beginPath(); ctx.roundRect(66, -TH / 2 - 4, 12, TH + 8, 3); ctx.fill();
+    ctx.restore();
+    // snap: three short lines kick out of the mouth
+    if (snapT < 0.22) {
+      const u = snapT / 0.22, e = 1 - (1 - u) ** 3;
+      ctx.save(); ctx.strokeStyle = `rgba(217,80,43,${(1 - u).toFixed(3)})`; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+      for (const a of [-0.75, 0, 0.75]) {
+        const c = Math.cos(a), sn = Math.sin(a), r0 = 30 + 26 * e, r1 = r0 + 22 * (1 - u * 0.6);
+        ctx.beginPath(); ctx.moveTo(MOUTH + 18 + c * r0, TY + sn * r0); ctx.lineTo(MOUTH + 18 + c * r1, TY + sn * r1); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+  function render() {
+    ctx.clearRect(0, 0, 800, 540);
+    ruler(); tape(); hook(); tcase();
+    const shown = drag ? Math.round(Math.min(MAX, len / PX)) : value;
+    $('num').textContent = shown;
+    $('read').classList.toggle('live', !!drag);
+    $('hint').textContent = drag ? 'let go to set' : 'drag the hook →';
+  }
+
+  Reel({
+    step, render,
+    geom: () => {
+      const r = card.getBoundingClientRect(), k = r.width / 800;
+      return { left: r.left, top: r.top, k, mouth: MOUTH, ty: TY, px: PX };
+    },
+  });
+  document.fonts.ready.then(render);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wax Seal Submit</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>/* inlined from ../_shared/reel.css */
+/* Shared look for "Interaction #N" pages: paper tokens + the Reel overlay layer.
+   The overlay layer only shows with ?capture (html.reel). Fonts: General Sans + Geist Mono. */
+:root {
+  --paper: #ECE8E0;
+  --card: #FAF8F4;
+  --ink: #1D1B18;
+  --ink-2: #57524A;
+  --muted: #9A948A;
+  --hair: rgba(40, 32, 20, .10);
+  --hair-strong: rgba(40, 32, 20, .16);
+  --accent: #D9502B;
+  --code-bg: #1E1C19;
+  --sans: "General Sans", ui-sans-serif, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(1200px 900px at 50% 38%, rgba(255,255,255,.55), transparent 70%),
+    radial-gradient(900px 700px at 50% 110%, rgba(120,100,70,.10), transparent 70%);
+}
+.stage { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+
+.card {
+  position: relative;
+  background: linear-gradient(180deg, #FCFBF8 0%, var(--card) 100%);
+  border-radius: 36px;
+  border: 1px solid var(--hair);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 1px 1px rgba(40,30,15,.04),
+    0 6px 12px -4px rgba(40,30,15,.06),
+    0 30px 60px -20px rgba(40,30,15,.16),
+    0 70px 120px -40px rgba(40,30,15,.18);
+}
+
+/* ---------- reel overlays (capture mode only) ---------- */
+.hook, .handle, .chip, .end, .codecard, #cursor, .big, .tint { display: none; pointer-events: none; }
+.reel body { user-select: none; -webkit-user-select: none; }
+.reel .stage { width: 1080px; height: 1920px; display: block; }
+.reel .card { position: absolute; left: var(--card-left, 80px); top: var(--card-top, 640px); scale: var(--card-scale, 1.1); transform-origin: 0 0; }
+.reel .hook, .reel .handle, .reel .chip, .reel .end, .reel .codecard, .reel #cursor, .reel .big, .reel .tint { display: block; }
+
+.tint { position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(900px 1300px at 50% 46%, transparent 50%, rgba(150,95,50,.10) 100%), rgba(230,170,110,.035); }
+.handle {
+  position: absolute; left: 0; right: 0; top: 300px; text-align: center;
+  font-family: var(--mono); font-size: 30px; color: var(--muted); letter-spacing: .02em;
+}
+.handle b { font-weight: 500; color: var(--accent); }
+.hook {
+  position: absolute; left: 80px; right: 80px; top: 356px; text-align: center;
+  font-size: 96px; font-weight: 600; letter-spacing: -.035em; line-height: 1.02; color: var(--ink);
+  text-wrap: balance;
+}
+.hook em { font-style: normal; color: var(--accent); }
+.chip { position: absolute; left: 0; right: 0; top: var(--chip-top, 1400px); text-align: center; }
+.chip span {
+  display: inline-flex; align-items: center; gap: 14px;
+  font-family: var(--mono); font-size: 28px; color: var(--ink-2);
+  padding: 14px 26px; border-radius: 999px; border: 1px solid var(--hair-strong);
+  background: rgba(250,248,244,.7);
+}
+.chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+.chip b { font-weight: 400; }
+.big { position: absolute; left: 0; right: 0; top: var(--big-top, 1440px); text-align: center; opacity: 0;
+  font-family: var(--mono); font-weight: 300; font-size: 132px; letter-spacing: -.05em; color: var(--accent); line-height: 1; }
+.big small { font-size: 30px; letter-spacing: .02em; color: var(--ink-2); font-weight: 400; display: block; margin-top: 10px; }
+.end {
+  position: absolute; left: 120px; right: 120px; top: var(--end-top, 1160px); text-align: center; opacity: 0;
+  font-size: 42px; font-weight: 500; letter-spacing: -.02em; line-height: 1.25; color: var(--ink);
+}
+.end b { font-weight: 600; color: var(--accent); }
+.end span { color: var(--muted); }
+.codecard {
+  position: absolute; left: 70px; top: var(--code-top, 640px); width: 890px; opacity: 0;
+  background: var(--code-bg); color: #E9E4DA; border-radius: 36px;
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 40px 90px -30px rgba(30,20,10,.45), 0 10px 24px -8px rgba(30,20,10,.25);
+  padding: 44px 46px 50px;
+}
+.codecard .file { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 25px; color: #8C857A; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 30px; }
+.codecard pre { font-family: var(--mono); font-size: 30px; line-height: 1.7; white-space: pre; margin: 0 -18px; }
+.codecard .ln { display: block; padding: 0 18px; border-radius: 10px; transition: none; }
+.codecard .ln.on { background: rgba(255,255,255,.07); box-shadow: inset 4px 0 0 var(--accent); }
+.c { color: #A39C90; } .k { color: #E8A27F; } .n { color: #F2C66D; } .o { color: #9C958A; }
+.hl.on { color: #fff; background: rgba(217,80,43,.30); border-radius: 6px; padding: 0 4px; margin: 0 -4px; }
+
+#cursor { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 50; pointer-events: none; }
+#cursor .tip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  background: rgba(29,27,24,.16); border: 2.5px solid rgba(29,27,24,.62);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.75), 0 8px 18px rgba(30,20,10,.22); }
+#cursor.down .tip { transform: scale(.88); background: rgba(29,27,24,.26); border-color: rgba(29,27,24,.8); }
+#cursor .rip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  border: 3px solid var(--accent); opacity: 0; }
+</style>
+<style>
+  :root { --card-top: 640px; --chip-top: 1480px; --big-top: 1460px; --code-top: 640px; --end-top: 1180px; }
+  .card { width: 800px; height: 700px; }
+  .clip { position: absolute; inset: 0; overflow: hidden; border-radius: 36px; }
+  .sheet { position: absolute; inset: 0; }
+  .meta { position: absolute; left: 56px; right: 56px; top: 52px; display: flex; justify-content: space-between;
+          font-family: var(--mono); font-size: 23px; color: var(--muted); }
+  .meta b { font-weight: 400; color: var(--accent); }
+  .title { position: absolute; left: 56px; top: 98px; font-size: 60px; font-weight: 600; letter-spacing: -.035em; color: var(--ink); }
+  .rows { position: absolute; left: 56px; top: 214px; width: 400px; }
+  .row { border-bottom: 1px solid var(--hair-strong); padding: 16px 0 14px; }
+  .row + .row { margin-top: 12px; }
+  .row span { display: block; font-family: var(--mono); font-size: 20px; color: var(--muted); }
+  .row p { margin-top: 6px; font-size: 32px; letter-spacing: -.015em; color: var(--ink); white-space: nowrap; }
+  .foot { position: absolute; left: 56px; right: 56px; bottom: 44px; display: flex; justify-content: space-between;
+          font-family: var(--mono); font-size: 22px; color: var(--muted); border-top: 1px solid var(--hair); padding-top: 22px; }
+  .foot .ok { color: var(--accent); }
+  svg.lay { position: absolute; left: 0; top: 0; width: 800px; height: 700px; overflow: visible; pointer-events: none; }
+  button.seal { position: absolute; left: calc(612px - 96px); top: calc(392px - 96px); width: 192px; height: 192px; border-radius: 50%;
+                border: 0; background: none; padding: 0; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent; }
+  button.seal:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="tint" id="tint"></div>
+  <div class="handle"><b>Interaction #5</b> · @zellap.app</div>
+  <h1 class="hook">Seal it to <em>send.</em></h1>
+
+  <div class="card" id="card">
+    <div class="clip" id="clip"><div class="sheet" id="sheet">
+      <div class="meta"><span>RSVP · <b>Spring supper</b></span><span>Sat 14 March</span></div>
+      <h2 class="title" id="title">Count me in.</h2>
+      <div class="rows">
+        <div class="row"><span>Name</span><p id="fName">Mira Holm</p></div>
+        <div class="row"><span>Guests</span><p id="fGuests">2</p></div>
+        <div class="row"><span>Note</span><p id="fNote">We'll bring the bread.</p></div>
+      </div>
+      <svg class="lay" id="paper" viewBox="0 0 800 700">
+        <defs>
+          <filter id="wax" filterUnits="userSpaceOnUse" x="0" y="0" width="800" height="700" color-interpolation-filters="sRGB">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="b"/>
+            <feColorMatrix in="b" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 22 -10" result="shape"/>
+            <feGaussianBlur in="shape" stdDeviation="5" result="soft"/>
+            <feOffset in="soft" dy="5" dx="2" result="sh"/>
+            <feFlood flood-color="#3A1408" flood-opacity=".38"/>
+            <feComposite in2="sh" operator="in" result="shadow"/>
+            <feFlood id="waxColor" flood-color="#C8361F"/>
+            <feComposite in2="shape" operator="in" result="base"/>
+            <feGaussianBlur in="shape" stdDeviation="7" result="bump"/>
+            <feDiffuseLighting in="bump" surfaceScale="4.2" diffuseConstant="1.18" lighting-color="#fff" result="diff">
+              <feDistantLight azimuth="235" elevation="58"/>
+            </feDiffuseLighting>
+            <feComposite in="base" in2="diff" operator="arithmetic" k1="1" result="lit"/>
+            <feSpecularLighting in="bump" surfaceScale="4.2" specularConstant="1" specularExponent="26" lighting-color="#FFE9DC" result="spec">
+              <feDistantLight azimuth="235" elevation="44"/>
+            </feSpecularLighting>
+            <feComposite in="spec" in2="shape" operator="in" result="specIn"/>
+            <feComposite id="gloss" in="specIn" in2="lit" operator="arithmetic" k2=".9" k3="1" result="wet"/>
+            <feMerge><feMergeNode in="shadow"/><feMergeNode in="wet"/></feMerge>
+          </filter>
+        </defs>
+        <circle id="zone" cx="612" cy="392" r="90" fill="none" stroke="rgba(40,32,20,.22)" stroke-width="2" stroke-dasharray="3 9" stroke-linecap="round"/>
+        <text id="zoneTxt" x="612" y="399" text-anchor="middle" font-family="Geist Mono" font-size="20" fill="#9A948A">hold</text>
+        <g id="squash"><g id="waxG" filter="url(#wax)"></g>
+          <g id="emb" opacity="0">
+            <g transform="translate(1.6 1.8)" stroke="rgba(70,10,0,.42)" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle id="eRingD" cx="612" cy="392" r="50"/><path id="eMarkD"/></g>
+            <g transform="translate(-1.4 -1.6)" stroke="rgba(255,205,180,.38)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+              <circle id="eRingL" cx="612" cy="392" r="50"/><path id="eMarkL"/></g>
+          </g>
+        </g>
+      </svg>
+      <div class="foot"><span id="hint">hold to seal</span><span>wax-seal submit</span></div>
+    </div></div>
+
+    <button class="seal" id="seal" aria-label="Hold to seal and send" aria-describedby="hint"></button>
+
+    <svg class="lay" id="tools" viewBox="0 0 800 700">
+      <defs>
+        <linearGradient id="stickG" x1="0" x2="1"><stop offset="0" stop-color="#9E2414"/><stop offset=".3" stop-color="#D9502B"/><stop offset=".55" stop-color="#E8704A"/><stop offset="1" stop-color="#A22916"/></linearGradient>
+        <linearGradient id="brass" x1="0" x2="1"><stop offset="0" stop-color="#8A6A2E"/><stop offset=".35" stop-color="#E3C277"/><stop offset=".6" stop-color="#C79E4C"/><stop offset="1" stop-color="#6E5222"/></linearGradient>
+        <linearGradient id="wood" x1="0" x2="1"><stop offset="0" stop-color="#3B2416"/><stop offset=".38" stop-color="#7A4E30"/><stop offset=".62" stop-color="#5C3A23"/><stop offset="1" stop-color="#2E1C11"/></linearGradient>
+        <radialGradient id="brassR" cx=".38" cy=".34" r=".75"><stop offset="0" stop-color="#F2D891"/><stop offset=".45" stop-color="#CFA552"/><stop offset=".85" stop-color="#8C6A2C"/><stop offset="1" stop-color="#6A4F1F"/></radialGradient>
+        <radialGradient id="woodR" cx=".38" cy=".34" r=".8"><stop offset="0" stop-color="#8A5A37"/><stop offset=".6" stop-color="#5A3820"/><stop offset="1" stop-color="#2E1C11"/></radialGradient>
+        <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter>
+      </defs>
+      <ellipse id="stampShadow" cx="622" cy="404" rx="90" ry="70" fill="rgba(50,25,10,.4)" filter="url(#soft)" opacity="0"/>
+      <g id="stick">
+        <rect x="-23" y="-430" width="46" height="420" rx="10" fill="url(#stickG)"/>
+        <path d="M-23 -24 Q-24 2 -6 8 Q0 12 6 8 Q24 2 23 -24 Z" fill="#C8361F"/>
+        <ellipse cx="-8" cy="-200" rx="4" ry="150" fill="rgba(255,230,210,.22)"/>
+        <circle id="bead" cx="0" cy="10" r="5" fill="#C8361F"/>
+      </g>
+      <g id="stamp" opacity="0">
+        <g id="stampBody">
+          <circle r="98" fill="url(#brassR)"/>
+          <circle r="90" fill="none" stroke="rgba(70,50,15,.45)" stroke-width="5" stroke-dasharray="2 5"/>
+          <circle r="80" fill="none" stroke="rgba(255,240,200,.35)" stroke-width="2"/>
+          <circle r="56" fill="url(#woodR)"/>
+          <circle r="56" fill="none" stroke="rgba(30,15,5,.35)" stroke-width="3"/>
+          <ellipse cx="-18" cy="-22" rx="20" ry="12" fill="rgba(255,225,195,.22)" transform="rotate(-35 -18 -22)"/>
+        </g>
+      </g>
+    </svg>
+    <span class="sr" role="status" aria-live="polite" id="live"></span>
+  </div>
+
+  <div class="codecard" id="code">
+    <div class="file"><span>seal.js</span><span>every tick, dt = 1/1440 s</span></div>
+<pre><span class="ln"><span class="k">if</span> (held <span class="o">&amp;&amp;</span> (t <span class="o">+=</span> dt) <span class="o">&gt;</span> <span class="hl"><span class="n">0.06</span></span>) drip();</span><span class="ln">r <span class="o">+=</span> (<span class="k">Math</span>.sqrt(area <span class="o">/</span> PI) <span class="o">-</span> r) <span class="o">*</span> <span class="n">0.02</span>;</span><span class="ln"><span class="k">if</span> (stamp.hit) sqV <span class="o">+=</span> <span class="hl"><span class="n">3.2</span></span>;          <span class="c">// impact</span></span><span class="ln">sqV <span class="o">+=</span> (<span class="n">1.08</span> <span class="o">-</span> sq) <span class="o">*</span> <span class="n">700</span> <span class="o">*</span> dt;   <span class="c">// spread</span></span><span class="ln">sqV <span class="o">*=</span> <span class="n">0.99</span>;  sq <span class="o">+=</span> sqV <span class="o">*</span> dt;</span><span class="ln">gloss <span class="o">=</span> <span class="n">0.9</span> <span class="o">*</span> wet;  <span class="c">// it cools and sets</span></span></pre>
+  </div>
+
+  <div class="chip" id="chip"><span><i></i><b id="chipText">1× real time</b></span></div>
+  <div class="big" id="big">0.5×<small>slow motion</small></div>
+  <p class="end" id="end">Comment <b>CODE</b> for the source.<br><span>Follow for more.</span></p>
+  <div id="cursor"><div class="tip"></div></div>
+</div>
+
+<script>/* inlined from ../_shared/reel.js */
+// Shared runtime for "Interaction #N" pages.
+// Normal use: a fixed-step rAF loop drives the component (stable at any refresh rate).
+// ?capture: the recorder drives time frame by frame via __tick(dt), and the overlay via __overlay(o).
+window.Reel = function ({ step, render, DT = 1 / 1440, geom = () => ({}) }) {
+  const CAPTURE = new URLSearchParams(location.search).has('capture');
+  if (CAPTURE) document.documentElement.classList.add('reel');
+  const $ = id => document.getElementById(id);
+  const advance = seconds => {           // whole fixed steps only, so the sim never depends on frame timing
+    const n = Math.round(seconds / DT);
+    for (let i = 0; i < n; i++) step(DT);
+  };
+  render();
+  if (!CAPTURE) {
+    let last = performance.now(), acc = 0;
+    const frame = now => {
+      acc += Math.min(0.05, (now - last) / 1000); last = now;
+      while (acc >= DT) { step(DT); acc -= DT; }
+      render(); requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    return CAPTURE;
+  }
+  const cur = $('cursor');
+  cur.style.transform = 'translate(-200px,-200px)';
+  // a press ring that grows out of the fingertip, on simulated time (so it slows down in slow motion too)
+  const rip = document.createElement('i'); rip.className = 'rip'; cur.appendChild(rip);
+  let ripT = 9;
+  addEventListener('pointerdown', () => { cur.classList.add('down'); ripT = 0; }, true);
+  addEventListener('pointerup', () => cur.classList.remove('down'), true);
+  const drawRip = () => {
+    const u = Math.min(1, ripT / 0.45), e = 1 - (1 - u) ** 3;
+    rip.style.transform = `scale(${(0.9 + 0.9 * e).toFixed(4)})`;
+    rip.style.opacity = (u < 1 ? 0.55 * (1 - u) : 0).toFixed(3);
+  };
+  drawRip();
+  window.__tick = sec => { advance(sec); ripT += sec; drawRip(); render(); };
+  window.__geom = geom;
+  window.__overlay = o => {
+    // sequential, never two text layers at once: card out, then code in (and back)
+    const card = $('card'), code = $('code');
+    card.style.opacity = o.card;
+    card.style.transform = `translateY(${(1 - o.card) * -18}px)`;
+    code.style.opacity = o.code;
+    code.style.transform = `translateY(${(1 - o.code) * 22}px)`;
+    $('chip').style.opacity = o.chipA ?? o.card * (1 - o.big);
+    $('end').style.opacity = o.code;
+    $('big').style.opacity = o.big; $('big').style.transform = `scale(${0.94 + 0.06 * o.big})`;
+    $('tint').style.opacity = o.tint;
+    document.querySelectorAll('.hl').forEach(el => el.classList.toggle('on', !!o.hl));
+    document.querySelectorAll('#code .ln').forEach((el, i) => el.classList.toggle('on', i === o.line));
+    cur.style.opacity = o.cursor ?? o.card;
+    $('chipText').textContent = o.chip;
+    if (o.cx !== undefined) cur.style.transform = `translate(${o.cx}px, ${o.cy}px)`;
+  };
+  return CAPTURE;
+};
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const CX = 612, CY = 392;                       // seal centre (card units)
+  const TIP = { x: 636, y: 212 }, ANG = 52;       // wax stick tip and its angle from vertical
+  const PERIOD = 0.06, G = 5200, R_DROP = 25, MAX_AREA = Math.PI * 80 * 80, MIN_AREA = Math.PI * 30 * 30;
+  const T_HIT = 0.24, T_LIFT = 0.38, T_GONE = 0.62, T_SENT = 0.72, T_SWAP = 0.92, SWAP = 0.5;
+  const LETTERS = [
+    { name: 'Mira Holm', guests: '2', note: "We'll bring the bread." },
+    { name: 'Jonas Berg', guests: '1', note: 'Vegetarian, please.' },
+  ];
+
+  let seed, letter = 0, old = null;
+  const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+
+  let held = false, phase, stickIn, stickV, dropT, drops, blobs, area, coreR, s, hit, sq, sqV, wob, wobV, wet, sent, swapU, embR;
+  function fresh() {
+    seed = 7 + (letter % 2) * 31;
+    phase = 'idle'; stickIn = 0; stickV = 0; dropT = PERIOD * 0.6; drops = []; blobs = []; area = 0; coreR = 0;
+    s = 0; hit = false; sq = 1; sqV = 0; wob = 0; wobV = 0; wet = 1; sent = false; swapU = 0; embR = 50;
+    const L = LETTERS[letter % 2];
+    $('fName').textContent = L.name; $('fGuests').textContent = L.guests; $('fNote').textContent = L.note;
+    $('waxG').replaceChildren(); $('emb').setAttribute('opacity', 0);
+  }
+  fresh();
+
+  // ---------- input: press and hold (pointer or Space / Enter) ----------
+  const press = () => { if (phase === 'idle' || phase === 'hold') { held = true; phase = 'hold'; } };
+  const letGo = () => {
+    if (!held) return; held = false;
+    if (phase !== 'hold') return;
+    if (area >= MIN_AREA) { phase = 'stamp'; s = 0; } else if (!drops.length && !blobs.length) phase = 'idle';
+  };
+  const seal = $('seal');
+  seal.addEventListener('pointerdown', e => { e.preventDefault(); seal.setPointerCapture(e.pointerId); press(); });
+  seal.addEventListener('pointerup', letGo);
+  seal.addEventListener('pointercancel', letGo);
+  seal.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); press(); } });
+  seal.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') letGo(); });
+
+  // ---------- simulation ----------
+  function drip() {
+    const R = Math.max(14, coreR), a = rnd() * Math.PI * 2, d = (0.35 + 0.65 * Math.sqrt(rnd())) * R * 0.8;
+    const tx = CX + Math.cos(a) * d, ty = CY + Math.sin(a) * d;
+    const el = document.createElementNS(NS, 'ellipse');
+    $('waxG').appendChild(el);
+    drops.push({ x0: TIP.x, y0: TIP.y + 12, x: TIP.x, y: TIP.y + 12, vy: 260, tx, ty, el });
+  }
+  function step(dt) {
+    // the stick slides in while held, out once you let go
+    stickV += ((held && phase === 'hold' ? 1 : 0) - stickIn) * (held ? 2600 : 700) * dt; stickV *= 0.975; stickIn += stickV * dt;
+    if (held && phase === 'hold' && stickIn > 0.6 && area < MAX_AREA) {
+      dropT += dt;
+      if (dropT >= PERIOD) { dropT -= PERIOD; drip(); }
+    }
+    for (let i = drops.length - 1; i >= 0; i--) {
+      const d = drops[i];
+      d.vy += G * dt; d.y += d.vy * dt;
+      const p = Math.min(1, (d.y - d.y0) / (d.ty - d.y0));
+      d.x = d.x0 + (d.tx - d.x0) * p;
+      if (d.y >= d.ty) {
+        d.el.remove(); drops.splice(i, 1);
+        const el = document.createElementNS(NS, 'circle'); $('waxG').appendChild(el);
+        blobs.push({ x: d.tx, y: d.ty, r: 7, rt: R_DROP * (0.85 + rnd() * 0.3), el });
+        area = Math.min(MAX_AREA, area + Math.PI * R_DROP * R_DROP);
+      }
+    }
+    for (const b of blobs) b.r += (b.rt - b.r) * (1 - Math.exp(-dt / 0.05));
+    coreR += (Math.sqrt(area / Math.PI) * 0.9 - coreR) * (1 - Math.exp(-dt / 0.07));
+
+    if (phase === 'stamp') {
+      s += dt;
+      if (!hit && s >= T_HIT) {                  // impact: the wax spreads, the mark is pressed in
+        hit = true; sqV += reduce.matches ? 0 : 3.2; wobV += reduce.matches ? 0 : 9; embR = coreR * 0.62;
+        for (let j = 0; j < 5; j++) {          // wax squeezed out under the stamp: a few soft lobes at the rim
+          const a = (j / 5 + rnd() * 0.12) * Math.PI * 2, el = document.createElementNS(NS, 'circle'); $('waxG').appendChild(el);
+          blobs.push({ x: CX + Math.cos(a) * coreR * 0.86, y: CY + Math.sin(a) * coreR * 0.86, r: 4, rt: 12 + rnd() * 9, el });
+        }
+      }
+      if (hit) wet = Math.max(0, 1 - (s - T_HIT) / 0.5);
+      if (!sent && s >= T_SENT) { sent = true; $('live').textContent = 'Sealed and sent'; }
+      if (s >= T_SWAP) {                         // sent: the sealed RSVP is pushed up, the next one comes in under it
+        old = $('sheet').cloneNode(true); old.removeAttribute('id'); $('clip').appendChild(old);
+        letter++; const keep = s; fresh(); phase = 'swap'; s = keep; swapU = 0;
+      }
+    } else if (phase === 'swap') {
+      s += dt; swapU = Math.min(1, (s - T_SWAP) / SWAP);
+      if (swapU >= 1) { phase = held ? 'hold' : 'idle'; swapU = 0; s = 0; if (old) { old.remove(); old = null; } }
+    }
+    sqV += ((hit ? 1.08 : 1) - sq) * 700 * dt; sqV *= 0.99; sq += sqV * dt;
+    wobV += -wob * 2400 * dt; wobV *= 0.993; wob += wobV * dt;
+  }
+
+  // ---------- render ----------
+  const ease = u => (u = Math.min(1, Math.max(0, u)), u * u * (3 - 2 * u));
+  const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+  let core = null;
+  function render() {
+    if (!core || !core.isConnected) { core = document.createElementNS(NS, 'circle'); $('waxG').prepend(core); }
+    core.setAttribute('cx', CX); core.setAttribute('cy', CY); core.setAttribute('r', Math.max(0, coreR).toFixed(2));
+    for (const b of blobs) { b.el.setAttribute('cx', b.x.toFixed(2)); b.el.setAttribute('cy', b.y.toFixed(2)); b.el.setAttribute('r', b.r.toFixed(2)); }
+    for (const d of drops) {
+      const st = Math.min(2.2, 1 + d.vy / 1400);
+      d.el.setAttribute('cx', d.x.toFixed(2)); d.el.setAttribute('cy', d.y.toFixed(2));
+      d.el.setAttribute('rx', (12 / Math.sqrt(st)).toFixed(2)); d.el.setAttribute('ry', (12 * st).toFixed(2));
+    }
+    const sx = sq * (1 + 0.035 * wob), sy = sq * (1 - 0.035 * wob);
+    $('squash').setAttribute('transform', `translate(${CX} ${CY}) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(${-CX} ${-CY})`);
+    // it cools: deeper red, less gloss
+    $('waxColor').setAttribute('flood-color', `rgb(${mix([200, 54, 31], [160, 38, 24], 1 - wet)})`);
+    $('gloss').setAttribute('k2', (0.35 + 0.6 * wet).toFixed(3));
+    // embossed mark
+    const r = embR, k = r / 50;
+    const mark = `M${CX - 17 * k} ${CY + 1 * k} L${CX - 5 * k} ${CY + 13 * k} L${CX + 19 * k} ${CY - 13 * k}`;
+    for (const id of ['eRingD', 'eRingL']) $(id).setAttribute('r', r.toFixed(2));
+    $('eMarkD').setAttribute('d', mark); $('eMarkL').setAttribute('d', mark);
+    $('emb').setAttribute('opacity', hit ? ease((s - T_LIFT) / 0.1).toFixed(3) : 0);
+    $('zone').setAttribute('opacity', (1 - Math.min(1, coreR / 40)).toFixed(3));
+    $('zoneTxt').setAttribute('opacity', phase === 'idle' || phase === 'swap' ? 1 : 0);
+
+    // stick: slides along its own axis
+    const off = (1 - stickIn) * 520, ax = Math.sin(ANG * Math.PI / 180), ay = -Math.cos(ANG * Math.PI / 180);
+    $('stick').setAttribute('transform', `translate(${(TIP.x + ax * off).toFixed(2)} ${(TIP.y + ay * off).toFixed(2)}) rotate(${ANG})`);
+    $('bead').setAttribute('r', (held && phase === 'hold' ? 4 + 7 * Math.min(1, dropT / PERIOD) : 4).toFixed(2));
+
+    // stamp: drops, presses, lifts
+    // stamp, seen from above: swings in from the upper right while lowering, presses, lifts away
+    let far = 1, press = 1;
+    const on = phase === 'stamp' && s < T_GONE;
+    if (on) {
+      if (s < T_HIT) { const u = Math.max(0, s / T_HIT); far = 1 - u * u; }
+      else if (s < T_LIFT) { far = 0; press = 1 - 0.05 * Math.sin(Math.min(1, (s - T_HIT) / 0.1) * Math.PI); }
+      else { const u = (s - T_LIFT) / (T_GONE - T_LIFT); far = u * u * (3 - 2 * u); }
+    }
+    const sxp = CX + 430 * far * far, syp = CY - 470 * far * far, sc = (1 + 0.32 * far) * press;
+    $('stamp').setAttribute('opacity', on ? 1 : 0);
+    $('stamp').setAttribute('transform', `translate(${sxp.toFixed(2)} ${syp.toFixed(2)}) scale(${sc.toFixed(4)})`);
+    $('stampShadow').setAttribute('opacity', on ? (0.85 * (1 - far * 0.7)).toFixed(3) : 0);
+    $('stampShadow').setAttribute('cx', (sxp + 10 + 60 * far).toFixed(1)); $('stampShadow').setAttribute('cy', (syp + 14 + 70 * far).toFixed(1));
+    $('stampShadow').setAttribute('rx', (96 + 40 * far).toFixed(1)); $('stampShadow').setAttribute('ry', (92 + 40 * far).toFixed(1));
+
+    // the sent letter slides up and out, the next one slides in from below
+    const e = phase === 'swap' ? ease(swapU) : 1;
+    $('sheet').style.transform = `translateY(${(700 * (1 - e)).toFixed(2)}px)`;
+    if (old) old.style.transform = `translateY(${(-700 * e).toFixed(2)}px)`;
+    const h = $('hint');
+    h.textContent = sent ? 'sealed · sent ✓' : phase === 'hold' ? 'release to stamp' : 'hold to seal';
+    h.className = sent ? 'ok' : '';
+  }
+
+  Reel({
+    step, render,
+    geom: () => {
+      const r = $('card').getBoundingClientRect(), k = r.width / 800;
+      return { left: r.left, top: r.top, k, cx: CX, cy: CY };
+    },
+  });
+})();
+</script>
+</body>
+</html>

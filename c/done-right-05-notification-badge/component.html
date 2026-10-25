@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notification badge · Done right #5 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 520px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-card { background: #FFFFFF; border: 1px solid rgba(40, 32, 20, .12); border-radius: 24px; padding: 32px; box-shadow: 0 24px 50px -28px rgba(40, 32, 20, .28); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .demo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .demo-actions button { min-height: 44px; padding: 0 14px; border: 1px solid #857E73; border-radius: 10px; background: #FFFFFF; color: #1D1B18; font: inherit; font-size: .875rem; font-weight: 500; cursor: pointer; }
+  .demo-actions button:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 2px; }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+
+  .notify-btn {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 1px solid rgba(40, 32, 20, .16);
+    border-radius: 14px;
+    background: #FFFFFF;
+    color: #1D1B18;
+    cursor: pointer;
+  }
+  .notify-btn:hover { background: #F2EFEA; }
+  .notify-btn:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 3px; }
+  .notify-btn svg { width: 24px; height: 24px; }
+
+  /* A number, not just a red dot. White on #C42B1C is 5.7:1. */
+  .notify-badge {
+    position: absolute;
+    top: -7px;
+    left: 26px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border: 1px solid transparent;   /* shows up in forced colours */
+    border-radius: 999px;
+    background: #C42B1C;
+    color: #FFFFFF;
+    box-shadow: 0 0 0 2.5px #FFFFFF; /* separates it from the icon */
+    font-size: .75rem;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .notify-badge[hidden] { display: none; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .notify-badge.is-new { animation: notify-pop .32s ease-out; }
+  }
+  @keyframes notify-pop { 40% { transform: scale(1.25); } }
+
+  @media (forced-colors: active) {
+    .notify-badge { border-color: CanvasText; }
+  }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #5 · @zellap.app</p>
+  <h1>Notification badge</h1>
+  <p class="demo-lede">The count is part of the button's name, the badge caps at 99+, and new notifications are announced once per burst, not once per ping.</p>
+
+  <div class="demo-card">
+    <div class="notify">
+      <button class="notify-btn" type="button" data-unread="3">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 20.5a2.2 2.2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        <span class="sr-only">
+          Notifications<span class="notify-count"></span>
+        </span>
+        <span class="notify-badge" aria-hidden="true"></span>
+      </button>
+      <p class="notify-live sr-only" role="status"></p>
+    </div>
+
+    <div class="demo-actions">
+      <button type="button" data-demo="1">+1 ping</button>
+      <button type="button" data-demo="40">+40 pings</button>
+      <button type="button" data-demo="clear">Mark all read</button>
+    </div>
+  </div>
+
+  <p class="demo-notes">The bell's name is "Notifications, 3 unread".<br>At 128 the badge says 99+, the name still says 128.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  for (const bell of document.querySelectorAll('.notify-btn')) {
+    const badge = bell.querySelector('.notify-badge');
+    const count = bell.querySelector('.notify-count');
+    const live = bell.closest('.notify').querySelector('.notify-live');
+    let unread = 0, fresh = 0, timer;
+
+    const render = (n) => {
+      badge.hidden = n === 0;
+      badge.textContent = n > 99 ? '99+' : n;
+      // The name gets the real number, even past 99.
+      count.textContent = n ? `, ${n} unread` : '';
+    };
+
+    // Call with: bell.dispatchEvent(new CustomEvent('unread', { detail: 7 }))
+    bell.addEventListener('unread', ({ detail: n }) => {
+      if (n > unread) {
+        fresh += n - unread;
+        badge.classList.remove('is-new');
+        requestAnimationFrame(() => badge.classList.add('is-new'));
+        // One message per burst, not one per ping.
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          const s = fresh > 1 ? 's' : '';
+          live.textContent = `${fresh} new notification${s}`;
+          fresh = 0;
+        }, 1000);
+      }
+      unread = n;
+      render(n);
+    });
+
+    unread = Number(bell.dataset.unread || 0);
+    render(unread);
+  }
+</script>
+
+<!-- Demo page only: fake incoming notifications. -->
+<script>
+  const bell = document.querySelector('.notify-btn');
+  let n = Number(bell.dataset.unread);
+  document.querySelectorAll('[data-demo]').forEach((b) => b.addEventListener('click', () => {
+    const v = b.dataset.demo;
+    if (v === 'clear') { n = 0; bell.dispatchEvent(new CustomEvent('unread', { detail: 0 })); return; }
+    for (let i = 0; i < Number(v); i++) setTimeout(() => bell.dispatchEvent(new CustomEvent('unread', { detail: ++n })), i * 40);
+  }));
+</script>
+</body>
+</html>

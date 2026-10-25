@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Range slider · Done right #2 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 520px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-card { background: #FFFFFF; border: 1px solid rgba(40, 32, 20, .12); border-radius: 24px; padding: 32px; box-shadow: 0 24px 50px -28px rgba(40, 32, 20, .28); display: grid; gap: 28px; }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .range {
+    --thumb: 28px;
+    --fill: #1D1B18;
+    --track: #948D82;      /* 3.3:1 on white, so the track is visible */
+    --ring: #1D1B18;
+    display: grid;
+    gap: 2px;
+    width: 100%;
+    min-width: 0;
+  }
+  .range-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+  .range-head label { font-weight: 600; font-size: 1.0625rem; }
+  .range-out { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 1.0625rem; }
+
+  /* 44px tall hit area, 6px visible track. */
+  .range input {
+    --stop: calc(var(--thumb) / 2 + var(--p, 0) * (100% - var(--thumb)));
+    appearance: none;
+    width: 100%;
+    height: 44px;
+    margin: 0;
+    background: none;
+    cursor: pointer;
+  }
+  .range input::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 99px;
+    background: linear-gradient(to right,
+      var(--fill) var(--stop), var(--track) var(--stop));
+  }
+  .range input::-moz-range-track {
+    height: 6px;
+    border-radius: 99px;
+    background: linear-gradient(to right,
+      var(--fill) var(--stop), var(--track) var(--stop));
+  }
+
+  .range input::-webkit-slider-thumb {
+    appearance: none;
+    width: var(--thumb);
+    height: var(--thumb);
+    margin-top: calc((6px - var(--thumb)) / 2);
+    border: 2px solid var(--fill);
+    border-radius: 50%;
+    background: #FFFFFF;
+    box-shadow: 0 2px 6px rgba(29, 27, 24, .25);
+    transition: transform .15s ease-out, box-shadow .15s ease-out;
+  }
+  .range input::-moz-range-thumb {
+    box-sizing: border-box;
+    width: var(--thumb);
+    height: var(--thumb);
+    border: 2px solid var(--fill);
+    border-radius: 50%;
+    background: #FFFFFF;
+    box-shadow: 0 2px 6px rgba(29, 27, 24, .25);
+    transition: transform .15s ease-out, box-shadow .15s ease-out;
+  }
+  .range input:enabled:hover::-webkit-slider-thumb {
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(29, 27, 24, .25), 0 0 0 7px rgba(29, 27, 24, .08);
+  }
+  .range input:enabled:hover::-moz-range-thumb {
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(29, 27, 24, .25), 0 0 0 7px rgba(29, 27, 24, .08);
+  }
+  .range input:enabled:active::-webkit-slider-thumb {
+    transform: scale(1.18);
+    box-shadow: 0 2px 6px rgba(29, 27, 24, .25), 0 0 0 9px rgba(29, 27, 24, .13);
+  }
+  .range input:enabled:active::-moz-range-thumb {
+    transform: scale(1.18);
+    box-shadow: 0 2px 6px rgba(29, 27, 24, .25), 0 0 0 9px rgba(29, 27, 24, .13);
+  }
+
+  /* Keyboard focus: a ring on the thumb, not on the whole row. */
+  .range input:focus-visible { outline: none; }
+  .range input:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 5.5px var(--ring);
+  }
+  .range input:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 5.5px var(--ring);
+  }
+
+  /* Ticks line up with the thumb centre at every step. */
+  .range-ticks {
+    display: flex;
+    justify-content: space-between;
+    margin: 0 calc(var(--thumb) / 2);
+  }
+  .range-ticks span {
+    width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-size: .8125rem;
+    color: #5A544B;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .range-ticks span::before { content: ""; width: 1.5px; height: 8px; background: #948D82; }
+
+  .range:has(input:disabled) { opacity: .45; }
+  .range input:disabled { cursor: not-allowed; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .range input::-webkit-slider-thumb { transition: none; }
+    .range input::-moz-range-thumb { transition: none; }
+  }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #2 · @zellap.app</p>
+  <h1>Range slider</h1>
+  <p class="demo-lede">A native <code>input type="range"</code>, styled. The value has a unit for screen readers, the ticks line up, and the hit area is 44px tall.</p>
+
+  <div class="demo-card">
+    <div class="range">
+      <div class="range-head">
+        <label for="speed">Playback speed</label>
+        <output class="range-out" for="speed"
+                aria-hidden="true">1×</output>
+      </div>
+      <input type="range" id="speed"
+             min="0.5" max="2" step="0.25" value="1"
+             data-format="{}×" data-spoken="{} times speed">
+      <div class="range-ticks" aria-hidden="true">
+        <span>0.5×</span><span></span><span>1×</span><span></span>
+        <span>1.5×</span><span></span><span>2×</span>
+      </div>
+    </div>
+
+    <div class="range">
+      <div class="range-head">
+        <label for="volume">Volume</label>
+        <output class="range-out" for="volume"
+                aria-hidden="true">60%</output>
+      </div>
+      <input type="range" id="volume"
+             min="0" max="100" step="5" value="60"
+             data-format="{}%" data-spoken="{} percent">
+      <div class="range-ticks" aria-hidden="true">
+        <span>0</span><span></span><span>50</span><span></span><span>100</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="demo-notes">Tab to a slider. Arrow keys step, Home/End go to the ends.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  for (const input of document.querySelectorAll('.range input[type="range"]')) {
+    const output = input.closest('.range').querySelector('output');
+    const min = Number(input.min), max = Number(input.max);
+    const { format, spoken } = input.dataset;
+
+    const update = () => {
+      const v = input.valueAsNumber;
+      const p = (v - min) / (max - min);
+      input.style.setProperty('--p', p);
+      output.value = format.replace('{}', v);
+      // Say the unit: "1.25 times speed", not "1.25".
+      const text = spoken.replace('{}', v);
+      input.setAttribute('aria-valuetext', text);
+    };
+
+    input.addEventListener('input', update);
+    update();
+  }
+</script>
+</body>
+</html>
