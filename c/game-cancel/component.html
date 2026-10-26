@@ -711,6 +711,11 @@ body.reel #cursor{display:block}
         const n = badges.length;
         tt.textContent = n ? `${n} new notification${n > 1 ? 's' : ''}` : 'All caught up';
         api.tween(260, p => title.style.transform = `translateY(${(1 - p) * 3}px)`);
+        // mercy: once it has snowballed, offer a clean restart of this level (no penalty)
+        if (n >= 6 && !cleared && !$('[data-r="reset"]', el)) {
+          sub.insertAdjacentHTML('afterend', '<p class="sub"><b>That escalated.</b> <button type="button" data-r="reset" style="font:inherit;color:inherit;background:none;border:0;padding:0;text-decoration:underline;text-underline-offset:3px;cursor:pointer">Start over</button></p>');
+          $('[data-r="reset"]', el).addEventListener('click', () => api.fail('Fresh start: 2 notifications.', { delay: 200 }));
+        }
       }
       function done() {
         cleared = true;
