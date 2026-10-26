@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spam protection without CAPTCHAs · Done right #22 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 540px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-card { background: #FFFFFF; border: 1px solid rgba(40, 32, 20, .12); border-radius: 24px; padding: 24px; box-shadow: 0 24px 50px -28px rgba(40, 32, 20, .28); }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .contact { display: grid; gap: 16px; color: #1D1B18; }
+  .contact-field { display: grid; gap: 6px; }
+  .contact-field > label { font-weight: 600; }
+  .contact-field input,
+  .contact-field textarea {
+    width: 100%; min-height: 48px; padding: 11px 14px;
+    border: 1.5px solid #857E73;           /* 4.0:1 on white */
+    border-radius: 12px; background: #FFFFFF; color: inherit; font: inherit;
+  }
+  .contact-field textarea { min-height: 104px; resize: vertical; }
+  .contact-field input:focus-visible,
+  .contact-field textarea:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 2px; border-color: #1D1B18; }
+
+  /* The honeypot. Off-screen, not display:none (some bots skip hidden fields).
+     aria-hidden + tabindex=-1: screen readers and keyboards never land in it. */
+  .contact-hp {
+    position: absolute; left: -10000px; top: auto;
+    width: 1px; height: 1px; overflow: hidden;
+  }
+
+  .contact-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .contact-send {
+    min-height: 48px; padding: 0 22px;
+    border: 0; border-radius: 12px; background: #1D1B18; color: #FFFFFF;
+    font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .contact-send:hover { background: #3A3631; }
+  .contact-send:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 3px; }
+  .contact-privacy { margin: 0; font-size: .875rem; color: #5A544B; }
+
+  .contact-status { margin: 0; font-weight: 500; color: #2D6A3E; }
+  .contact-status:empty { display: none; }
+  .contact-status[data-tone="wait"] { color: #4F4A43; }
+  .contact-status[data-tone="stop"] { color: #8A3A12; }
+  .contact-status a { color: inherit; text-underline-offset: 3px; }
+
+  /* The challenge box: empty unless the server asks for a check. */
+  .contact-check:empty { display: none; }
+
+  /* Demo only: what the server decided, so you can see it work. */
+  .spam-log {
+    margin: 0; padding: 14px 16px; list-style: none;
+    display: grid; gap: 6px;
+    border-radius: 14px; background: #1E1C19; color: #EDE6DA;
+    font: 400 .8125rem/1.45 "Geist Mono", ui-monospace, monospace;
+  }
+  .spam-log:empty::before { content: "server log · waiting for a message"; color: #ABA396; }
+  .spam-log li { display: grid; grid-template-columns: 3.2em 1fr; gap: 8px; }
+  .spam-log b { font-weight: 500; }
+  .spam-log [data-code^="2"] b { color: #BCD79E; }
+  .spam-log [data-code="202"] b { color: #EFC86F; }
+  .spam-log [data-code^="4"] b { color: #F2A27E; }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #22 · @zellap.app</p>
+  <h1>Spam protection without CAPTCHAs</h1>
+  <p class="demo-lede">A honeypot and a time trap catch the lazy bots, the server rate-limits the rest, and an invisible check runs only when something looks off. People never solve a thing.</p>
+
+  <div class="demo-card">
+    <form class="contact" action="/contact" method="post" data-ip="203.0.113.7" data-log="c-log">
+      <div class="contact-field">
+        <label for="c-name">Name</label>
+        <input id="c-name" name="name" autocomplete="name" required>
+      </div>
+      <div class="contact-field">
+        <label for="c-email">Email</label>
+        <input id="c-email" name="email" type="email" autocomplete="email" required>
+      </div>
+      <div class="contact-field">
+        <label for="c-message">Message</label>
+        <textarea id="c-message" name="message" required></textarea>
+      </div>
+
+      <!-- Bots fill every field. People never see this one. -->
+      <div class="contact-hp" aria-hidden="true">
+        <label for="c-website">Leave this empty</label>
+        <input id="c-website" name="website"
+               tabindex="-1" autocomplete="off">
+      </div>
+      <!-- When the form appeared. Sign it on the server in production. -->
+      <input type="hidden" name="started">
+
+      <div class="contact-check" data-sitekey="1x00000000000000000000BB"></div>
+      <div class="contact-row">
+        <button class="contact-send" type="submit">Send message</button>
+        <p class="contact-privacy">No CAPTCHA. No tracking.</p>
+      </div>
+      <p class="contact-status" role="status"></p>
+    </form>
+  </div>
+  <ol class="spam-log" id="c-log" aria-label="Server log (demo)" style="margin-top:16px"></ol>
+
+  <p class="demo-notes">Send it normally: no challenge, no third-party script.<br>Send within 3 s of loading: an invisible check runs first. Send 6 in 10 min: an honest 429.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  // ---------- SERVER: your POST /contact handler ----------
+  // It runs in this page so the demo works offline. In production it lives
+  // on the server: the browser can't be trusted to check itself.
+  const server = {
+    LIMIT: 5,                   // messages
+    WINDOW: 10 * 60 * 1000,     // per 10 minutes, per IP
+    MIN_MS: 3000,               // faster than 3 s looks like a script
+    hits: new Map(),
+
+    async contact(data, ip, now = Date.now()) {
+      // 1. Honeypot filled: a bot. Fake a success, store nothing.
+      if (data.get('website')) return reply(200, 'dropped · honeypot');
+
+      // 2. Rate limit per IP: an honest 429 that says when.
+      const recent = (this.hits.get(ip) || [])
+        .filter((t) => now - t < this.WINDOW);
+      if (recent.length >= this.LIMIT) {
+        const min = Math.ceil((recent[0] + this.WINDOW - now) / 6e4);
+        return reply(429, `rate limited · retry in ${min} min`, { min });
+      }
+
+      // 3. Time trap: too fast is suspicious, not guilty. Ask for a check.
+      const token = data.get('cf-turnstile-response');
+      const secs = (now - Number(data.get('started'))) / 1000;
+      if (token) {
+        const human = await verifyTurnstile(token, ip);
+        if (!human) return reply(403, 'check failed');
+      } else if (secs * 1000 < this.MIN_MS) {
+        return reply(202, `check needed · ${secs.toFixed(1)} s`);
+      }
+
+      recent.push(now);
+      this.hits.set(ip, recent);
+      return reply(200, token ? 'accepted · passed check'
+                              : `accepted · ${secs.toFixed(1)} s`);
+    },
+  };
+  const reply = (status, note, extra) => ({ status, note, ...extra });
+
+  // In production: POST https://challenges.cloudflare.com/turnstile/v0/siteverify
+  // with your secret key, the token and the IP. Test keys return this token.
+  async function verifyTurnstile(token, ip) {
+    return token === 'XXXX.DUMMY.TOKEN.XXXX';
+  }
+
+  // ---------- BROWSER ----------
+  const TURNSTILE = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+  const MAIL = 'hello@zellap.app';
+
+  // Loaded only when the server asks. Most visitors never download it.
+  const loadTurnstile = () => window.turnstile ? Promise.resolve() :
+    new Promise((ok, fail) => {
+      const s = document.createElement('script');
+      s.src = TURNSTILE;
+      s.onload = ok;
+      s.onerror = fail;
+      document.head.append(s);
+    });
+
+  const challenge = async (box) => {
+    await loadTurnstile();
+    return new Promise((resolve, reject) => turnstile.render(box, {
+      sitekey: box.dataset.sitekey,
+      appearance: 'interaction-only',   // invisible unless it really needs you
+      callback: resolve,
+      'error-callback': reject,
+    }));
+  };
+
+  for (const form of document.querySelectorAll('.contact')) {
+    const status = form.querySelector('.contact-status');
+    const box = form.querySelector('.contact-check');
+    const log = document.getElementById(form.dataset.log);   // demo only
+    const ip = form.dataset.ip;   // demo only: the server reads the real IP
+    let busy = false;
+
+    const say = (html, tone = 'ok') => { status.dataset.tone = tone; status.innerHTML = html; };
+    const note = (res) => log?.insertAdjacentHTML('beforeend',
+      `<li data-code="${res.status}"><b>${res.status}</b><span>${res.note}</span></li>`);
+    const start = () => { form.elements.started.value = Date.now(); };
+    start();
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (busy) return;
+      busy = true;
+      const data = new FormData(form);
+      let res = await server.contact(data, ip);
+      note(res);
+
+      if (res.status === 202) {
+        say('One quick check…', 'wait');
+        try {
+          data.set('cf-turnstile-response', await challenge(box));
+          res = await server.contact(data, ip);
+          note(res);
+        } catch {
+          res = { status: 0 };
+        }
+        box.replaceChildren();
+      }
+
+      busy = false;
+      if (res.status === 200) {
+        say('Sent. We reply within one working day.');
+        form.reset();
+        start();
+      } else if (res.status === 429) {
+        say(`That's 5 messages in 10 minutes. Try again in ${res.min} min, or email <a href="mailto:${MAIL}">${MAIL}</a>.`, 'stop');
+      } else {
+        // Never a dead end: the text stays, and there's another way in.
+        say(`We couldn't check this automatically. Your text is still here. Try again, or email <a href="mailto:${MAIL}">${MAIL}</a>.`, 'stop');
+      }
+    });
+  }
+</script>
+</body>
+</html>

@@ -158,8 +158,11 @@ body.reel #cursor{display:block}
 <script>/* inlined from ../_kit/reel.js */
 /* Shared runtime for the Cursed UI pages.
    - a simulation clock (K.now, ms) advanced by K.tick(ms): rAF in the browser, stepped by the recorder (?manual)
-   - tweens, easing, the hook <-> outro swap (window.__outro), and the reel cursor driven by real pointer events */
+   - tweens, easing, the hook <-> outro swap (window.__outro), and the reel cursor driven by real pointer events
+   - opts.embedded: a private clock for a component mounted elsewhere (the game): no reel cursor, no globals, own rAF loop,
+     K.stop() ends it. Pointer position is still tracked (K.px/K.py) */
 window.ReelKit = function (opts) {
+  if (opts.embedded) return ReelKit.embedded(opts);
   const qs = new URLSearchParams(location.search);
   const REEL = qs.has('reel'), MANUAL = qs.has('manual');
   if (REEL) document.body.classList.add('reel');
@@ -237,6 +240,49 @@ window.ReelKit = function (opts) {
       let last = performance.now();
       requestAnimationFrame(function loop(t) { tick(Math.min(50, t - last)); last = t; requestAnimationFrame(loop); });
     } else tick(16);
+  };
+  return K;
+};
+
+ReelKit.embedded = function (opts) {
+  const K = { REEL: false, MANUAL: false, embedded: true, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+  K.moveCursor = () => {};
+  const mv = e => { K.px = e.clientX; K.py = e.clientY; };
+  const dn = () => { K.down = true; }, up = () => { K.down = false; };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerdown', dn); window.addEventListener('pointerup', up);
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  K.tick = tick;
+  let raf = 0, alive = false;
+  K.start = () => {
+    if (alive) return; alive = true;
+    let last = performance.now();
+    raf = requestAnimationFrame(function loop(t) { if (!alive) return; tick(Math.min(50, t - last)); last = t; raf = requestAnimationFrame(loop); });
+  };
+  K.stop = () => {
+    alive = false; cancelAnimationFrame(raf);
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerdown', dn); window.removeEventListener('pointerup', up);
   };
   return K;
 };

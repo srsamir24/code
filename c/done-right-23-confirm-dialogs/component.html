@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirm dialogs · Done right #23 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 540px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  /* The list the dialog protects */
+  .files {
+    display: grid; gap: 12px; padding: 20px;
+    border: 1px solid rgba(40, 32, 20, .14); border-radius: 20px;
+    background: #FFFFFF; color: #1D1B18;
+  }
+  .files-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .files-title { margin: 0; font-size: 1.125rem; font-weight: 600; }
+  .files-list { display: grid; margin: 0; padding: 0; list-style: none; }
+  .files-list li + li { border-top: 1px solid rgba(40, 32, 20, .10); }
+  .files-list label {
+    display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 4px;
+    cursor: pointer;
+  }
+  .files-list input { width: 20px; height: 20px; margin: 0; accent-color: #1D1B18; }
+  .files-list input:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 3px; }
+  .files-size { margin-left: auto; color: #5A544B; font-size: .875rem; font-variant-numeric: tabular-nums; }
+  .files-status { margin: 0; font-size: .9375rem; font-weight: 500; color: #2D6A3E; }
+  .files-status:empty { display: none; }
+
+  /* Buttons: same size. The danger one is red AND says the verb. */
+  .ask-btn,
+  .files-delete {
+    min-height: 48px; padding: 0 18px;
+    border: 1.5px solid #1D1B18; border-radius: 12px;
+    background: #FFFFFF; color: #1D1B18;
+    font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .ask-btn:hover, .files-delete:hover { background: #F2EFEA; }
+  .ask-btn:focus-visible,
+  .files-delete:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 3px; }
+  .ask-btn.is-danger { border-color: #B3261E; background: #B3261E; color: #FFFFFF; }
+  .ask-btn.is-danger:hover { background: #8F1D17; }
+
+  /* The dialog */
+  .ask {
+    width: min(100% - 32px, 440px);
+    padding: 0; border: 0; border-radius: 20px;
+    background: #FFFFFF; color: #1D1B18;
+    box-shadow: 0 30px 80px -20px rgba(29, 27, 24, .45);
+  }
+  .ask::backdrop { background: rgba(29, 27, 24, .45); }
+  .ask-form { display: grid; gap: 14px; padding: 24px; }
+  .ask-title { margin: 0; font-size: 1.25rem; line-height: 1.3; font-weight: 600; overflow-wrap: anywhere; }
+  .ask-body { display: grid; gap: 10px; color: #4F4A43; }
+  .ask-body p { margin: 0; }
+  .ask-names { margin: 0; padding: 10px 14px; list-style: none; border-radius: 12px; background: #F4F1EB; color: #1D1B18; font-size: .9375rem; }
+  .ask-names li { overflow-wrap: anywhere; }
+  .ask-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #23 · @zellap.app</p>
+  <h1>Confirm dialogs done right</h1>
+  <p class="demo-lede">A real modal &lt;dialog&gt;. It names what goes and how many, the buttons say the verb, focus starts on the safe choice, every way out keeps your files, and the fifth time it asks exactly like the first.</p>
+
+  <section class="files" aria-labelledby="files-title" data-dialog="ask">
+    <div class="files-bar">
+      <h2 class="files-title" id="files-title">Files</h2>
+      <button class="files-delete" type="button" aria-haspopup="dialog">Delete…</button>
+    </div>
+    <ul class="files-list">
+      <li><label><input type="checkbox" value="Q3 report.pdf"> Q3 report.pdf <span class="files-size">2.4 MB</span></label></li>
+      <li><label><input type="checkbox" value="Brand guide.fig"> Brand guide.fig <span class="files-size">18 MB</span></label></li>
+      <li><label><input type="checkbox" value="Invoice 0142.pdf"> Invoice 0142.pdf <span class="files-size">96 KB</span></label></li>
+      <li><label><input type="checkbox" value="Moodboard.png"> Moodboard.png <span class="files-size">5.1 MB</span></label></li>
+      <li><label><input type="checkbox" value="Notes.md"> Notes.md <span class="files-size">4 KB</span></label></li>
+    </ul>
+    <p class="files-status" role="status"></p>
+  </section>
+
+  <dialog class="ask" id="ask" role="alertdialog" closedby="any"
+          aria-labelledby="ask-title" aria-describedby="ask-body">
+    <form class="ask-form" method="dialog">
+      <h2 class="ask-title" id="ask-title"></h2>
+      <div class="ask-body" id="ask-body"></div>
+      <div class="ask-actions">
+        <button class="ask-btn" value="cancel"></button>
+        <button class="ask-btn is-danger" value="confirm"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <p class="demo-notes">Tick a few files, then Delete. Esc, a click outside or "Keep files" changes nothing.<br>Ask five times: the words never change.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  // The words. Same input, same words: the 5th time reads like the 1st.
+  const deleteCopy = (names) => {
+    const n = names.length;
+    const what = n === 1 ? `“${names[0]}”` : `${n} files`;
+    const shown = names.slice(0, 3).map((x) => Object.assign(
+      document.createElement('li'), { textContent: x }));
+    const list = document.createElement('ul');
+    list.className = 'ask-names';
+    list.append(...shown);
+    if (n > 3) list.append(Object.assign(document.createElement('li'),
+      { textContent: `and ${n - 3} more` }));
+    const p = document.createElement('p');
+    p.textContent = `${n === 1 ? 'It skips' : 'They skip'} the bin. This can't be undone.`;
+    return {
+      title: `Delete ${what}?`,
+      body: n === 1 ? [p] : [list, p],   // one file: the title names it
+      cancel: n === 1 ? 'Keep file' : 'Keep files',
+      confirm: n === 1 ? 'Delete file' : `Delete ${n} files`,
+    };
+  };
+
+  const fillAsk = (dialog, { title, body, cancel, confirm }) => {
+    const [no, yes] = dialog.querySelectorAll('.ask-btn');
+    dialog.querySelector('.ask-title').textContent = title;
+    dialog.querySelector('.ask-body').replaceChildren(...body);
+    no.textContent = cancel;
+    yes.textContent = confirm;
+    return no;
+  };
+
+  // A confirm() you can await. True only for the confirm button.
+  const ask = (dialog, copy) => new Promise((resolve) => {
+    const back = document.activeElement;
+    const safe = fillAsk(dialog, copy);
+    dialog.returnValue = '';
+    dialog.showModal();
+    safe.focus();   // the safe choice, every time
+    dialog.addEventListener('close', () => {
+      back?.focus();   // back where you were
+      resolve(dialog.returnValue === 'confirm');
+    }, { once: true });
+  });
+
+  for (const dialog of document.querySelectorAll('dialog.ask')) {
+    // Esc closes natively. A click on the backdrop does too
+    // (closedby="any", plus this for browsers without it).
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) dialog.close();
+    });
+  }
+
+  for (const files of document.querySelectorAll('.files')) {
+    const dialog = document.getElementById(files.dataset.dialog);
+    const trigger = files.querySelector('.files-delete');
+    const status = files.querySelector('.files-status');
+    const picked = () => [...files.querySelectorAll('.files-list :checked')];
+
+    files.addEventListener('change', () => {
+      const n = picked().length;
+      trigger.textContent = n ? `Delete ${n === 1 ? 'file' : `${n} files`}…` : 'Delete…';
+    });
+
+    trigger.addEventListener('click', async () => {
+      const boxes = picked();
+      status.textContent = '';
+      if (!boxes.length) {
+        status.textContent = 'Tick the files you want to delete first.';
+        return;
+      }
+      const names = boxes.map((b) => b.value);
+      if (!(await ask(dialog, deleteCopy(names)))) return;   // kept
+      boxes.forEach((b) => b.closest('li').remove());
+      trigger.textContent = 'Delete…';
+      status.textContent = names.length === 1
+        ? `Deleted “${names[0]}”.` : `${names.length} files deleted.`;
+    });
+  }
+</script>
+</body>
+</html>

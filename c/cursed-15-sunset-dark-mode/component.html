@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sunset Dark Mode</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<style>/* inlined from ../_kit/reel.css */
+/* Shared shell for the Cursed UI pages: palette, backdrop, hook/outro, reel canvas, cursor. */
+:root{
+  --bg:#f3f2ee; --ink:#121214; --ink-2:#5f5f66; --ink-3:#8d8c92;
+  --line:rgba(18,18,20,.085); --line-2:#e6e3dc;
+  --gold-1:#ffd772; --gold-2:#f2a43a; --gold-ink:#a8681a;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Satoshi",ui-sans-serif,sans-serif; -webkit-font-smoothing:antialiased;
+  overflow:hidden; -webkit-user-select:none; user-select:none;
+}
+.backdrop{position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(60% 45% at 50% 46%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bg),var(--bg));
+}
+.backdrop::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(18,18,20,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(18,18,20,.045) 1px,transparent 1px);
+  background-size:28px 28px; background-position:center;
+  -webkit-mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+          mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+}
+.stage{position:relative;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
+
+.tag{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 9px;border-radius:99px;
+  background:#fff;border:1px solid var(--line);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);
+  box-shadow:0 4px 10px -6px rgba(40,34,20,.18)}
+.tag i,.outro i{display:block;width:7px;height:7px;border-radius:50%;background:linear-gradient(var(--gold-1),var(--gold-2))}
+.hook{font-weight:900;font-size:27px;line-height:1.12;letter-spacing:-.025em;text-align:center;max-width:430px;text-wrap:balance}
+.handle{display:block;margin-top:10px;font-weight:500;font-size:12.5px;letter-spacing:.01em;color:var(--ink-3)}
+.outro{font-weight:900;font-size:30px;letter-spacing:-.025em;color:var(--ink);opacity:0;text-align:center}
+.outro span{display:inline-flex;align-items:center;gap:10px}
+.outro i{width:14px;height:14px}
+.outro b{display:inline-block;font-weight:900;background:var(--ink);color:#fff;border-radius:10px;padding:1px 10px 3px;margin:0 1px;letter-spacing:.01em}
+.outro small{display:block;margin-top:14px;font-weight:700;font-size:19px;letter-spacing:-.01em;color:#34343a}
+.outro small em{font-style:normal;font-weight:500;color:var(--ink-2)}
+
+.card{position:relative;width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:30px;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 40px 70px -32px rgba(40,34,20,.22),0 10px 24px -12px rgba(0,0,0,.08);
+}
+.app{display:flex;align-items:center;gap:12px}
+.icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.x{margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-3)}
+
+/* reel mode: fixed 540x960 phone canvas (recorded at 2x = 1080x1920) */
+body.reel .stage{display:block;width:540px;height:960px;margin:0 auto;padding:0}
+body.reel .tag{position:absolute;top:154px;left:50%;transform:translateX(-50%)}
+body.reel .hook{position:absolute;top:198px;left:50%;transform:translateX(-50%);width:450px;font-size:30px}
+body.reel .card{position:absolute;top:318px;left:60px}
+body.reel .outro{position:absolute;top:192px;left:0;right:0;font-size:25px}
+body:not(.reel) .outro{display:none}
+body.reel, body.reel *{cursor:none !important}
+#cursor{position:fixed;left:0;top:0;width:0;height:0;z-index:99;pointer-events:none;display:none}
+body.reel #cursor{display:block}
+#cursor svg{position:absolute;left:0;top:0;overflow:visible;filter:drop-shadow(0 3px 5px rgba(0,0,0,.25))}
+#ring{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;border:2px solid rgba(18,18,20,.5);opacity:0}
+</style>
+<style>/* inlined from component.css */
+/* Cursed UI #15: dark mode exists, but it unlocks at your real local sunset. Scoped to .cu-sun */
+.cu-sun{--ink:#121214;--ink-2:#5f5f66;--ink-3:#8d8c92;--line:rgba(18,18,20,.085);--line-2:#e6e3dc;--panel:#fbfaf7;
+  position:relative;padding:24px 26px 22px;font-family:"Satoshi",ui-sans-serif,sans-serif;color:var(--ink)}
+.cu-sun .app{display:flex;align-items:center;gap:12px}
+.cu-sun .icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.cu-sun .app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.cu-sun .app span{display:block;font-size:13.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.cu-sun .x{margin-left:auto;background:transparent;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-3)}
+.cu-sun .lbl{margin-top:18px;display:flex;justify-content:space-between;align-items:baseline}
+.cu-sun .lbl b{font-weight:700;font-size:15px;letter-spacing:-.01em}
+.cu-sun .lbl span{font-size:13.5px;font-weight:500;color:var(--ink-3)}
+
+/* theme tiles, after the macOS / iOS appearance pickers */
+.cu-sun .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.cu-sun .tile{position:relative;border:0;background:none;padding:0;cursor:pointer;font:inherit;color:inherit;text-align:center}
+.cu-sun .thumb{position:relative;height:66px;border-radius:11px;overflow:hidden;box-shadow:0 0 0 1px var(--line),0 6px 14px -10px rgba(0,0,0,.35);transition:none}
+.cu-sun .tile.sel .thumb{box-shadow:0 0 0 2px var(--panel),0 0 0 3.5px var(--ink),0 6px 14px -10px rgba(0,0,0,.35)}
+.cu-sun .thumb .win{position:absolute;left:10px;top:12px;right:-6px;bottom:-6px;border-radius:7px;display:flex;overflow:hidden}
+.cu-sun .thumb .side{width:24px;flex:none}
+.cu-sun .thumb .body{flex:1;padding:8px 7px}
+.cu-sun .thumb .body i{display:block;height:4px;border-radius:2px;margin-bottom:5px}
+.cu-sun .thumb .dots{position:absolute;left:5px;top:4px;display:flex;gap:2.5px}
+.cu-sun .thumb .dots u{width:4px;height:4px;border-radius:50%;opacity:.5}
+.cu-sun .t-light .thumb{background:linear-gradient(160deg,oklch(.93 .03 230),oklch(.9 .04 80))}
+.cu-sun .t-light .win{background:#fff}
+.cu-sun .t-light .side{background:#f1efea}
+.cu-sun .t-light .body i{background:#e6e3dc}
+.cu-sun .t-light .dots u{background:#9a978f}
+.cu-sun .t-dark .thumb{background:linear-gradient(160deg,oklch(.36 .05 280),oklch(.24 .03 260))}
+.cu-sun .t-dark .win{background:#1c1c21}
+.cu-sun .t-dark .side{background:#25252b}
+.cu-sun .t-dark .body i{background:#34343c}
+.cu-sun .t-dark .dots u{background:#8a8a95}
+.cu-sun .t-auto .thumb{background:linear-gradient(160deg,oklch(.93 .03 230),oklch(.9 .04 80))}
+.cu-sun .t-auto .half{position:absolute;inset:0;clip-path:polygon(62% 0,100% 0,100% 100%,38% 100%);background:linear-gradient(160deg,oklch(.36 .05 280),oklch(.24 .03 260))}
+.cu-sun .t-auto .half .win{background:#1c1c21}.cu-sun .t-auto .half .side{background:#25252b}.cu-sun .t-auto .half .body i{background:#34343c}
+.cu-sun .t-auto>.thumb>.win{background:#fff}.cu-sun .t-auto>.thumb>.win .side{background:#f1efea}.cu-sun .t-auto>.thumb>.win .body i{background:#e6e3dc}
+.cu-sun .lock{position:absolute;right:6px;top:6px;height:20px;padding:0 6px 0 5px;border-radius:99px;background:rgba(255,255,255,.14);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 0 0 .5px rgba(255,255,255,.22) inset;
+  display:flex;align-items:center;gap:3px;font-weight:700;font-size:11.5px;color:#fff;letter-spacing:.01em;font-variant-numeric:tabular-nums;z-index:2}
+.cu-sun .cap{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:9px;font-weight:700;font-size:14.5px;letter-spacing:-.005em}
+.cu-sun .cap i{width:14px;height:14px;border-radius:50%;box-shadow:0 0 0 1.25px var(--line-2) inset;flex:none}
+.cu-sun .tile.sel .cap i{box-shadow:0 0 0 4.5px var(--ink) inset}
+
+/* sunset gate */
+.cu-sun .gate{overflow:hidden}
+.cu-sun .gate-in{padding-top:16px}
+.cu-sun .sky{position:relative;height:114px;border-radius:16px;overflow:hidden;box-shadow:0 0 0 1px var(--line)}
+.cu-sun .sky svg{position:absolute;inset:0;display:block}
+.cu-sun .sky::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.22;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 1.1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.cu-sun .sun{cursor:grab}
+.cu-sun .ticks{position:absolute;left:12px;right:12px;top:8px;display:flex;justify-content:space-between;font-weight:700;font-size:12px;letter-spacing:.04em;color:rgba(255,255,255,.9);font-variant-numeric:tabular-nums;text-transform:uppercase}
+.cu-sun .when{display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px}
+.cu-sun .when small{display:block;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3)}
+.cu-sun .when .cd{position:relative}
+.cu-sun .when .cd b{display:block;margin-top:3px;font-weight:900;font-size:40px;letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.cu-sun .when .fine{position:absolute;left:100%;top:24px;margin-left:8px;padding:2px 8px 3px;border-radius:99px;background:oklch(.62 .2 28);color:#fff;font-weight:700;font-size:13px;white-space:nowrap;opacity:0}
+.cu-sun .when .at{text-align:right}
+.cu-sun .when .at b{display:block;margin-top:3px;font-weight:700;font-size:22px;letter-spacing:-.01em;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.cu-sun .status{margin-top:12px;height:22px;font-size:15.5px;font-weight:500;color:var(--ink-2);white-space:nowrap;transform-origin:0 50%}
+.cu-sun .status b{font-weight:700;color:var(--ink)}
+</style>
+<style>
+  /* the page dims along with the sun while you drag it down */
+  /* reel framing: card 1.06x, a little higher */
+  body.reel .card{top:292px;transform:scale(1.06);transform-origin:50% 0}
+  .dusk{position:fixed;inset:0;pointer-events:none;opacity:0;
+    background:radial-gradient(60% 45% at 50% 46%, oklch(.27 .03 285), oklch(.17 .02 280) 75%)}
+</style>
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="dusk" id="dusk"></div>
+<div class="stage">
+  <div class="tag"><i></i>Cursed UI #15</div>
+  <header class="hook" id="hook">Dark mode opens at sunset.<span class="handle">@zellap.app</span></header>
+
+  <main class="card" id="card"></main>
+
+  <footer class="outro" id="outro"><span><i></i>Comment <b>CODE</b> for the source</span><small>Follow for more cursed UI <em>&middot; @zellap.app</em></small></footer>
+</div>
+
+<script>/* inlined from ../_kit/reel.js */
+/* Shared runtime for the Cursed UI pages.
+   - a simulation clock (K.now, ms) advanced by K.tick(ms): rAF in the browser, stepped by the recorder (?manual)
+   - tweens, easing, the hook <-> outro swap (window.__outro), and the reel cursor driven by real pointer events
+   - opts.embedded: a private clock for a component mounted elsewhere (the game): no reel cursor, no globals, own rAF loop,
+     K.stop() ends it. Pointer position is still tracked (K.px/K.py) */
+window.ReelKit = function (opts) {
+  if (opts.embedded) return ReelKit.embedded(opts);
+  const qs = new URLSearchParams(location.search);
+  const REEL = qs.has('reel'), MANUAL = qs.has('manual');
+  if (REEL) document.body.classList.add('reel');
+
+  const K = { REEL, MANUAL, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  /* critically-ish damped spring step: z = damping ratio */
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+
+  /* ---------- cursor ---------- */
+  document.body.insertAdjacentHTML('beforeend', `<div id="cursor">
+    <div id="ring"></div>
+    <svg id="c-arrow" width="26" height="34" viewBox="0 0 26 34"><path d="M2 2 L2 26 L8.2 20.4 L12.4 30.4 L16.6 28.6 L12.5 18.9 L20.8 18.6 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg id="c-hand" width="30" height="34" viewBox="0 0 30 34" style="display:none;left:-9px;top:-2px"><path d="M10 15V5.2a2.6 2.6 0 0 1 5.2 0V13 M15.2 12.6a2.5 2.5 0 0 1 5 0v1.8 M20.2 13.6a2.5 2.5 0 0 1 5 0v6.2c0 6.6-4 11.2-10 11.2-4.6 0-6.7-2.2-9.4-6.5L3 19.6a2.5 2.5 0 0 1 4.2-2.7L10 20.8V15" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg id="c-grab" width="30" height="30" viewBox="0 0 30 30" style="display:none;left:-15px;top:-13px"><path d="M8.2 11.4a2.4 2.4 0 0 1 4.8 0v-1a2.4 2.4 0 0 1 4.8 0v1a2.4 2.4 0 0 1 4.8 0v1.4a2.4 2.4 0 0 1 4.6.9v4.8c0 5.6-3.8 9.4-9.4 9.4-4.2 0-6.4-1.8-8.6-5.2l-2.4-3.8a2.3 2.3 0 0 1 3.4-3z M13 11.4v4 M17.8 11.4v4 M22.6 12.8v3" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  </div>`);
+  const $ = id => document.getElementById(id);
+  const cur = $('cursor'), ring = $('ring'), shapes = { arrow: $('c-arrow'), hand: $('c-hand'), grab: $('c-grab') };
+  let curScale = 1;
+  function moveCursor() {
+    if (!REEL) return;
+    const el = document.elementFromPoint(K.px, K.py);
+    const kind = (opts.cursorKind && opts.cursorKind(el)) || 'arrow';
+    for (const k in shapes) shapes[k].style.display = k === kind ? '' : 'none';
+    cur.style.transform = `translate(${K.px}px,${K.py}px) scale(${curScale})`;
+  }
+  K.moveCursor = moveCursor;
+  window.addEventListener('pointermove', e => { K.px = e.clientX; K.py = e.clientY; moveCursor(); });
+  window.addEventListener('pointerleave', () => { K.px = K.py = -999; });
+  window.addEventListener('pointerdown', () => {
+    K.down = true;
+    if (!REEL) return;
+    K.tween(90, p => { curScale = 1 - .14 * p; moveCursor(); });
+    K.tween(300, p => { curScale = .86 + .14 * p; moveCursor(); }, K.ease.back, 120);
+    K.tween(480, p => { ring.style.opacity = (1 - p) * .9; ring.style.transform = `scale(${.4 + p * 1.1})`; });
+  });
+  window.addEventListener('pointerup', () => { K.down = false; moveCursor(); });
+
+  /* ---------- hook <-> outro ---------- */
+  let outroOn = false;
+  window.__outro = on => {
+    if (on === outroOn) return; outroOn = on;
+    const hook = document.querySelector('.hook'), outro = document.querySelector('.outro');
+    K.tween(440, p => { const q = on ? p : 1 - p;
+      hook.style.opacity = K.clamp(1 - q / .45, 0, 1);   // strictly sequential: never two lines at once
+      const o = K.clamp((q - .55) / .45, 0, 1);
+      outro.style.opacity = o; outro.style.transform = `translateY(${(1 - o) * 10}px)`; }, K.ease.lin);
+  };
+
+  /* ---------- clock ---------- */
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  window.__tick = tick;
+  K.start = () => {
+    if (!MANUAL) {
+      let last = performance.now();
+      requestAnimationFrame(function loop(t) { tick(Math.min(50, t - last)); last = t; requestAnimationFrame(loop); });
+    } else tick(16);
+  };
+  return K;
+};
+
+ReelKit.embedded = function (opts) {
+  const K = { REEL: false, MANUAL: false, embedded: true, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+  K.moveCursor = () => {};
+  const mv = e => { K.px = e.clientX; K.py = e.clientY; };
+  const dn = () => { K.down = true; }, up = () => { K.down = false; };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerdown', dn); window.addEventListener('pointerup', up);
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  K.tick = tick;
+  let raf = 0, alive = false;
+  K.start = () => {
+    if (alive) return; alive = true;
+    let last = performance.now();
+    raf = requestAnimationFrame(function loop(t) { if (!alive) return; tick(Math.min(50, t - last)); last = t; raf = requestAnimationFrame(loop); });
+  };
+  K.stop = () => {
+    alive = false; cancelAnimationFrame(raf);
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerdown', dn); window.removeEventListener('pointerup', up);
+  };
+  return K;
+};
+</script>
+<script>/* inlined from component.js */
+/* Cursed UI #15: an appearance picker where Dark mode is real, but locked until your actual local sunset (19:42).
+   The sun crawls along its arc and the countdown ticks. Clicking Dark bounces back to Light, and every click
+   costs you: +5 s on the countdown, and the sun gets pushed back up the sky. You can grab the sun and drag it
+   down to the horizon: the countdown races to zero, the whole page goes dark, Dark mode switches on, and the
+   moment you let go it all floats back up.
+
+   Self-contained level. Needs ../_kit/reel.js (ReelKit clock) and component.css.
+     const api = CursedUI.sunsetDarkMode.init(el, { K, onDusk: d => ... })   // el: an empty container, e.g. a .card
+     api.reset(); api.destroy();
+   onDusk(d) gets 0..1 while the sun is being dragged down, so a host page can darken around the card.
+   Pass { K } to drive it from an outside clock (the reel page does); otherwise it runs its own rAF loop. */
+(function () {
+  const CU = window.CursedUI = window.CursedUI || {};
+  const SUNSET = '19:42', SUNRISE = '07:10';
+  const LEFT0 = 3 * 3600 + 17 * 60 + 52;               // 16:24:08 now -> 3:17:52 to go
+  const A0 = .7, CRAWL = .05 / 3, PUSH = .05, FINE = 3;  // arc position (0 sunrise .. 1 sunset) per second; per Dark click (3 clicks = 9 s)
+  const W = 368, H = 114, HY = 92, CX = W / 2, R = W / 2 - 26, RY = 66;
+  const ok = (a, b, t) => `oklch(${(a[0] + (b[0] - a[0]) * t).toFixed(3)} ${(a[1] + (b[1] - a[1]) * t).toFixed(3)} ${(a[2] + (b[2] - a[2]) * t).toFixed(1)})`;
+  const hex = (a, b, t) => { const p = s => [1, 3, 5].map(i => parseInt(s.slice(i, i + 2), 16)); const A = p(a), B = p(b);
+    return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`; };
+  const SKY_TOP = [[.76, .085, 238], [.27, .07, 285]], SKY_MID = [[.86, .06, 200], [.5, .12, 330]], SKY_LOW = [[.93, .06, 82], [.7, .17, 42]];
+  const GROUND = [[.8, .045, 120], [.24, .03, 285]], RIDGE = [[.86, .04, 115], [.31, .045, 300]], SUN = [[.97, .1, 96], [.76, .19, 40]];
+  const arc = a => [CX - R * Math.cos(Math.PI * a), HY - RY * Math.sin(Math.PI * a)];
+  const LOCKED = `<svg width="9" height="10" viewBox="0 0 9 10"><rect x=".8" y="4.2" width="7.4" height="5.2" rx="1.4" fill="#fff"/><path d="M2.4 4.4V3a2.1 2.1 0 0 1 4.2 0v1.4" fill="none" stroke="#fff" stroke-width="1.3"/></svg>${SUNSET}`;
+  const OPEN = `<svg width="9" height="10" viewBox="0 0 9 10"><rect x=".8" y="4.2" width="7.4" height="5.2" rx="1.4" fill="#fff"/><path d="M2.4 4.4V3a2.1 2.1 0 0 1 4.2 0" fill="none" stroke="#fff" stroke-width="1.3" transform="translate(2.6 -.6)"/></svg>Open`;
+  const MSG = ['Asking early costs <b>+3 s</b>.', 'Asked again. <b>+3 s</b>. The sun heard you.', 'Unlocks at your local sunset.'];   // the last one matches frame 0
+
+  CU.sunsetDarkMode = {
+    id: 'sunset-dark-mode', n: 15,
+    title: 'Dark mode opens at sunset',
+    goal: 'Switch to dark mode.',
+    init(root, opts = {}) {
+      root.classList.add('cu-sun');
+      const thumb = (extra = '') => `<div class="win"><div class="side"></div><div class="body"><i style="width:80%"></i><i style="width:55%"></i><i style="width:68%"></i></div></div><div class="dots"><u></u><u></u><u></u></div>${extra}`;
+      root.innerHTML = `
+        <div class="app"><div class="icon" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="5.2" fill="#fff"/><ellipse cx="13" cy="13" rx="11" ry="4.6" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.4" transform="rotate(-24 13 13)"/><circle cx="22.6" cy="8.6" r="2" fill="#f2a43a"/></svg></div>
+          <div><b>Orbit</b><span>Settings &middot; Appearance</span></div>
+          <div class="x" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div></div>
+        <div class="lbl"><b>Theme</b><span>Applies to every device</span></div>
+        <div class="tiles" role="radiogroup" aria-label="Theme">
+          <button class="tile t-light sel" data-t="light" role="radio"><div class="thumb">${thumb()}</div><div class="cap"><i></i>Light</div></button>
+          <button class="tile t-dark" data-t="dark" role="radio"><div class="thumb">${thumb(`<span class="lock" data-lock>${LOCKED}</span>`)}</div><div class="cap"><i></i>Dark</div></button>
+          <button class="tile t-auto" data-t="auto" role="radio"><div class="thumb">${thumb()}<div class="half">${thumb()}</div></div><div class="cap"><i></i>Auto</div></button>
+        </div>
+        <div class="gate" data-gate><div class="gate-in">
+          <div class="sky"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" data-svg></svg>
+            <div class="ticks"><span>Sunrise ${SUNRISE}</span><span>Sunset ${SUNSET}</span></div></div>
+          <div class="when"><div class="cd"><small>Dark mode in</small><b data-cd></b><span class="fine" data-fine>+3 s</span></div><div class="at"><small>Unlocks at</small><b>${SUNSET}</b></div></div>
+          <div class="status" data-status></div>
+        </div></div>`;
+      const q = s => root.querySelector(`[data-${s}]`);
+      const svg = q('svg'), gate = q('gate'), cdEl = q('cd'), status = q('status'), fineEl = q('fine'), lockEl = q('lock');
+      const tiles = {}; root.querySelectorAll('.tile').forEach(b => tiles[b.dataset.t] = b);
+      const NS = 'http://www.w3.org/2000/svg', uid = 'cs' + Math.random().toString(36).slice(2, 7);
+      const mk = (tag, attrs, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+
+      /* ---------- sky ---------- */
+      const defs = mk('defs', {});
+      const gSky = mk('linearGradient', { id: uid + 's', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+      const stops = [0, .62, 1].map(o => mk('stop', { offset: o }, gSky));
+      const gGlow = mk('radialGradient', { id: uid + 'g' }, defs);
+      const glowStops = [0, 1].map(o => mk('stop', { offset: o }, gGlow));
+      mk('rect', { width: W, height: H, fill: `url(#${uid}s)` });
+      const stars = [[38, 40], [74, 52], [112, 36], [150, 46], [192, 30], [232, 54], [268, 38], [318, 44], [58, 66], [178, 62]]   // clear of the top labels
+        .map(([x, y], i) => mk('circle', { cx: x, cy: y, r: i % 3 ? .9 : 1.3, fill: '#fff', opacity: 0 }));
+      const glow = mk('circle', { r: 96, fill: `url(#${uid}g)` });
+      mk('path', { d: `M${CX - R} ${HY}A${R} ${RY} 0 0 1 ${CX + R} ${HY}`, fill: 'none', stroke: 'rgba(255,255,255,.6)', 'stroke-width': 1, 'stroke-dasharray': '1.5 5', 'stroke-linecap': 'round' });
+      const trail = mk('path', { fill: 'none', stroke: 'rgba(255,255,255,.85)', 'stroke-width': 1.25, 'stroke-linecap': 'round' });
+      const sunG = mk('g', { class: 'sun', 'data-sun': '' });
+      const halo = mk('circle', { r: 19, fill: '#fff', opacity: .28 }, sunG);
+      const disc = mk('circle', { r: 11.5 }, sunG);
+      mk('circle', { r: 30, fill: 'transparent' }, sunG);                                   // generous grab area
+      const ridge = mk('path', { d: `M0 ${HY - 3}C40 ${HY - 12} 78 ${HY - 13} 118 ${HY - 5}S196 ${HY - 1} 236 ${HY - 9}S320 ${HY - 14} ${W} ${HY - 4}V${H}H0z` });
+      const ground = mk('rect', { x: 0, y: HY, width: W, height: H - HY });
+
+      const own = !opts.K;
+      const K = opts.K || ReelKit({ embedded: true, update: dt => api.update(dt), render: () => api.render() });
+      const timers = [];
+      const later = (ms, fn) => timers.push({ at: K.now + ms, fn });
+
+      let sel = 'light', tries = 0, t0 = 0, grab = false, grabA = 0, msgHTML = '', fine = 0, pushT = 0, wasDark = false;
+      const off = { x: 0, v: 0 }, push = { x: 0, v: 0 };
+
+      const left = () => Math.max(0, LEFT0 + fine - Math.floor((K.now - t0) / 1000));
+      const realA = () => A0 + CRAWL * (K.now - t0) / 1000 - push.x;
+      function say(html) {
+        if (html === msgHTML) return; msgHTML = html; status.innerHTML = html;
+        K.tween(300, p => status.style.transform = `scale(${(1 + .05 * (1 - p)).toFixed(3)})`, K.ease.out);
+      }
+      function select(t) { sel = t; for (const k in tiles) { tiles[k].classList.toggle('sel', k === t); tiles[k].setAttribute('aria-checked', k === t); } }
+      function bump(el, dx = 8) { K.tween(460, p => el.style.transform = `translateX(${(dx * Math.sin(p * Math.PI * 3) * (1 - p)).toFixed(2)}px)`, K.ease.lin); }
+
+      function pickDark() {
+        tries++;
+        select('dark');
+        const th = tiles.dark.querySelector('.thumb');                 // a real press, and Dark stays on long enough to see
+        K.tween(80, p => th.style.transform = `scale(${(1 - .05 * p).toFixed(4)})`);
+        K.tween(260, p => th.style.transform = `scale(${(.95 + .05 * p).toFixed(4)})`, K.ease.back, 90);
+        later(330, () => { select('light'); bump(tiles.dark); });
+        fine += FINE; pushT += PUSH;                                     // impatience costs 5 s, and the sun goes back up
+        K.tween(700, p => { fineEl.style.opacity = (p < .15 ? p / .15 : 1 - (p - .15) / .85).toFixed(3);
+          fineEl.style.transform = `translateY(${(-4 - 18 * p).toFixed(2)}px)`; }, K.ease.out);
+        K.tween(380, p => cdEl.style.color = `color-mix(in oklch, oklch(.62 .2 28) ${((1 - p) * 100).toFixed(1)}%, var(--ink))`, K.ease.inOut);
+        say(MSG[Math.min(tries, MSG.length) - 1]);
+      }
+      function pointA(x, y) {                                            // pointer -> arc position
+        const r = svg.getBoundingClientRect(), k = r.width / W, px = (x - r.left) / k, py = (y - r.top) / k;   // scale-aware
+        return Math.atan2(Math.max(0, (HY - py)) / RY, (CX - px) / R) / Math.PI;
+      }
+      const offs = [];
+      const on = (el, ev, fn, o) => { el.addEventListener(ev, fn, o); offs.push(() => el.removeEventListener(ev, fn, o)); };
+      on(tiles.dark, 'click', pickDark);
+      on(tiles.light, 'click', () => select('light'));
+      on(tiles.auto, 'click', () => { select('auto'); later(170, () => { select('light'); bump(tiles.auto); }); say(`Auto also waits for <b>${SUNSET}</b>.`); });
+      on(sunG, 'pointerdown', e => { grab = true; grabA = pointA(e.clientX, e.clientY) - (realA() + off.x); e.preventDefault(); });
+      on(window, 'pointermove', e => {
+        if (!grab) return;
+        const ra = realA();
+        off.x = K.clamp(pointA(e.clientX, e.clientY) - grabA, ra, 1.02) - ra; off.v = 0;
+      });
+      on(window, 'pointerup', () => {
+        if (!grab) return; grab = false;
+        if (off.x > .05) later(260, () => say(`Nice try. Sunset is still <b>${SUNSET}</b>.`));
+      });
+
+      function update(dt) {
+        for (let i = timers.length - 1; i >= 0; i--) if (K.now >= timers[i].at) timers.splice(i, 1)[0].fn();
+        if (!grab) K.spring(off, 0, 22, .85, dt);                     // floats back up over ~1.5 s
+        K.spring(push, pushT, 160, .8, dt);
+      }
+
+      function render() {
+        const ra = realA(), a = K.clamp(ra + off.x, 0, 1.03);
+        const d = K.clamp(off.x / (1 - ra), 0, 1), e = d * d * (3 - 2 * d);
+        const [sx, sy] = arc(Math.min(a, 1));
+        const sy2 = a > 1 ? sy + (a - 1) * 400 : sy;
+        sunG.setAttribute('transform', `translate(${sx.toFixed(2)} ${sy2.toFixed(2)})`);
+        const pulse = .5 + .5 * Math.sin(K.now / 2500 * Math.PI * 2);   // 2.5 s period: loops cleanly
+        halo.setAttribute('r', (18 + 2.5 * pulse).toFixed(2)); halo.setAttribute('opacity', (.22 + .1 * pulse).toFixed(3));
+        disc.style.fill = ok(SUN[0], SUN[1], e);
+        glow.setAttribute('cx', sx.toFixed(2)); glow.setAttribute('cy', sy2.toFixed(2));
+        glowStops[0].style.stopColor = ok(SUN[0], SUN[1], e); glowStops[0].style.stopOpacity = (.55 + .3 * e).toFixed(3);
+        glowStops[1].style.stopColor = ok(SUN[0], SUN[1], e); glowStops[1].style.stopOpacity = 0;
+        stops[0].style.stopColor = ok(SKY_TOP[0], SKY_TOP[1], e);
+        stops[1].style.stopColor = ok(SKY_MID[0], SKY_MID[1], e);
+        stops[2].style.stopColor = ok(SKY_LOW[0], SKY_LOW[1], e);
+        ground.style.fill = ok(GROUND[0], GROUND[1], e); ridge.style.fill = ok(RIDGE[0], RIDGE[1], e);
+        stars.forEach((s, i) => s.setAttribute('opacity', K.clamp((e - .45 - i * .03) * 3, 0, 1).toFixed(3)));
+        let dpath = ''; for (let i = 0; i <= 24; i++) { const [x, y] = arc(ra * i / 24); dpath += (i ? 'L' : 'M') + x.toFixed(2) + ' ' + y.toFixed(2); }
+        trail.setAttribute('d', dpath);
+
+        /* dragging the sun down races the countdown to zero (and back up when it floats home) */
+        const s = Math.round(left() * (1 - K.clamp(e / .96, 0, 1))), hh = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60), ss = s % 60;
+        const dark = e > .96;                                          // only at 0:00:00
+        if (dark !== wasDark) {
+          wasDark = dark; lockEl.innerHTML = dark ? OPEN : LOCKED;
+          if (dark) { select('dark'); say('Sunset reached. Dark mode on.'); } else { select('light'); bump(tiles.dark); }
+        }
+        cdEl.textContent = `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+
+        /* dragging the sun down previews the dark theme on the card itself */
+        const ce = K.clamp((e - .3) / .4, 0, 1), cf = ce * ce * (3 - 2 * ce);
+        root.style.background = hex('#ffffff', '#1a1a1f', cf);
+        root.style.setProperty('--panel', hex('#ffffff', '#1a1a1f', cf));
+        /* text flips light/dark over a narrow band around the midpoint, so it never fades into the background */
+        const te = K.clamp((e - .47) / .06, 0, 1), tf = te * te * (3 - 2 * te);
+        root.style.setProperty('--ink', hex('#121214', '#f2f1ee', tf));
+        root.style.setProperty('--ink-2', hex('#5f5f66', '#a9a9b2', tf));
+        root.style.setProperty('--ink-3', hex('#8d8c92', '#7b7b85', tf));
+        root.style.setProperty('--line-2', hex('#e6e3dc', '#3a3a42', cf));
+        root.style.setProperty('--line', `rgba(${Math.round(18 + 237 * e)},${Math.round(18 + 237 * e)},${Math.round(20 + 235 * e)},${(.085 + .02 * e).toFixed(3)})`);
+        if (opts.onDusk) opts.onDusk(e, tf);
+      }
+
+      function reset() {
+        timers.length = 0; tries = 0; grab = false; msgHTML = ''; fine = 0; pushT = 0; wasDark = false;
+        off.x = off.v = push.x = push.v = 0; t0 = K.now; select('light'); say('Unlocks at your local sunset.');
+        Object.values(tiles).forEach(t => t.style.transform = '');
+      }
+
+      const api = {
+        update, render, reset,
+        sunA: () => realA() + off.x,
+        grabbing: () => grab,
+        arcPoint: a => { const r = svg.getBoundingClientRect(), k = r.width / W, [x, y] = arc(a); return [r.left + x * k, r.top + y * k]; },
+        tries: n => { tries = n; },
+        el: { root, light: tiles.light, dark: tiles.dark, auto: tiles.auto, sun: sunG },
+        destroy() { offs.forEach(f => f()); if (own) K.stop(); root.innerHTML = ''; root.classList.remove('cu-sun'); }
+      };
+      reset();
+      if (own) K.start();
+      return api;
+    }
+  };
+})();
+</script>
+<script>
+(() => {
+  let api;
+  const dusk = document.getElementById('dusk'), hook = document.getElementById('hook'), outro = document.getElementById('outro');
+  const mix = (a, b, t) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',')})`;
+  const K = ReelKit({
+    cursorKind: el => (api && api.grabbing()) || (el && el.closest('[data-sun]')) ? 'grab' : el && el.closest('button') ? 'hand' : 'arrow',
+    update: dt => api.update(dt), render: () => api.render()
+  });
+  api = CursedUI.sunsetDarkMode.init(document.getElementById('card'), { K, onDusk: (d, t) => {
+    dusk.style.opacity = (d * .94).toFixed(3);
+    hook.style.color = mix([18, 18, 20], [242, 241, 238], t);     // t: flips over a narrow band, never bg-on-bg
+    outro.style.color = mix([18, 18, 20], [242, 241, 238], t);
+  } });
+  const c = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  window.__pt = k => c(api.el[k]);
+  window.__thumb = k => { const r = api.el[k].querySelector('.thumb').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  window.__reset = () => api.reset();
+  window.__tries = n => api.tries(n);
+  window.__sunA = () => api.sunA();
+  window.__arc = a => api.arcPoint(a);
+  K.start();
+})();
+</script>
+</body>
+</html>

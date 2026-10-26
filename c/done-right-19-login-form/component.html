@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Login form · Done right #19 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 460px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-card { background: #FFFFFF; border: 1px solid rgba(40, 32, 20, .12); border-radius: 24px; padding: 28px; box-shadow: 0 24px 50px -28px rgba(40, 32, 20, .28); }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .login { display: grid; gap: 18px; color: #1D1B18; }
+  .login-field { display: grid; gap: 6px; }
+  .login-field label { font-weight: 600; }
+  .login-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .login-forgot {
+    display: inline-flex; align-items: center; min-height: 44px; margin: -12px 0;
+    color: #1D1B18; font-size: .9375rem; font-weight: 500;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .login-forgot:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 2px; border-radius: 4px; }
+
+  /* The input and the Show button share one bordered box. */
+  .login-box {
+    display: flex;
+    align-items: center;
+    min-height: 52px;
+    border: 1.5px solid #857E73;      /* 4.0:1 on white */
+    border-radius: 12px;
+    background: #FFFFFF;
+  }
+  .login-box:has(input:focus-visible) { border-color: #1D1B18; outline: 2.5px solid #1D1B18; outline-offset: 2px; }
+  .login-box:has([aria-invalid="true"]) { border-color: #B3261E; }
+  .login-box input {
+    flex: 1;
+    width: 0;
+    min-width: 0;
+    height: 49px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+  .login-box input:focus { outline: none; }
+
+  /* Show password: a toggle button. Name stays "Show password", state is aria-pressed. */
+  .login-show {
+    flex: none;
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 44px;
+    margin-right: 3px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: #1D1B18;
+    font: inherit;
+    font-size: .9375rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .login-show:hover { background: #F2EFEA; }
+  .login-show[aria-pressed="true"] { background: #1D1B18; color: #FFFFFF; }
+  .login-show:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 2px; }
+  .login-show svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+  .login-show .slash { display: none; }
+  .login-show[aria-pressed="true"] .slash { display: inline; }
+
+  .login-error,
+  .login-alert,
+  .login-caps {
+    display: flex; gap: 8px; margin: 0;
+    font-size: .875rem; font-weight: 500; color: #B3261E;   /* 6.5:1 on white */
+  }
+  .login-error[hidden], .login-caps[hidden], .login-alert:empty { display: none; }
+  .login-error::before,
+  .login-alert::before {
+    content: "!"; flex: none; display: grid; place-items: center; margin-top: .1em;
+    width: 1.125rem; height: 1.125rem; border-radius: 50%;
+    background: #B3261E; color: #FFFFFF; font-weight: 700; font-size: .75rem;
+  }
+  .login-alert { padding: 12px 14px; border: 1.5px solid #B3261E; border-radius: 12px; background: #FCF1EF; }
+  .login-caps { color: #5A544B; }
+
+  /* "Keep me signed in": off by default, and it says for how long. */
+  .login-keep {
+    display: flex; align-items: center; gap: 12px;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .login-keep input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: #1D1B18; cursor: pointer; }
+  .login-keep input:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 2px; }
+  .login-keep b { font-weight: 600; }
+  .login-keep span { color: #5A544B; }
+
+  .login-btn {
+    min-height: 48px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 12px;
+    background: #1D1B18;
+    color: #FFFFFF;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .login-btn:hover { background: #3A3631; }
+  .login-btn[aria-disabled="true"] { cursor: progress; }
+  .login-btn:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 3px; }
+
+  .login-status { margin: -6px 0 0; font-size: .9375rem; color: #2D6A3E; font-weight: 500; }
+  .login-status:empty { display: none; }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #19 · @zellap.app</p>
+  <h1>A login form that works with you</h1>
+  <p class="demo-lede">Real labels, the autocomplete your password manager looks for, paste allowed, a Show button that keeps your place, and one honest error that doesn't leak who has an account.</p>
+
+  <div class="demo-card">
+    <form class="login" action="/api/login" method="post" novalidate>
+      <div class="login-field">
+        <label for="email">Email</label>
+        <div class="login-box">
+          <input id="email" name="email" type="email"
+                 autocomplete="username" autocapitalize="none"
+                 spellcheck="false" required
+                 aria-describedby="email-error"
+                 data-missing="Enter your email address."
+                 data-bad="Enter an email like name@example.com.">
+        </div>
+        <p class="login-error" id="email-error" hidden></p>
+      </div>
+      <div class="login-field">
+        <div class="login-top">
+          <label for="password">Password</label>
+          <a class="login-forgot" href="/forgot-password">Forgot password?</a>
+        </div>
+        <div class="login-box">
+          <input id="password" name="password" type="password"
+                 autocomplete="current-password" required
+                 aria-describedby="password-error password-caps"
+                 data-missing="Enter your password.">
+          <button class="login-show" type="button"
+                  aria-controls="password" aria-pressed="false"
+                  aria-label="Show password">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path class="slash" d="M4 4l16 16"/></svg>
+            Show
+          </button>
+        </div>
+        <p class="login-caps" id="password-caps" hidden>Caps Lock is on.</p>
+        <p class="login-error" id="password-error" hidden></p>
+      </div>
+      <label class="login-keep">
+        <input type="checkbox" name="keep">
+        <b>Keep me signed in</b> <span>for 30 days on this device</span>
+      </label>
+      <p class="login-alert" role="alert"></p>
+      <button class="login-btn" type="submit">Sign in</button>
+      <p class="login-status" role="status"></p>
+    </form>
+  </div>
+
+  <p class="demo-notes">Demo account: ana@studio.no / paper-lantern-42 (made up).<br>Anything else shows the wrong-login message. Try pasting the password.</p>
+</main>
+
+<!-- Demo page only: a fake server. Delete this and the component uses fetch(). -->
+<script>
+  window.signIn = (form) => new Promise((resolve) => {
+    const d = new FormData(form);
+    setTimeout(() => resolve(d.get('email') === 'ana@studio.no' && d.get('password') === 'paper-lantern-42'), 700);
+  });
+</script>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  // Your API call. true = signed in, false = wrong login, throw = network.
+  const signIn = (form) => window.signIn
+    ? window.signIn(form)
+    : fetch(form.action, { method: 'POST', body: new FormData(form) })
+        .then((r) => {
+          if (r.status === 401) return false;
+          if (!r.ok) throw new Error(r.status);
+          return true;
+        });
+
+  for (const form of document.querySelectorAll('.login')) {
+    const email = form.querySelector('[type=email]');
+    const pass = form.querySelector('[autocomplete=current-password]');
+    const show = form.querySelector('.login-show');
+    const caps = form.querySelector('.login-caps');
+    const alert = form.querySelector('.login-alert');
+    const status = form.querySelector('.login-status');
+    const btn = form.querySelector('.login-btn');
+    let busy = false;
+
+    const check = (field) => {
+      const v = field.validity;
+      const msg = v.valueMissing ? field.dataset.missing
+        : v.typeMismatch ? field.dataset.bad : '';
+      const id = field.getAttribute('aria-describedby').split(' ')[0];
+      const error = document.getElementById(id);
+      error.textContent = msg;
+      error.hidden = !msg;
+      field.setAttribute('aria-invalid', String(!!msg));
+      return !msg;
+    };
+    for (const field of [email, pass]) {
+      field.addEventListener('input', () => {
+        if (field.getAttribute('aria-invalid') === 'true') check(field);
+      });
+    }
+
+    // Show / hide: same value, same caret.
+    const reveal = (on) => {
+      const { selectionStart: a, selectionEnd: b } = pass;
+      pass.type = on ? 'text' : 'password';
+      pass.setSelectionRange(a, b);
+      show.setAttribute('aria-pressed', String(on));
+    };
+    show.addEventListener('click', () =>
+      reveal(show.getAttribute('aria-pressed') !== 'true'));
+
+    // Caps Lock hint while typing the password.
+    const capsCheck = (e) => {
+      if (e.getModifierState) caps.hidden = !e.getModifierState('CapsLock');
+    };
+    pass.addEventListener('keydown', capsCheck);
+    pass.addEventListener('keyup', capsCheck);
+    pass.addEventListener('blur', () => { caps.hidden = true; });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (busy) return;
+      const bad = [email, pass].filter((field) => !check(field));
+      if (bad.length) return bad[0].focus();
+
+      reveal(false);                  // never leave it on screen
+      busy = true;
+      btn.setAttribute('aria-disabled', 'true');
+      btn.textContent = 'Signing in…';
+      alert.textContent = '';
+      try {
+        if (await signIn(form)) {
+          status.textContent = 'Signed in. Welcome back.';
+        } else {
+          // One message. Never say which part was wrong.
+          alert.textContent =
+            "That email and password don't match. Check both and try again.";
+          pass.value = '';
+          pass.focus();
+        }
+      } catch {
+        alert.textContent =
+          "Couldn't reach the server. Nothing was lost, try again.";
+      }
+      busy = false;
+      btn.setAttribute('aria-disabled', 'false');
+      btn.textContent = 'Sign in';
+    });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Queue Progress</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<style>/* inlined from ../_kit/reel.css */
+/* Shared shell for the Cursed UI pages: palette, backdrop, hook/outro, reel canvas, cursor. */
+:root{
+  --bg:#f3f2ee; --ink:#121214; --ink-2:#5f5f66; --ink-3:#8d8c92;
+  --line:rgba(18,18,20,.085); --line-2:#e6e3dc;
+  --gold-1:#ffd772; --gold-2:#f2a43a; --gold-ink:#a8681a;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Satoshi",ui-sans-serif,sans-serif; -webkit-font-smoothing:antialiased;
+  overflow:hidden; -webkit-user-select:none; user-select:none;
+}
+.backdrop{position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(60% 45% at 50% 46%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bg),var(--bg));
+}
+.backdrop::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(18,18,20,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(18,18,20,.045) 1px,transparent 1px);
+  background-size:28px 28px; background-position:center;
+  -webkit-mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+          mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+}
+.stage{position:relative;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
+
+.tag{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 9px;border-radius:99px;
+  background:#fff;border:1px solid var(--line);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);
+  box-shadow:0 4px 10px -6px rgba(40,34,20,.18)}
+.tag i,.outro i{display:block;width:7px;height:7px;border-radius:50%;background:linear-gradient(var(--gold-1),var(--gold-2))}
+.hook{font-weight:900;font-size:27px;line-height:1.12;letter-spacing:-.025em;text-align:center;max-width:430px;text-wrap:balance}
+.handle{display:block;margin-top:10px;font-weight:500;font-size:12.5px;letter-spacing:.01em;color:var(--ink-3)}
+.outro{font-weight:900;font-size:30px;letter-spacing:-.025em;color:var(--ink);opacity:0;text-align:center}
+.outro span{display:inline-flex;align-items:center;gap:10px}
+.outro i{width:14px;height:14px}
+.outro b{display:inline-block;font-weight:900;background:var(--ink);color:#fff;border-radius:10px;padding:1px 10px 3px;margin:0 1px;letter-spacing:.01em}
+.outro small{display:block;margin-top:14px;font-weight:700;font-size:19px;letter-spacing:-.01em;color:#34343a}
+.outro small em{font-style:normal;font-weight:500;color:var(--ink-2)}
+
+.card{position:relative;width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:30px;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 40px 70px -32px rgba(40,34,20,.22),0 10px 24px -12px rgba(0,0,0,.08);
+}
+.app{display:flex;align-items:center;gap:12px}
+.icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.x{margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-3)}
+
+/* reel mode: fixed 540x960 phone canvas (recorded at 2x = 1080x1920) */
+body.reel .stage{display:block;width:540px;height:960px;margin:0 auto;padding:0}
+body.reel .tag{position:absolute;top:154px;left:50%;transform:translateX(-50%)}
+body.reel .hook{position:absolute;top:198px;left:50%;transform:translateX(-50%);width:450px;font-size:30px}
+body.reel .card{position:absolute;top:318px;left:60px}
+body.reel .outro{position:absolute;top:192px;left:0;right:0;font-size:25px}
+body:not(.reel) .outro{display:none}
+body.reel, body.reel *{cursor:none !important}
+#cursor{position:fixed;left:0;top:0;width:0;height:0;z-index:99;pointer-events:none;display:none}
+body.reel #cursor{display:block}
+#cursor svg{position:absolute;left:0;top:0;overflow:visible;filter:drop-shadow(0 3px 5px rgba(0,0,0,.25))}
+#ring{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;border:2px solid rgba(18,18,20,.5);opacity:0}
+</style>
+<style>/* inlined from component.css */
+/* Cursed UI #9: a progress bar that is a queue, and people keep cutting in. Scoped to .cu-q */
+.cu-q{--ink:#121214;--ink-2:#5f5f66;--ink-3:#8d8c92;--line:rgba(18,18,20,.085);--line-2:#e6e3dc;--gold-1:#ffd772;--gold-2:#f2a43a;--red:#c23a31;
+  position:relative;padding:24px 28px 24px;font-family:"Satoshi",ui-sans-serif,sans-serif;color:var(--ink)}
+.cu-q .app{display:flex;align-items:center;gap:12px}
+.cu-q .icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.cu-q .app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.cu-q .app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.cu-q h2{margin-top:18px;font-weight:700;font-size:23px;letter-spacing:-.02em;line-height:1.15;white-space:nowrap}
+.cu-q .stat{margin-top:6px;display:flex;align-items:baseline;justify-content:space-between}
+.cu-q .pos{font-size:17px;font-weight:500;color:var(--ink-2)}
+.cu-q .pos b{color:var(--ink);font-weight:700;display:inline-block;transform-origin:50% 70%}
+.cu-q .pct{font-weight:900;font-size:34px;letter-spacing:-.03em;font-variant-numeric:tabular-nums;display:inline-block;transform-origin:100% 70%}
+
+.cu-q .lane{position:relative;height:172px;margin-top:10px;border:1px solid var(--line-2);border-radius:20px;background:#fbfaf7;overflow:hidden}
+.cu-q .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,rgba(255,215,114,.10),rgba(255,215,114,.42));border-right:2px solid rgba(242,164,58,.55)}
+.cu-q .floor{position:absolute;left:0;right:0;bottom:24px;height:1px;background:rgba(18,18,20,.10)}
+.cu-q .door{position:absolute;right:10px;bottom:24px;width:50px;height:88px;border-radius:12px 12px 0 0;background:linear-gradient(170deg,#2a2a33,#101014)}
+.cu-q .door i{position:absolute;left:50%;top:12px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:#37d27a;box-shadow:0 0 8px #37d27a}
+.cu-q .door s{position:absolute;right:9px;top:48px;width:5px;height:5px;border-radius:50%;background:#6b6b75}
+.cu-q .sign{position:absolute;right:6px;bottom:96px;transform-origin:50% 0;padding:5px 9px 6px;border-radius:8px;background:var(--red);color:#fff;font-weight:900;font-size:15px;letter-spacing:.05em;line-height:1;text-align:center;white-space:nowrap;
+  box-shadow:0 6px 12px -6px rgba(194,58,49,.6);opacity:0}
+.cu-q .sign small{display:block;font-weight:700;font-size:14px;letter-spacing:0;margin-top:2px;opacity:.85}
+.cu-q .peep{position:absolute;left:0;bottom:24px;width:24px;height:46px;margin-left:-12px;cursor:pointer;will-change:transform;transform-origin:50% 100%}
+.cu-q .peep .h{position:absolute;left:5px;top:0;width:14px;height:14px;border-radius:50%}
+.cu-q .peep .b{position:absolute;left:1px;top:16px;width:22px;height:30px;border-radius:10px 10px 4px 4px}
+.cu-q .peep.dog{width:28px;height:24px;margin-left:-14px}
+.cu-q .peep.dog .h{left:17px;top:0;width:12px;height:12px;border-radius:45%}
+.cu-q .peep.dog .b{left:0;top:7px;width:24px;height:13px;border-radius:7px}
+.cu-q .peep.dog .t{position:absolute;left:-5px;top:6px;width:8px;height:3px;border-radius:2px;transform:rotate(-30deg)}
+.cu-q .peep.bot .h{border-radius:4px}
+.cu-q .peep .cr{position:absolute;left:5px;top:-7px}
+.cu-q .peep.you .b{box-shadow:0 0 0 2px #fff,0 0 0 3.5px var(--gold-2)}
+.cu-q .peep.you .h{box-shadow:0 0 0 2px #fff,0 0 0 3.5px var(--gold-2)}
+.cu-q .youtag{position:absolute;left:0;bottom:4px;margin-left:-20px;width:40px;text-align:center;font-weight:900;font-size:13px;letter-spacing:.06em;color:var(--gold-ink,#a8681a)}
+.cu-q .pill{position:absolute;left:0;top:10px;padding:4px 10px 5px;border-radius:99px;background:var(--ink);color:#fff;font-weight:700;font-size:14px;white-space:nowrap;opacity:0;pointer-events:none;transform-origin:50% 100%}
+.cu-q .pill.sorry{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:0 6px 12px -6px rgba(0,0,0,.25)}
+.cu-q .log{margin-top:13px;height:22px;font-size:16px;font-weight:700;color:var(--red);white-space:nowrap;display:flex;align-items:center;gap:7px}
+.cu-q .log.ok{color:#23894a}
+.cu-q .log.idle{color:var(--ink-3);font-weight:500}
+.cu-q .hint{margin-top:4px;font-size:13.5px;font-weight:500;color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="stage">
+  <div class="tag"><i></i>Cursed UI #9</div>
+  <header class="hook">Progress bar, but it's a queue.<span class="handle">@zellap.app</span></header>
+
+  <main class="card" id="card"></main>
+
+  <footer class="outro" id="outro"><span><i></i>Comment <b>CODE</b> for the source</span><small>Follow for more cursed UI <em>&middot; @zellap.app</em></small></footer>
+</div>
+
+<script>/* inlined from ../_kit/reel.js */
+/* Shared runtime for the Cursed UI pages.
+   - a simulation clock (K.now, ms) advanced by K.tick(ms): rAF in the browser, stepped by the recorder (?manual)
+   - tweens, easing, the hook <-> outro swap (window.__outro), and the reel cursor driven by real pointer events
+   - opts.embedded: a private clock for a component mounted elsewhere (the game): no reel cursor, no globals, own rAF loop,
+     K.stop() ends it. Pointer position is still tracked (K.px/K.py) */
+window.ReelKit = function (opts) {
+  if (opts.embedded) return ReelKit.embedded(opts);
+  const qs = new URLSearchParams(location.search);
+  const REEL = qs.has('reel'), MANUAL = qs.has('manual');
+  if (REEL) document.body.classList.add('reel');
+
+  const K = { REEL, MANUAL, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  /* critically-ish damped spring step: z = damping ratio */
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+
+  /* ---------- cursor ---------- */
+  document.body.insertAdjacentHTML('beforeend', `<div id="cursor">
+    <div id="ring"></div>
+    <svg id="c-arrow" width="26" height="34" viewBox="0 0 26 34"><path d="M2 2 L2 26 L8.2 20.4 L12.4 30.4 L16.6 28.6 L12.5 18.9 L20.8 18.6 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg id="c-hand" width="30" height="34" viewBox="0 0 30 34" style="display:none;left:-9px;top:-2px"><path d="M10 15V5.2a2.6 2.6 0 0 1 5.2 0V13 M15.2 12.6a2.5 2.5 0 0 1 5 0v1.8 M20.2 13.6a2.5 2.5 0 0 1 5 0v6.2c0 6.6-4 11.2-10 11.2-4.6 0-6.7-2.2-9.4-6.5L3 19.6a2.5 2.5 0 0 1 4.2-2.7L10 20.8V15" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg id="c-grab" width="30" height="30" viewBox="0 0 30 30" style="display:none;left:-15px;top:-13px"><path d="M8.2 11.4a2.4 2.4 0 0 1 4.8 0v-1a2.4 2.4 0 0 1 4.8 0v1a2.4 2.4 0 0 1 4.8 0v1.4a2.4 2.4 0 0 1 4.6.9v4.8c0 5.6-3.8 9.4-9.4 9.4-4.2 0-6.4-1.8-8.6-5.2l-2.4-3.8a2.3 2.3 0 0 1 3.4-3z M13 11.4v4 M17.8 11.4v4 M22.6 12.8v3" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  </div>`);
+  const $ = id => document.getElementById(id);
+  const cur = $('cursor'), ring = $('ring'), shapes = { arrow: $('c-arrow'), hand: $('c-hand'), grab: $('c-grab') };
+  let curScale = 1;
+  function moveCursor() {
+    if (!REEL) return;
+    const el = document.elementFromPoint(K.px, K.py);
+    const kind = (opts.cursorKind && opts.cursorKind(el)) || 'arrow';
+    for (const k in shapes) shapes[k].style.display = k === kind ? '' : 'none';
+    cur.style.transform = `translate(${K.px}px,${K.py}px) scale(${curScale})`;
+  }
+  K.moveCursor = moveCursor;
+  window.addEventListener('pointermove', e => { K.px = e.clientX; K.py = e.clientY; moveCursor(); });
+  window.addEventListener('pointerleave', () => { K.px = K.py = -999; });
+  window.addEventListener('pointerdown', () => {
+    K.down = true;
+    if (!REEL) return;
+    K.tween(90, p => { curScale = 1 - .14 * p; moveCursor(); });
+    K.tween(300, p => { curScale = .86 + .14 * p; moveCursor(); }, K.ease.back, 120);
+    K.tween(480, p => { ring.style.opacity = (1 - p) * .9; ring.style.transform = `scale(${.4 + p * 1.1})`; });
+  });
+  window.addEventListener('pointerup', () => { K.down = false; moveCursor(); });
+
+  /* ---------- hook <-> outro ---------- */
+  let outroOn = false;
+  window.__outro = on => {
+    if (on === outroOn) return; outroOn = on;
+    const hook = document.querySelector('.hook'), outro = document.querySelector('.outro');
+    K.tween(440, p => { const q = on ? p : 1 - p;
+      hook.style.opacity = K.clamp(1 - q / .45, 0, 1);   // strictly sequential: never two lines at once
+      const o = K.clamp((q - .55) / .45, 0, 1);
+      outro.style.opacity = o; outro.style.transform = `translateY(${(1 - o) * 10}px)`; }, K.ease.lin);
+  };
+
+  /* ---------- clock ---------- */
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  window.__tick = tick;
+  K.start = () => {
+    if (!MANUAL) {
+      let last = performance.now();
+      requestAnimationFrame(function loop(t) { tick(Math.min(50, t - last)); last = t; requestAnimationFrame(loop); });
+    } else tick(16);
+  };
+  return K;
+};
+
+ReelKit.embedded = function (opts) {
+  const K = { REEL: false, MANUAL: false, embedded: true, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+  K.moveCursor = () => {};
+  const mv = e => { K.px = e.clientX; K.py = e.clientY; };
+  const dn = () => { K.down = true; }, up = () => { K.down = false; };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerdown', dn); window.addEventListener('pointerup', up);
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  K.tick = tick;
+  let raf = 0, alive = false;
+  K.start = () => {
+    if (alive) return; alive = true;
+    let last = performance.now();
+    raf = requestAnimationFrame(function loop(t) { if (!alive) return; tick(Math.min(50, t - last)); last = t; raf = requestAnimationFrame(loop); });
+  };
+  K.stop = () => {
+    alive = false; cancelAnimationFrame(raf);
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerdown', dn); window.removeEventListener('pointerup', up);
+  };
+  return K;
+};
+</script>
+<script>/* inlined from component.js */
+/* Cursed UI #9: the progress bar is a queue of tiny people, and people keep cutting in ahead of you.
+
+   Self-contained level. Needs ../_kit/reel.js (ReelKit clock) and component.css.
+     const api = CursedUI.queue.init(el, { onWin, script, loop })   // el: an empty container, e.g. a .card
+     el.addEventListener('cursed:win', e => ...)
+     api.reset(); api.destroy();
+   Rules: the front of the line is served every so often and you move up. Cutters jump in right ahead of you.
+   Tap a cutter (or any of a group) and they pop out of the line. Win: you reach the server door (100%).
+   The position / percentage only change once a cutter has visibly landed (cause first, number after).
+   script: [[ms, action]] with action 'serve' | 'vip' | 'group' | 'bot' | 'dog' | 'q' | 'close'; loop: repeat it.
+   Pass { K } to drive it from an outside clock (the reel page does); otherwise it runs its own rAF loop. */
+(function () {
+  const CU = window.CursedUI = window.CursedUI || {};
+  const SP = 44, Z = 1.45;                             // slot spacing (px), people scale
+  const KINDS = {
+    vip:   { n: 1, label: 'Priority',         log: 'A Priority user cut in ahead of you', col: '#7b5fd6' },
+    group: { n: 3, label: 'Team plan',        log: 'A team of 3 cut in ahead of you',      col: '#3aa6a0' },
+    bot:   { n: 1, label: 'AI agent',         log: 'An AI agent cut in ahead of you',      col: '#5c6370' },
+    dog:   { n: 1, label: 'Their dog',        log: "Someone's dog cut in ahead of you",    col: '#b98a5a' },
+    q:     { n: 1, label: 'Quick question',   log: 'Someone with a quick question cut in',  col: '#d0685e' }};
+  const CROWD = ['#9aaabb', '#c9a184', '#a3b89c', '#b6a2c4', '#cfb370', '#8fb3b0', '#c79595', '#a9a29a'];
+  const IDLE = 'Uploading… keep this tab open';
+  const GAME = [[900, 'serve'], [1900, 'vip'], [2700, 'serve'], [3700, 'group'], [4500, 'serve'], [5500, 'bot'],
+                [6300, 'serve'], [7300, 'dog'], [8000, 'serve'], [9000, 'q'], [9800, 'serve']];
+
+  CU.queue = {
+    id: 'queue', n: 9,
+    title: 'Progress bar, but it is a queue',
+    goal: 'Get your upload to the front of the line. Tap cutters to send them away.',
+    init(root, opts = {}) {
+      root.classList.add('cu-q');
+      root.innerHTML = `
+        <div class="app"><div class="icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 22 22"><path d="M11 15.5V4.5M6.5 9L11 4.5 15.5 9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17.5h14" stroke="#f2a43a" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div><b>Orbit</b><span>Uploads &middot; 1 file</span></div></div>
+        <h2>Uploading launch-video.mp4</h2>
+        <div class="stat"><span class="pos">You're <b data-pos>#5</b> in line</span><span class="pct" data-pct>48%</span></div>
+        <div class="lane" data-lane role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100">
+          <div class="fill" data-fill></div><div class="floor"></div>
+          <div class="door"><i data-light></i><s></s></div>
+          <div class="sign" data-sign>CLOSED<small>back in 5 min</small></div>
+        </div>
+        <div data-logwrap><div class="log idle" data-log>${IDLE}</div></div>`;
+      const q = s => root.querySelector(`[data-${s}]`);
+      const logWrap = q('logwrap'), lane = q('lane'), fill = q('fill'), posEl = q('pos'), pctEl = q('pct'), logEl = q('log'), sign = q('sign'), light = q('light');
+
+      const own = !opts.K;
+      const K = opts.K || ReelKit({ embedded: true, update: dt => api.update(dt), render: () => api.render() });
+      const timers = [];
+      const later = (ms, fn) => timers.push({ at: K.now + ms, fn });
+
+      let line = [], gone = [], you = null, script = opts.script || GAME, loop = opts.loop != null ? opts.loop : !opts.script;
+      let si = 0, t0 = 0, running = false, closed = false, won = false, uid = 0;
+      const pct = { x: 48, v: 0 };
+      let shownPct = -1, shownPos = -1, holdUntil = -1, heldA = 0;
+      const signS = { x: 0, v: 0 };
+      let dipK = 1;
+      const groups = new Set();
+      const statEl = root.querySelector('.stat');
+
+      const W = () => lane.clientWidth;
+      const slotX = i => W() - 88 - i * SP;
+      const doorX = () => W() - 35;
+
+      function person(kind, col, cutter) {
+        const el = document.createElement('div');
+        el.className = 'peep' + (kind === 'dog' ? ' dog' : '') + (kind === 'bot' ? ' bot' : '') + (kind === 'you' ? ' you' : '');
+        el.innerHTML = `<span class="h" style="background:${col}"></span><span class="b" style="background:${col}"></span>` +
+          (kind === 'dog' ? `<span class="t" style="background:${col}"></span>` : '') +
+          (kind === 'vip' ? '<svg class="cr" width="14" height="8" viewBox="0 0 14 8"><path d="M1 7.5L1.6 1.8l3 2.6L7 .6l2.4 3.8 3-2.6.6 5.7z" fill="#f2b33a" stroke="#c98a1c" stroke-width=".8" stroke-linejoin="round"/></svg>' : '');
+        lane.appendChild(el);
+        return { id: uid++, el, kind, cutter, x: { x: 0, v: 0 }, y: { x: 0, v: 0 }, op: 1, sc: 1, ph: 0, leaving: false, group: null };
+      }
+      function pill(text, cls) {
+        const p = document.createElement('div');
+        p.className = 'pill' + (cls ? ' ' + cls : ''); p.textContent = text; lane.appendChild(p);
+        return { el: p, w: p.offsetWidth, op: { x: 0, v: 0 }, on: true, text };
+      }
+      function say(text, cls) {
+        logEl.className = 'log' + (cls ? ' ' + cls : ''); logEl.textContent = text;
+        K.tween(380, p => logEl.style.transform = `translateX(${(-6 * (1 - p)).toFixed(2)}px)`, K.ease.back);
+        K.tween(240, p => logEl.style.opacity = p, K.ease.out);
+      }
+      function bump(el, s = .2) { K.tween(420, p => el.style.transform = `scale(${1 + s * (1 - p)})`, K.ease.out); }
+
+      function build() {
+        [...lane.querySelectorAll('.peep,.pill,.youtag')].forEach(e => e.remove());
+        groups.clear();
+        line = []; gone = [];
+        for (let i = 0; i < 8; i++) {
+          const p = i === 4 ? person('you', 'linear-gradient(160deg,#ffd772,#f2a43a)', false) : person('crowd', CROWD[i], false);
+          line.push(p);
+        }
+        you = line[4];
+        const tag = document.createElement('div'); tag.className = 'youtag'; tag.textContent = 'YOU'; lane.appendChild(tag); you.tag = tag;
+        line.forEach((p, i) => { p.x.x = slotX(i); });
+      }
+
+      function ahead() { return line.indexOf(you); }
+      function pctFor(a) { return won ? 100 : a === 0 ? 99 : Math.max(2, 92 - a * 11); }
+
+      function serve() {
+        if (closed || won || !line.length) return;
+        const f = line[0];
+        if (f === you) { win(); return; }
+        line.shift(); f.leaving = true; gone.push(f);
+        if (!logEl.classList.contains('idle')) say(IDLE, 'idle');           // the queue moved: old news fades
+        const x0 = f.x.x, dx = doorX() - x0;
+        K.tween(520, p => { f.x.x = x0 + dx * p; f.x.v = 60; f.sc = 1 - .35 * p; f.op = 1 - K.clamp((p - .45) / .55, 0, 1); }, K.ease.inOut);
+        later(540, () => { f.el.remove(); gone.splice(gone.indexOf(f), 1); });
+        K.tween(300, p => light.style.transform = `scale(${1 + .6 * Math.sin(Math.PI * p)})`, K.ease.out);
+      }
+      function cut(kind) {
+        if (closed || won) return;
+        const k = KINDS[kind], at = ahead(), grp = { kind, members: [], pill: null };
+        heldA = ahead(); holdUntil = K.now + 470;                        // number waits until they have landed
+        for (let j = 0; j < k.n; j++) {
+          const p = person(kind, k.col, true);
+          p.group = grp; grp.members.push(p);
+          line.splice(at + j, 0, p);
+          p.x.x = slotX(at + j); p.y.x = -150 - j * 14; p.op = 0; p.drop = K.now + 170 + j * 70;   // the line makes room first
+        }
+        grp.members.forEach((p, j) => K.tween(160, e => p.op = e, K.ease.out, 170 + j * 70));
+        grp.pill = pill(k.label); groups.add(grp);
+        grp.born = K.now + 170;
+        later(200, () => say(k.log));
+        later(470, () => bump(pctEl, .14));
+      }
+      function shoo(p) {
+        const g = p.group;
+        if (!g || g.leaving || closed || won) return;
+        g.leaving = true;
+        g.pill.el.textContent = 'Sorry!'; g.pill.el.className = 'pill sorry'; g.pill.w = g.pill.el.offsetWidth;
+        say('Asked them to leave.', 'ok');
+        later(300, () => {
+          g.members.forEach((m, j) => {                                   // pop up and out in 2 frames, before anyone moves into the gap
+            line.splice(line.indexOf(m), 1); m.leaving = true; gone.push(m);
+            const y0 = m.y.x;
+            K.tween(66, e => { m.y.x = y0 - 26 * e; m.y.v = 0; m.op = 1 - e; m.sc = 1 + .18 * e; }, K.ease.out);
+            later(90, () => { m.el.remove(); gone.splice(gone.indexOf(m), 1); });
+          });
+          g.pill.on = false;
+          later(400, () => { g.pill.el.remove(); groups.delete(g); });
+        });
+        bump(pctEl, .14);
+      }
+      function close() {
+        closed = true;
+        light.style.background = '#e0473d'; light.style.boxShadow = '0 0 8px #e0473d';
+        say('Server is on lunch. Back in 5 min.');
+      }
+      function win() {
+        won = true;
+        const x0 = you.x.x, dx = doorX() - x0;
+        K.tween(560, p => { you.x.x = x0 + dx * p; you.x.v = 60; you.sc = 1 - .35 * p; you.op = 1 - K.clamp((p - .5) / .5, 0, 1); }, K.ease.inOut);
+        say('Upload complete. You made it.', 'ok');
+        root.dispatchEvent(new CustomEvent('cursed:win', { bubbles: true, detail: { id: 'queue' } }));
+        if (opts.onWin) opts.onWin();
+      }
+      const ACT = { serve, close, vip: () => cut('vip'), group: () => cut('group'), bot: () => cut('bot'), dog: () => cut('dog'), q: () => cut('q') };
+
+      const offs = [];
+      const onDown = e => { const el = e.target.closest && e.target.closest('.peep'); if (!el) return; const p = line.find(m => m.el === el); if (p) shoo(p); };
+      lane.addEventListener('pointerdown', onDown); offs.push(() => lane.removeEventListener('pointerdown', onDown));
+
+      function update(dt) {
+        for (let i = timers.length - 1; i >= 0; i--) if (K.now >= timers[i].at) timers.splice(i, 1)[0].fn();
+        if (running) {
+          while (script[si] && K.now - t0 >= script[si][0]) { ACT[script[si][1]](); si++; }
+          if (si >= script.length && loop) { t0 += script[script.length - 1][0]; si = 0; }
+        }
+        line.forEach((p, i) => {
+          if (p.leaving) return;
+          const tx = slotX(i);
+          K.spring(p.x, tx, 130, .92, dt);
+          if (!(p.drop > K.now)) K.spring(p.y, 0, 300, .55, dt);
+        });
+        const a = K.now < holdUntil ? heldA : ahead();
+        K.spring(pct, pctFor(a < 0 ? 0 : a), 160, 1, dt);
+        K.spring(signS, closed ? 1 : 0, 260, .35, dt);
+        for (const p of line.concat(gone)) {
+          const sp = Math.abs(p.x.v);
+          if (sp > 6) p.ph += dt * 15; else p.ph += (Math.round(p.ph / Math.PI) * Math.PI - p.ph) * Math.min(1, dt * 12);
+        }
+      }
+      function render() {
+        for (const p of line.concat(gone)) {
+          const bob = -Math.abs(Math.sin(p.ph)) * 3.2, tilt = Math.sin(p.ph) * 5;
+          p.el.style.transform = `translate(${p.x.x.toFixed(2)}px,${(p.y.x + bob).toFixed(2)}px) rotate(${tilt.toFixed(2)}deg) scale(${(p.sc * Z).toFixed(3)})`;
+          p.el.style.opacity = (p.op * dipK).toFixed(3);
+        }
+        if (you && you.tag) { you.tag.style.transform = `translateX(${you.x.x.toFixed(2)}px)`; you.tag.style.opacity = (you.op * dipK).toFixed(3); }
+        fill.style.opacity = dipK.toFixed(3); statEl.style.opacity = dipK.toFixed(3); logWrap.style.opacity = dipK.toFixed(3);
+        for (const g of groups) {                                            // every pill until it is removed (it outlives its people)
+          const pl = g.pill; if (!pl) continue;
+          const xs = g.members.map(m => m.x.x), ys = g.members.map(m => m.y.x);
+          const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = Math.min(...ys);
+          const age = K.now - g.born, o = pl.on ? K.clamp(age / 200, 0, 1) : Math.max(0, +pl.el.style.opacity - .12);
+          if (pl.on || pl.fx == null) { pl.fx = cx; pl.fy = Math.min(0, cy); }            // leaving: the pill stays put and fades
+          pl.el.style.opacity = (o * dipK).toFixed(3);
+          pl.el.style.transform = `translate(${(pl.fx - pl.w / 2).toFixed(2)}px,${(pl.fy + 2 * (1 - o)).toFixed(2)}px) scale(${(.85 + .15 * o).toFixed(3)})`;
+        }
+        const P = Math.round(pct.x);
+        if (P !== shownPct) { shownPct = P; pctEl.textContent = P + '%'; lane.setAttribute('aria-valuenow', P); }
+        const a = K.now < holdUntil ? heldA : ahead();
+        if (a >= 0 && a !== shownPos) { shownPos = a; posEl.textContent = a === 0 ? 'next' : '#' + (a + 1); bump(posEl, .25); }
+        fill.style.width = (you ? Math.max(0, you.x.x + 20) : 0).toFixed(2) + 'px';
+        const s = signS.x;
+        sign.style.opacity = (K.clamp(s * 3, 0, 1) * dipK).toFixed(3);
+        sign.style.transform = `translateY(${(-10 * (1 - K.clamp(s, 0, 1))).toFixed(2)}px) rotate(${(14 * (1 - s)).toFixed(2)}deg)`;
+      }
+      function reset(paused) {
+        timers.length = 0; closed = false; won = false; si = 0; running = false;
+        light.style.background = ''; light.style.boxShadow = '';
+        signS.x = signS.v = 0;
+        build();
+        pct.x = pctFor(4); pct.v = 0; shownPct = shownPos = -1;
+        logEl.textContent = IDLE; logEl.className = 'log idle'; logEl.style.opacity = 1; logEl.style.transform = ''; holdUntil = -1;
+        if (!paused) go();
+      }
+      function go() { running = true; t0 = K.now; si = 0; }
+      function crossfade(ms = 150) {                      // reel reset: a snapshot of the card fades out over a fresh line
+        const snap = root.cloneNode(true);
+        snap.removeAttribute('id'); snap.style.pointerEvents = 'none'; snap.style.zIndex = 5;
+        root.parentNode.insertBefore(snap, root.nextSibling);
+        reset(true);
+        K.tween(ms, p => { snap.style.opacity = 1 - p; }, K.ease.lin);
+        later(ms + 10, () => snap.remove());
+      }
+      function dip(ms = 260) {                           // reel loop: the old run fades out, a fresh line fades in. Never two at once
+        running = false;
+        K.tween(ms / 2, p => { dipK = 1 - p; }, K.ease.lin);
+        later(ms / 2 + 1, () => { reset(true); dipK = 0; K.tween(ms / 2, p => { dipK = p; }, K.ease.lin); });
+      }
+      function softReset(ms = 700) {                    // fade the line out, rebuild it, fade it back in (pct rolls back)
+        running = false;
+        const old = line.concat(gone);
+        K.tween(ms / 2, p => { old.forEach(m => m.op = Math.min(m.op, 1 - p)); logEl.style.opacity = 1 - p; sign.style.opacity = Math.min(+sign.style.opacity, 1 - p); }, K.ease.out);
+        later(ms / 2 + 10, () => {
+          const keep = pct.x;
+          reset(true); pct.x = keep; signS.x = 0;
+          line.forEach(m => m.op = 0);
+          K.tween(ms / 2, p => line.forEach(m => m.op = p), K.ease.out);
+          logEl.style.opacity = 1;
+        });
+      }
+
+      const api = {
+        update, render, reset, softReset, crossfade, dip, go, cut, serve, close,
+        point(which) {                                  // centre of a cutter group member (for the recorder) or of you
+          const p = which === 'you' ? you : line.find(m => m.cutter && !m.leaving && (!which || m.group.kind === which));
+          if (!p) return null;
+          const r = p.el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2];
+        },
+        destroy() { offs.forEach(f => f()); if (own) K.stop(); root.innerHTML = ''; root.classList.remove('cu-q'); }
+      };
+      reset(true);
+      if (own) { K.start(); go(); }
+      return api;
+    }
+  };
+})();
+</script>
+<script>
+(() => {
+  /* reel cut: ms after __go(). Ends with you at the front and the server closing. Without ?reel the level loops its own script */
+  const REEL = [[300, 'serve'], [1000, 'vip'], [2200, 'serve'], [2600, 'group'], [4200, 'serve'], [4700, 'dog'], [6000, 'serve'], [6500, 'close']];
+  let api;
+  const K = ReelKit({
+    cursorKind: el => el && el.closest('.peep') ? 'hand' : 'arrow',
+    update: dt => api.update(dt), render: () => api.render()
+  });
+  api = CursedUI.queue.init(document.getElementById('card'), K.REEL ? { K, script: REEL, loop: false } : { K });
+  window.__cutter = k => api.point(k);
+  window.__go = () => api.go();
+  window.__soft = () => api.softReset(800);
+  window.__reset = () => { api.crossfade(150); api.go(); };
+  window.__dip = () => api.dip(240);                           // loop point: old run fades out, fresh line fades in (never doubled)
+  if (!K.REEL) api.go();
+  K.start();
+})();
+</script>
+</body>
+</html>

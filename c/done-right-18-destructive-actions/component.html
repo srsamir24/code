@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Destructive actions · Done right #18 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 580px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .ws {
+    display: grid;
+    gap: 20px;
+    padding: 24px;
+    border: 1px solid rgba(40, 32, 20, .14);
+    border-radius: 20px;
+    background: #FFFFFF;
+    color: #1D1B18;
+  }
+  .ws-title { margin: 0; font-size: 1.125rem; font-weight: 600; }
+  .ws-field { display: grid; gap: 6px; font-weight: 600; }
+  .ws-line { display: flex; gap: 10px; }
+  .ws-line input {
+    flex: 1; min-width: 0; height: 48px; padding: 0 14px;
+    border: 1.5px solid #857E73; border-radius: 12px;   /* 4.0:1 on white */
+    font: inherit; font-weight: 400; color: inherit; background: #FFFFFF;
+  }
+
+  .ws-btn, .danger-btn, .restore-btn, .wipe-cancel, .wipe-go {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 48px;
+    padding: 0 18px;
+    border: 1.5px solid #1D1B18;
+    border-radius: 12px;
+    background: #FFFFFF;
+    color: #1D1B18;
+    font: inherit;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .ws-btn:hover, .restore-btn:hover, .wipe-cancel:hover { background: #F2EFEA; }
+  .ws-line input:focus-visible, .wipe-confirm input:focus-visible,
+  .ws-btn:focus-visible, .danger-btn:focus-visible, .restore-btn:focus-visible,
+  .wipe-cancel:focus-visible, .wipe-go:focus-visible {
+    outline: 2.5px solid #1D1B18;
+    outline-offset: 2px;
+  }
+  .ws-btn svg, .danger-btn svg, .wipe-go svg { width: 18px; height: 18px; flex: none; }
+
+  /* Danger zone: its own box, far from Save, labelled in words. */
+  .danger {
+    display: grid;
+    gap: 14px;
+    margin-top: 12px;
+    padding: 18px 20px 20px;
+    border: 1.5px solid #B3261E;       /* 6.5:1 on white */
+    border-radius: 16px;
+  }
+  .danger-title { margin: 0; font-size: .8125rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #B3261E; }
+  .danger-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .danger-row[hidden] { display: none; }
+  .danger-what { margin: 0; font-weight: 600; }
+  .danger-sub { margin: 2px 0 0; font-size: .875rem; color: #4F4A43; max-width: 34ch; }
+  .danger-btn { border-color: #B3261E; color: #B3261E; }
+  .danger-btn:hover { background: #FCF0EE; }
+  .danger-status { margin: 0; font-size: .875rem; font-weight: 500; color: #1D1B18; }
+  .danger-status:empty { display: none; }
+
+  /* The dialog: names the thing, counts what goes, says what stays. */
+  .wipe {
+    width: min(100% - 32px, 480px);
+    padding: 0;
+    border: 0;
+    border-radius: 20px;
+    background: #FFFFFF;
+    color: #1D1B18;
+    box-shadow: 0 30px 80px -20px rgba(29, 27, 24, .45);
+  }
+  .wipe::backdrop { background: rgba(29, 27, 24, .5); }
+  .wipe-body { display: grid; gap: 18px; padding: 26px; }
+  .wipe-title { margin: 0; font-size: 1.3125rem; line-height: 1.25; font-weight: 600; letter-spacing: -.01em; overflow-wrap: anywhere; }
+  .wipe-facts { display: grid; gap: 12px; }
+  .wipe-k { margin: 0 0 4px; font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #5A544B; }
+  .wipe-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; color: #4F4A43; }
+  .wipe-list li { position: relative; padding-left: 22px; }
+  .wipe-list li::before { position: absolute; left: 0; font-weight: 700; }
+  .wipe-list.is-gone li::before { content: "×"; color: #B3261E; }
+  .wipe-list.is-kept li::before { content: "✓"; color: #2D6A3E; }
+  .wipe-list b { color: #1D1B18; font-weight: 600; }
+
+  .wipe-confirm { display: grid; gap: 6px; }
+  .wipe-confirm label { font-weight: 500; }
+  .wipe-confirm code {
+    padding: 1px 6px; border-radius: 6px;
+    background: #F2EFEA; color: #1D1B18;
+    font: 500 .9375em/1.4 "Geist Mono", ui-monospace, monospace;
+    user-select: all;                    /* one click selects it for copying */
+  }
+  .wipe-confirm input {
+    height: 48px; padding: 0 14px;
+    border: 1.5px solid #857E73; border-radius: 12px;
+    background: #FFFFFF; color: inherit;
+    font: 400 1rem/1 "Geist Mono", ui-monospace, monospace;
+  }
+  .wipe-confirm input[aria-invalid="true"] { border-color: #B3261E; }
+  .wipe-error {
+    display: flex; gap: 6px; margin: 0;
+    font-size: .875rem; font-weight: 500; color: #B3261E;
+  }
+  .wipe-error[hidden] { display: none; }
+  .wipe-error::before {
+    content: "!"; flex: none; display: grid; place-items: center; margin-top: .15em;
+    width: 1rem; height: 1rem; border-radius: 50%;
+    background: #B3261E; color: #FFFFFF; font-weight: 700; font-size: .6875rem;
+  }
+
+  .wipe-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+  .wipe-go { border-color: #B3261E; background: #B3261E; color: #FFFFFF; }
+  .wipe-go:hover { background: #8F1D17; border-color: #8F1D17; }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #18 · @zellap.app</p>
+  <h1>Destructive actions</h1>
+  <p class="demo-lede">Delete lives in its own Danger zone, the dialog counts exactly what goes, you type the name to confirm (paste is fine), and you still get 30 days to restore.</p>
+
+  <section class="ws" aria-labelledby="ws-title">
+    <h2 class="ws-title" id="ws-title">Workspace settings</h2>
+    <div class="ws-field">
+      <label for="ws-name">Workspace name</label>
+      <div class="ws-line">
+        <input id="ws-name" value="Northwind Studio" autocomplete="off">
+        <button class="ws-btn" type="button">Save</button>
+      </div>
+    </div>
+
+    <section class="danger" aria-labelledby="danger-title"
+             data-dialog="delete-ws" data-purge="12 Dec 2026">
+      <h3 class="danger-title" id="danger-title">Danger zone</h3>
+      <div class="danger-row">
+        <div>
+          <p class="danger-what">Delete this workspace</p>
+          <p class="danger-sub">12 projects, 340 files, 3 members. You get 30 days to restore it.</p>
+        </div>
+        <button class="danger-btn" type="button" aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>
+          Delete workspace…
+        </button>
+      </div>
+      <div class="danger-row" data-when="scheduled" hidden>
+        <div>
+          <p class="danger-what">Pending deletion</p>
+          <p class="danger-sub">Members have lost access. Restore brings everything back.</p>
+        </div>
+        <button class="restore-btn" type="button">Restore workspace</button>
+      </div>
+      <p class="danger-status" role="status"></p>
+    </section>
+  </section>
+
+  <dialog class="wipe" id="delete-ws"
+          aria-labelledby="delete-ws-title"
+          aria-describedby="delete-ws-facts">
+    <form class="wipe-body" method="dialog" novalidate>
+      <h2 class="wipe-title" id="delete-ws-title">
+        Delete “Northwind Studio”?
+      </h2>
+      <div class="wipe-facts" id="delete-ws-facts">
+        <div>
+          <p class="wipe-k">Goes now</p>
+          <ul class="wipe-list is-gone">
+            <li><b>12 projects, 340 files</b></li>
+            <li><b>3 members</b> lose access</li>
+          </ul>
+        </div>
+        <div>
+          <p class="wipe-k">Stays</p>
+          <ul class="wipe-list is-kept">
+            <li><b>Invoices.</b> Billing stops today.</li>
+            <li><b>30 days to restore,</b> until 12 Dec 2026.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="wipe-confirm">
+        <label for="delete-ws-name">
+          Type <code>northwind-studio</code> to confirm
+        </label>
+        <input id="delete-ws-name" data-match="northwind-studio"
+               autocomplete="off" spellcheck="false" autocapitalize="off"
+               aria-describedby="delete-ws-error">
+        <p class="wipe-error" id="delete-ws-error" hidden></p>
+      </div>
+      <div class="wipe-actions">
+        <button class="wipe-cancel" type="button">Cancel</button>
+        <button class="wipe-go" type="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>
+          Delete workspace
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <p class="demo-notes">Esc or Cancel changes nothing. A wrong name tells you why. Paste works.<br>After deleting: "Restore workspace" for 30 days, one click.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  for (const zone of document.querySelectorAll('.danger')) {
+    const dialog = document.getElementById(zone.dataset.dialog);
+    const form = dialog.querySelector('form');
+    const field = dialog.querySelector('[data-match]');
+    const error = dialog.querySelector('.wipe-error');
+    const openBtn = zone.querySelector('.danger-btn');
+    const restoreBtn = zone.querySelector('.restore-btn');
+    const [live, gone] = zone.querySelectorAll('.danger-row');
+    const status = zone.querySelector('.danger-status');
+    const name = field.dataset.match;
+
+    const setError = (msg) => {
+      error.textContent = msg;
+      error.hidden = !msg;
+      field.setAttribute('aria-invalid', String(!!msg));
+    };
+    const setState = (scheduled) => {
+      live.hidden = scheduled;
+      gone.hidden = !scheduled;
+      zone.dataset.state = scheduled ? 'scheduled' : '';
+    };
+
+    openBtn.addEventListener('click', () => {
+      field.value = '';
+      setError('');
+      dialog.showModal();
+      // Start in the field: typing the name is the only way on,
+      // and Enter deletes nothing until it matches.
+      field.focus();
+    });
+    dialog.querySelector('.wipe-cancel')
+      .addEventListener('click', () => dialog.close());
+
+    // Never a disabled button: a mismatch says why.
+    form.addEventListener('submit', (e) => {
+      const typed = field.value.trim();  // pasted spaces are ok
+      if (typed !== name) {
+        e.preventDefault();
+        setError(typed
+          ? `That doesn't match. Type ${name} exactly.`
+          : `Type ${name} to confirm.`);
+        field.focus();
+        return;
+      }
+      const until = zone.dataset.purge;
+      setState(true);
+      status.textContent = `Scheduled for deletion on ${until}.`
+        + ' Restore it any time before then.';
+      zone.dispatchEvent(new CustomEvent('delete', { bubbles: true }));
+    });
+    field.addEventListener('input', () => {
+      if (field.getAttribute('aria-invalid') === 'true'
+          && field.value.trim() === name) setError('');
+    });
+
+    // Deleted → focus Restore. Esc or Cancel → back to Delete.
+    dialog.addEventListener('close', () => {
+      (zone.dataset.state ? restoreBtn : openBtn).focus();
+    });
+
+    restoreBtn.addEventListener('click', () => {
+      setState(false);
+      status.textContent = 'Workspace restored. Nothing was lost.';
+      openBtn.focus();
+      zone.dispatchEvent(new CustomEvent('restore', { bubbles: true }));
+    });
+  }
+</script>
+</body>
+</html>

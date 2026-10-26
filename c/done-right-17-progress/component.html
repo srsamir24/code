@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Progress that doesn't lie · Done right #17 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 540px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 20px; }
+  .demo-controls button { min-height: 44px; padding: 0 18px; border: 1.5px solid #1D1B18; border-radius: 12px; background: #1D1B18; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer; }
+  .demo-controls button:focus-visible, .demo-controls input:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 3px; }
+  .demo-controls label { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+  .demo-controls input { width: 20px; height: 20px; accent-color: #1D1B18; }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+
+  .job {
+    display: grid;
+    gap: 12px;
+    padding: 24px;
+    border: 1px solid rgba(40, 32, 20, .14);
+    border-radius: 20px;
+    background: #FFFFFF;
+    color: #1D1B18;
+  }
+  .job-title { margin: 0; font-size: 1.125rem; font-weight: 600; }
+  .job-title:focus { outline: none; }
+
+  /* Native <progress>, restyled. */
+  .job-bar {
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 12px;
+    border: 1px solid #857E73;          /* 4.0:1 on white */
+    border-radius: 99px;
+    background: #EFEBE4;
+    overflow: hidden;
+    color: #1D1B18;
+  }
+  .job-bar::-webkit-progress-bar { background: transparent; }
+  .job-bar::-webkit-progress-value { background: #1D1B18; border-radius: 99px; }
+  .job-bar::-moz-progress-bar { background: #1D1B18; border-radius: 99px; }
+  .job[data-state="done"] .job-bar::-webkit-progress-value { background: #2D6A3E; }
+  .job[data-state="done"] .job-bar::-moz-progress-bar { background: #2D6A3E; }
+
+  /* Unknown length: moving stripes, never a fake number. */
+  .job-bar:indeterminate {
+    background: repeating-linear-gradient(-45deg,
+      #857E73 0 8px, #EFEBE4 8px 16px) 0 0 / 22.63px 100%;
+    animation: job-stripes .8s linear infinite;
+  }
+  @keyframes job-stripes { to { background-position: 22.63px 0; } }
+
+  .job-detail {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0;
+    color: #4F4A43;
+    font-size: .9375rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .job-alert { margin: 0; color: #B3261E; font-weight: 500; font-size: .9375rem; }
+  .job-alert:empty { display: none; }
+
+  .job-retry,
+  .job-download {
+    justify-self: start;
+    display: inline-grid;
+    place-items: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1.5px solid #1D1B18;
+    border-radius: 12px;
+    background: #FFFFFF;
+    color: #1D1B18;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .job-retry[hidden], .job-download[hidden] { display: none; }
+  .job-retry:hover, .job-download:hover { background: #F2EFEA; }
+  .job-retry:focus-visible,
+  .job-download:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .job-bar:indeterminate { animation: none; }   /* the words stay */
+  }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #17 · @zellap.app</p>
+  <h1>Progress that doesn't lie</h1>
+  <p class="demo-lede">Stripes until the size is known, then the real number. It never goes backwards, estimates only once it has data, announces milestones instead of every tick, and says so when it stalls.</p>
+
+  <section class="job" aria-labelledby="job-title"
+           data-files="8" data-stall="10"
+           data-done-title="Export finished">
+    <h2 class="job-title" id="job-title"
+        tabindex="-1">Exporting 8 photos</h2>
+    <progress class="job-bar" max="100"
+              aria-labelledby="job-title"
+              aria-describedby="job-detail"></progress>
+    <p class="job-detail" id="job-detail">
+      <span class="job-files">Preparing…</span>
+      <span class="job-eta"></span>
+    </p>
+    <p class="job-alert" role="alert"></p>
+    <button class="job-retry" type="button" hidden>Retry</button>
+    <a class="job-download" href="#" download hidden>Download photos.zip</a>
+    <p class="job-live sr-only" role="status"></p>
+  </section>
+
+  <div class="demo-controls">
+    <button type="button" id="run">Run a fake export</button>
+    <label><input type="checkbox" id="stall"> Stall it</label>
+  </div>
+  <p class="demo-notes">Tick "Stall it" mid-way: after 10 s it says so and offers Retry.<br>Your app feeds it: job.dispatchEvent(new CustomEvent('progress', {detail: {loaded, size, done}})).</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  // Feed it events: 'start', 'progress' {loaded, size, done}, 'done', 'fail'.
+  const MILESTONES = [25, 50, 75];
+
+  // Round the estimate. Nobody believes "1 min 47 s".
+  const eta = (s) =>
+    s < 10 ? 'A few seconds left'
+    : s < 60 ? 'Less than a minute left'
+    : s < 5400 ? `About ${Math.round(s / 60)} min left`
+    : `About ${Math.round(s / 3600)} h left`;
+
+  for (const job of document.querySelectorAll('.job')) {
+    const bar = job.querySelector('.job-bar');
+    const title = job.querySelector('.job-title');
+    const files = job.querySelector('.job-files');
+    const left = job.querySelector('.job-eta');
+    const alert = job.querySelector('.job-alert');
+    const retry = job.querySelector('.job-retry');
+    const download = job.querySelector('.job-download');
+    const live = job.querySelector('.job-live');
+    const total = Number(job.dataset.files);
+    const stallAfter = Number(job.dataset.stall) * 1000;
+    const runTitle = title.textContent;
+    let s, timer;
+
+    const problem = (msg) => {
+      job.dataset.state = 'stalled';
+      alert.textContent = msg;
+      left.textContent = '';
+      retry.hidden = false;
+    };
+    const clearProblem = () => {
+      if (document.activeElement === retry) title.focus();
+      alert.textContent = '';
+      retry.hidden = true;
+    };
+    const watch = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => problem(
+        `No progress for ${stallAfter / 1000} s. Check your connection.`
+      ), stallAfter);
+    };
+    const freshEstimate = () => Object.assign(s, { rate: null, n: 0, t0: null, last: null });
+
+    // No size yet: no value = indeterminate.
+    job.addEventListener('start', () => {
+      s = { pct: -1, said: 0 };
+      freshEstimate();
+      clearTimeout(timer);
+      clearProblem();
+      job.dataset.state = 'running';
+      title.textContent = runTitle;
+      bar.removeAttribute('value');
+      files.textContent = 'Preparing…';
+      left.textContent = '';
+      download.hidden = true;
+    });
+
+    job.addEventListener('progress', (e) => {
+      const { loaded, size, done, at = performance.now() } = e.detail;
+      const pct = Math.min(loaded / size * 100, 99.9);
+      if (pct <= s.pct) return; // never go backwards
+
+      // Smoothed speed, so the estimate doesn't jump with every chunk.
+      if (s.last) {
+        const r = (loaded - s.last.loaded) / (at - s.last.at);
+        s.rate = s.rate === null ? r : 0.3 * r + 0.7 * s.rate;
+        s.n++;
+      } else s.t0 = at;
+      s.last = { loaded, at };
+      s.pct = pct;
+      if (job.dataset.state === 'stalled') clearProblem();
+      job.dataset.state = 'running';
+
+      const shown = Math.floor(pct); // 99% until done
+      bar.value = pct;
+      files.textContent = `${done} of ${total} files · ${shown}%`;
+      left.textContent = s.n >= 3 && at - s.t0 >= 3000
+        ? eta((size - loaded) / s.rate / 1000)
+        : 'Estimating…';
+
+      // Announce milestones, not every tick.
+      const m = MILESTONES.filter((x) => shown >= x).pop() || 0;
+      if (m > s.said) {
+        s.said = m;
+        live.textContent = `${m}% done, ${done} of ${total} files.`;
+      }
+      watch();
+    });
+
+    job.addEventListener('done', () => {
+      clearTimeout(timer);
+      clearProblem();
+      job.dataset.state = 'done';
+      title.textContent = job.dataset.doneTitle;
+      bar.value = 100;
+      files.textContent = `${total} of ${total} files · 100%`;
+      left.textContent = '';
+      download.hidden = false;
+      live.textContent = `${job.dataset.doneTitle}. ${total} of ${total} files ready.`;
+    });
+
+    job.addEventListener('fail', () => {
+      clearTimeout(timer);
+      problem(`Export stopped at ${Math.floor(s.pct)}%. Nothing is lost.`);
+    });
+
+    retry.addEventListener('click', () => {
+      clearProblem();
+      job.dataset.state = 'running';
+      freshEstimate();                   // old speed is stale
+      left.textContent = 'Estimating…';
+      job.dispatchEvent(new CustomEvent('retry'));
+      watch();
+    });
+
+    job.dispatchEvent(new CustomEvent('start'));
+  }
+</script>
+
+<!-- Demo page only: a fake export that feeds the component. -->
+<script>
+  (() => {
+    const job = document.querySelector('.job');
+    const stall = document.getElementById('stall');
+    const size = 80e6;
+    let loaded = 0, tick;
+    const step = () => {
+      if (!stall.checked) {
+        loaded = Math.min(size, loaded + size * (0.009 + Math.random() * 0.006));
+        job.dispatchEvent(new CustomEvent('progress', { detail: { loaded, size, done: Math.floor(loaded / size * 8) } }));
+        if (loaded >= size) { clearInterval(tick); job.dispatchEvent(new CustomEvent('done')); return; }
+      }
+    };
+    document.getElementById('run').addEventListener('click', () => {
+      clearInterval(tick);
+      loaded = 0;
+      job.dispatchEvent(new CustomEvent('start'));
+      setTimeout(() => { tick = setInterval(step, 200); }, 1500);
+    });
+    job.addEventListener('retry', () => { stall.checked = false; });
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shared Element Transition</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>/* inlined from ../_shared/reel.css */
+/* Shared look for "Interaction #N" pages: paper tokens + the Reel overlay layer.
+   The overlay layer only shows with ?capture (html.reel). Fonts: General Sans + Geist Mono. */
+:root {
+  --paper: #ECE8E0;
+  --card: #FAF8F4;
+  --ink: #1D1B18;
+  --ink-2: #57524A;
+  --muted: #9A948A;
+  --hair: rgba(40, 32, 20, .10);
+  --hair-strong: rgba(40, 32, 20, .16);
+  --accent: #D9502B;
+  --code-bg: #1E1C19;
+  --sans: "General Sans", ui-sans-serif, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(1200px 900px at 50% 38%, rgba(255,255,255,.55), transparent 70%),
+    radial-gradient(900px 700px at 50% 110%, rgba(120,100,70,.10), transparent 70%);
+}
+.stage { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+
+.card {
+  position: relative;
+  background: linear-gradient(180deg, #FCFBF8 0%, var(--card) 100%);
+  border-radius: 36px;
+  border: 1px solid var(--hair);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 1px 1px rgba(40,30,15,.04),
+    0 6px 12px -4px rgba(40,30,15,.06),
+    0 30px 60px -20px rgba(40,30,15,.16),
+    0 70px 120px -40px rgba(40,30,15,.18);
+}
+
+/* ---------- reel overlays (capture mode only) ---------- */
+.hook, .handle, .chip, .end, .codecard, #cursor, .big, .tint { display: none; pointer-events: none; }
+.reel body { user-select: none; -webkit-user-select: none; }
+.reel .stage { width: 1080px; height: 1920px; display: block; }
+.reel .card { position: absolute; left: var(--card-left, 80px); top: var(--card-top, 640px); scale: var(--card-scale, 1.1); transform-origin: 0 0; }
+.reel .hook, .reel .handle, .reel .chip, .reel .end, .reel .codecard, .reel #cursor, .reel .big, .reel .tint { display: block; }
+
+.tint { position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(900px 1300px at 50% 46%, transparent 50%, rgba(150,95,50,.10) 100%), rgba(230,170,110,.035); }
+.handle {
+  position: absolute; left: 0; right: 0; top: 300px; text-align: center;
+  font-family: var(--mono); font-size: 30px; color: var(--muted); letter-spacing: .02em;
+}
+.handle b { font-weight: 500; color: var(--accent); }
+.hook {
+  position: absolute; left: 80px; right: 80px; top: 356px; text-align: center;
+  font-size: 96px; font-weight: 600; letter-spacing: -.035em; line-height: 1.02; color: var(--ink);
+  text-wrap: balance;
+}
+.hook em { font-style: normal; color: var(--accent); }
+.chip { position: absolute; left: 0; right: 0; top: var(--chip-top, 1400px); text-align: center; }
+.chip span {
+  display: inline-flex; align-items: center; gap: 14px;
+  font-family: var(--mono); font-size: 28px; color: var(--ink-2);
+  padding: 14px 26px; border-radius: 999px; border: 1px solid var(--hair-strong);
+  background: rgba(250,248,244,.7);
+}
+.chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+.chip b { font-weight: 400; }
+.big { position: absolute; left: 0; right: 0; top: var(--big-top, 1440px); text-align: center; opacity: 0;
+  font-family: var(--mono); font-weight: 300; font-size: 132px; letter-spacing: -.05em; color: var(--accent); line-height: 1; }
+.big small { font-size: 30px; letter-spacing: .02em; color: var(--ink-2); font-weight: 400; display: block; margin-top: 10px; }
+.end {
+  position: absolute; left: 120px; right: 120px; top: var(--end-top, 1160px); text-align: center; opacity: 0;
+  font-size: 42px; font-weight: 500; letter-spacing: -.02em; line-height: 1.25; color: var(--ink);
+}
+.end b { font-weight: 600; color: var(--accent); }
+.end span { color: var(--muted); }
+.codecard {
+  position: absolute; left: 70px; top: var(--code-top, 640px); width: 890px; opacity: 0;
+  background: var(--code-bg); color: #E9E4DA; border-radius: 36px;
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 40px 90px -30px rgba(30,20,10,.45), 0 10px 24px -8px rgba(30,20,10,.25);
+  padding: 44px 46px 50px;
+}
+.codecard .file { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 25px; color: #8C857A; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 30px; }
+.codecard pre { font-family: var(--mono); font-size: 30px; line-height: 1.7; white-space: pre; margin: 0 -18px; }
+.codecard .ln { display: block; padding: 0 18px; border-radius: 10px; transition: none; }
+.codecard .ln.on { background: rgba(255,255,255,.07); box-shadow: inset 4px 0 0 var(--accent); }
+.c { color: #A39C90; } .k { color: #E8A27F; } .n { color: #F2C66D; } .o { color: #9C958A; }
+.hl.on { color: #fff; background: rgba(217,80,43,.30); border-radius: 6px; padding: 0 4px; margin: 0 -4px; }
+
+#cursor { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 50; pointer-events: none; }
+#cursor .tip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  background: rgba(29,27,24,.16); border: 2.5px solid rgba(29,27,24,.62);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.75), 0 8px 18px rgba(30,20,10,.22); }
+#cursor.down .tip { transform: scale(.88); background: rgba(29,27,24,.26); border-color: rgba(29,27,24,.8); }
+#cursor .rip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  border: 3px solid var(--accent); opacity: 0; }
+</style>
+<style>
+  :root { --card-top: 610px; --card-left: 68px; --card-scale: 1.18; --chip-top: 1505px; --big-top: 1490px; --code-top: 640px; --end-top: 1180px;
+          --spring: cubic-bezier(.5, 1.25, .5, 1); }
+  .card { width: 800px; height: 720px; overflow: hidden; contain: layout paint; }
+  .view[hidden] { display: none !important; }
+
+  /* ---------- grid ---------- */
+  .top { position: absolute; left: 56px; right: 56px; top: 44px; display: flex; justify-content: space-between; align-items: baseline; }
+  .top h2 { font-size: 44px; font-weight: 600; letter-spacing: -.03em; }
+  .top span { font-family: var(--mono); font-size: 21px; color: var(--muted); }
+  .grid { position: absolute; left: 56px; top: 146px; display: grid; grid-template-columns: repeat(3, 200px); column-gap: 44px; row-gap: 26px; }
+  .tile { all: unset; display: block; cursor: pointer; width: 200px; -webkit-tap-highlight-color: transparent; }
+  .tile:focus-visible .sleeve { outline: 3px solid var(--accent); outline-offset: 5px; }
+  .tile .t { margin-top: 13px; font-size: 22px; font-weight: 500; letter-spacing: -.01em; color: var(--ink); width: fit-content; white-space: nowrap; }
+  .tile .a { margin-top: 3px; font-family: var(--mono); font-size: 17px; color: var(--muted); }
+
+  /* the sleeve: printed card stock, a little ring wear, a soft shadow */
+  .sleeve { position: relative; width: 200px; height: 200px; border-radius: 6px; overflow: hidden;
+            box-shadow: 0 1px 1px rgba(30,20,10,.10), 0 10px 20px -10px rgba(30,20,10,.35), 0 2px 0 rgba(255,255,255,.4) inset; }
+  .sleeve svg { display: block; width: 100%; height: 100%; }
+  .sleeve::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(circle at 50% 50%, transparent 41%, rgba(255,255,255,.10) 42.5%, transparent 44%, transparent 45.5%, rgba(0,0,0,.05) 46.5%, transparent 48%),
+      linear-gradient(135deg, rgba(255,255,255,.16), transparent 40%, rgba(0,0,0,.06));
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+
+  /* ---------- detail ---------- */
+  .back { all: unset; position: absolute; left: 50px; top: 38px; width: 60px; height: 60px; border-radius: 50%; cursor: pointer;
+          display: grid; place-items: center; box-shadow: inset 0 0 0 1px var(--hair-strong); background: rgba(255,255,255,.5); }
+  .back:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+  .crumb { position: absolute; left: 132px; top: 56px; font-family: var(--mono); font-size: 21px; color: var(--muted); }
+  .hero { position: absolute; left: 56px; top: 128px; width: 340px; height: 340px; }
+  .hero .sleeve { width: 340px; height: 340px; position: absolute; inset: 0; z-index: 2; border-radius: 8px;
+                  box-shadow: 0 1px 1px rgba(30,20,10,.10), 0 22px 40px -18px rgba(30,20,10,.45), 0 2px 0 rgba(255,255,255,.4) inset; }
+  .vinyl { position: absolute; left: 12px; top: 12px; width: 316px; height: 316px; border-radius: 50%; z-index: 1; opacity: 0;
+           background:
+             radial-gradient(circle, transparent 0 33%, rgba(255,255,255,.035) 33.4% 33.8%, transparent 34.2%),
+             repeating-radial-gradient(circle, #151412 0 1.2px, #1E1C1A 1.6px 2.6px),
+             #171513;
+           box-shadow: 0 16px 30px -14px rgba(20,10,0,.6), inset 0 0 0 1px rgba(255,255,255,.05); }
+  .vinyl .sheen { position: absolute; inset: 0; border-radius: 50%;
+           background: conic-gradient(from 20deg, transparent 0 8%, rgba(255,255,255,.13) 14%, transparent 22% 52%, rgba(255,255,255,.10) 62%, transparent 70%); }
+  .vinyl .label { position: absolute; left: 50%; top: 50%; width: 104px; height: 104px; margin: -52px 0 0 -52px; border-radius: 50%;
+           background: var(--lab, #D9502B); box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+  .vinyl .label::before { content: ""; position: absolute; left: 18px; right: 18px; top: 28px; height: 3px; border-radius: 2px; background: rgba(255,250,240,.55);
+           box-shadow: 0 9px 0 rgba(255,250,240,.35), 0 40px 0 rgba(255,250,240,.35); }
+  .vinyl .label::after { content: ""; position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #ECE8E0; }
+  .info { position: absolute; left: 56px; right: 56px; top: 500px; }
+  .info .t { font-size: 54px; font-weight: 600; letter-spacing: -.035em; line-height: 1; width: fit-content; white-space: nowrap; }
+  .info .a { margin-top: 12px; font-family: var(--mono); font-size: 22px; color: var(--ink-2); }
+  .tracks { margin-top: 24px; border-top: 1px solid var(--hair); font-family: var(--mono); font-size: 19px; color: var(--muted); }
+  .tracks div { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--hair); }
+  .tracks b { font-weight: 400; color: var(--ink-2); margin-right: 18px; }
+  .side { position: absolute; right: 56px; top: 140px; width: 150px; text-align: right; font-family: var(--mono); font-size: 19px; color: var(--muted); line-height: 1.7; }
+  .side .p { font-size: 46px; font-weight: 300; letter-spacing: -.05em; color: var(--ink); line-height: 1; margin-bottom: 18px; }
+  .side .buy { margin-top: 22px; display: inline-block; font: 500 22px var(--sans); color: #FAF8F4; background: var(--ink); border-radius: 999px; padding: 12px 22px; }
+
+  /* ---------- the transition ---------- */
+  ::view-transition-group(*) { animation-duration: 800ms; animation-timing-function: var(--spring); }
+  .views { position: absolute; inset: 0; view-transition-name: page; }
+  ::view-transition-old(root) { display: none; }
+  ::view-transition-new(root) { animation: none; }
+  /* the page swap is quick and quiet, so the 0.6 s sleeve flight is the whole story (no long dissolve) */
+  ::view-transition-old(page) { animation: 90ms linear both recede; }
+  ::view-transition-new(page) { animation: 150ms cubic-bezier(.2,.7,.2,1) 50ms both arrive; }   /* nearly back to back: no double exposure, no blank flash */
+  /* the finger stays live and on top of the morph */
+  #cursor { view-transition-name: finger; }
+  ::view-transition-group(finger), ::view-transition-new(finger) { animation: none; }
+  ::view-transition-old(finger) { display: none; }
+  ::view-transition-old(sleeve), ::view-transition-new(sleeve),
+  ::view-transition-old(title), ::view-transition-new(title) { animation: none; mix-blend-mode: normal; width: 100%; height: 100%; }
+  /* one snapshot per element, never a crossfade of two (no doubled text): always the big one, the hero, scaled */
+  html[data-dir="open"]::view-transition-old(sleeve), html[data-dir="close"]::view-transition-new(sleeve),
+  html[data-dir="open"]::view-transition-old(title), html[data-dir="close"]::view-transition-new(title) { display: none; }
+  @keyframes recede { to { opacity: 0; transform: scale(.97); filter: blur(2px); } }
+  @keyframes arrive { from { opacity: 0; transform: translateY(14px); } }
+  @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="tint" id="tint"></div>
+  <div class="handle"><b>Interaction #15</b> · @zellap.app</div>
+  <h1 class="hook">The thumbnail <em>becomes</em> the page.</h1>
+
+  <div class="card" id="card">
+    <div class="views" id="views">
+    <section class="view" id="grid">
+      <div class="top"><h2>Crate 03</h2><span>6 records · by mood</span></div>
+      <div class="grid" id="tiles"></div>
+    </section>
+    <section class="view" id="detail" hidden>
+      <button class="back" id="back" aria-label="Back to the crate">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M13.5 4.5L7 11l6.5 6.5" stroke="#1D1B18" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <span class="crumb" id="crumb">crate 03 / 03</span>
+      <div class="hero"><div class="vinyl" id="vinyl"><i class="sheen" id="sheen"></i><i class="label" id="label"></i></div><div class="sleeve" id="heroSleeve"></div></div>
+      <div class="side"><div class="p" id="price">€28</div><div id="meta1">LP · 1979</div><div>33⅓ rpm</div><div id="meta2">8 tracks</div><span class="buy">Add</span></div>
+      <div class="info"><div class="t" id="heroTitle"></div><div class="a" id="heroArtist"></div>
+        <div class="tracks" id="tracks"></div></div>
+    </section>
+    </div>
+    <span class="sr" role="status" aria-live="polite" id="live"></span>
+  </div>
+
+  <div class="codecard" id="code">
+    <div class="file"><span>open.js</span><span>View Transitions API</span></div>
+<pre><span class="ln">thumb.style.viewTransitionName <span class="o">=</span> <span class="n">'sleeve'</span>;</span><span class="ln"><span class="k">document</span>.<span class="hl">startViewTransition</span>(() <span class="o">=&gt;</span> {</span><span class="ln">  thumb.style.viewTransitionName <span class="o">=</span> <span class="n">''</span>;</span><span class="ln">  showDetail(record); <span class="c">// hero: 'sleeve'</span></span><span class="ln">});</span><span class="ln"><span class="k">::view-transition-group</span>(*) {</span><span class="ln">  animation: <span class="n">.8s</span> <span class="hl">cubic-bezier(<span class="n">.5</span>,<span class="n">1.25</span>,<span class="n">.5</span>,<span class="n">1</span>)</span>; }</span></pre>
+  </div>
+
+  <div class="chip" id="chip"><span><i></i><b id="chipText">1× real time</b></span></div>
+  <div class="big" id="big">0.5×<small>slow motion</small></div>
+  <p class="end" id="end">Comment <b>CODE</b> for the source.<br><span>Follow for more.</span></p>
+  <div id="cursor"><div class="tip"></div></div>
+</div>
+
+<script>/* inlined from ../_shared/reel.js */
+// Shared runtime for "Interaction #N" pages.
+// Normal use: a fixed-step rAF loop drives the component (stable at any refresh rate).
+// ?capture: the recorder drives time frame by frame via __tick(dt), and the overlay via __overlay(o).
+window.Reel = function ({ step, render, DT = 1 / 1440, geom = () => ({}) }) {
+  const CAPTURE = new URLSearchParams(location.search).has('capture');
+  if (CAPTURE) document.documentElement.classList.add('reel');
+  const $ = id => document.getElementById(id);
+  const advance = seconds => {           // whole fixed steps only, so the sim never depends on frame timing
+    const n = Math.round(seconds / DT);
+    for (let i = 0; i < n; i++) step(DT);
+  };
+  render();
+  if (!CAPTURE) {
+    let last = performance.now(), acc = 0;
+    const frame = now => {
+      acc += Math.min(0.05, (now - last) / 1000); last = now;
+      while (acc >= DT) { step(DT); acc -= DT; }
+      render(); requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    return CAPTURE;
+  }
+  const cur = $('cursor');
+  cur.style.transform = 'translate(-200px,-200px)';
+  // a press ring that grows out of the fingertip, on simulated time (so it slows down in slow motion too)
+  const rip = document.createElement('i'); rip.className = 'rip'; cur.appendChild(rip);
+  let ripT = 9;
+  addEventListener('pointerdown', () => { cur.classList.add('down'); ripT = 0; }, true);
+  addEventListener('pointerup', () => cur.classList.remove('down'), true);
+  const drawRip = () => {
+    const u = Math.min(1, ripT / 0.45), e = 1 - (1 - u) ** 3;
+    rip.style.transform = `scale(${(0.9 + 0.9 * e).toFixed(4)})`;
+    rip.style.opacity = (u < 1 ? 0.55 * (1 - u) : 0).toFixed(3);
+  };
+  drawRip();
+  window.__tick = sec => { advance(sec); ripT += sec; drawRip(); render(); };
+  window.__geom = geom;
+  window.__overlay = o => {
+    // sequential, never two text layers at once: card out, then code in (and back)
+    const card = $('card'), code = $('code');
+    card.style.opacity = o.card;
+    card.style.transform = `translateY(${(1 - o.card) * -18}px)`;
+    code.style.opacity = o.code;
+    code.style.transform = `translateY(${(1 - o.code) * 22}px)`;
+    $('chip').style.opacity = o.chipA ?? o.card * (1 - o.big);
+    $('end').style.opacity = o.code;
+    $('big').style.opacity = o.big; $('big').style.transform = `scale(${0.94 + 0.06 * o.big})`;
+    $('tint').style.opacity = o.tint;
+    document.querySelectorAll('.hl').forEach(el => el.classList.toggle('on', !!o.hl));
+    document.querySelectorAll('#code .ln').forEach((el, i) => el.classList.toggle('on', i === o.line));
+    cur.style.opacity = o.cursor ?? o.card;
+    $('chipText').textContent = o.chip;
+    if (o.cx !== undefined) cur.style.transform = `translate(${o.cx}px, ${o.cy}px)`;
+  };
+  return CAPTURE;
+};
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const CAPTURE = new URLSearchParams(location.search).has('capture');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const card = $('card');
+  // sleeves are drawn, not photographed: six small compositions in one palette
+  const C = { cream: '#EFE7D8', ink: '#1F1C19', orange: '#D9502B', sage: '#93A68C', cobalt: '#2E4A9E', mustard: '#D7A23C', rose: '#E3B5A4' };
+  const RECORDS = [
+    { t: 'Slow Weather', a: 'The Quiet Arcs', y: 1979, n: 8, p: 28, lab: C.orange, art: `<rect width="200" height="200" fill="${C.mustard}"/>${[...Array(9)].map((_, i) => `<circle cx="0" cy="200" r="${30 + i * 19}" fill="none" stroke="${C.ink}" stroke-width="${5 - i * 0.35}"/>`).join('')}<circle cx="150" cy="52" r="14" fill="${C.orange}"/>` },
+    { t: 'Night Ferry', a: 'Harbour Lights', y: 1983, n: 10, p: 32, lab: C.cream, art: `<rect width="200" height="200" fill="${C.cobalt}"/><circle cx="100" cy="92" r="52" fill="${C.cream}"/><g fill="${C.cobalt}">${[...Array(6)].map((_, i) => `<rect x="40" y="${100 + i * 9}" width="120" height="${2 + i * 0.9}"/>`).join('')}</g><rect x="22" y="160" width="156" height="2" fill="${C.cream}" opacity=".6"/>` },
+    { t: 'Grid Theory', a: 'Ida Morrow', y: 1976, n: 7, p: 26, lab: C.orange, art: `<rect width="200" height="200" fill="${C.cream}"/>${[...Array(16)].map((_, i) => `<circle cx="${43 + (i % 4) * 38}" cy="${43 + (i >> 2) * 38}" r="${i === 9 ? 15 : 9}" fill="${i === 9 ? C.orange : C.ink}"/>`).join('')}` },
+    { t: 'Coastline', a: 'West Pier', y: 1981, n: 9, p: 30, lab: C.mustard, art: `<rect width="200" height="200" fill="${C.cream}"/><circle cx="100" cy="128" r="62" fill="${C.orange}"/><rect y="128" width="200" height="72" fill="${C.ink}"/><g fill="${C.cream}" opacity=".5">${[...Array(4)].map((_, i) => `<rect x="${40 + i * 6}" y="${142 + i * 12}" width="${120 - i * 12}" height="2"/>`).join('')}</g>` },
+    { t: 'Paper Cuts', a: 'Studio Fold', y: 1985, n: 11, p: 34, lab: C.ink, art: `<rect width="200" height="200" fill="${C.sage}"/><rect x="38" y="44" width="92" height="118" fill="${C.cream}" transform="rotate(-9 84 103)"/><rect x="76" y="58" width="88" height="104" fill="${C.orange}" transform="rotate(7 120 110)" opacity=".92"/><rect x="62" y="30" width="6" height="140" fill="${C.ink}" transform="rotate(14 65 100)"/>` },
+    { t: 'Signal', a: 'Low Orbit', y: 1988, n: 8, p: 29, lab: C.orange, art: `<rect width="200" height="200" fill="${C.ink}"/><g fill="${C.orange}">${[...Array(5)].map((_, i) => `<rect x="${-40 + i * 44}" y="-20" width="${14 - i * 2}" height="260" transform="rotate(32 100 100)"/>`).join('')}</g><circle cx="148" cy="150" r="20" fill="${C.cream}"/>` },
+  ];
+  const svg = r => `<svg viewBox="0 0 200 200" aria-hidden="true">${r.art}</svg>`;
+  const TRACKS = ['Opening', 'Long Light', 'Undertow', 'The Quiet Part', 'Harbour', 'Late Train'];
+
+  $('tiles').innerHTML = RECORDS.map((r, i) =>
+    `<button class="tile" data-i="${i}" aria-label="${r.t} by ${r.a}"><div class="sleeve">${svg(r)}</div><div class="t">${r.t}</div><div class="a">${r.a}</div></button>`).join('');
+  const tiles = [...document.querySelectorAll('.tile')];
+
+  // ---------- state, all on the fixed-step clock ----------
+  const DUR = 0.8;                      // the morph (group animation) length, s
+  let open = -1, vt = null, vtT = 0, vtOn = false, vinylX = 0, vinylV = 0, vinylTo = 0, spin = 0, pendingClose = false, closeT = 0;
+
+  function setDetail(i) {
+    const r = RECORDS[i];
+    $('heroSleeve').innerHTML = svg(r);
+    $('heroTitle').textContent = r.t; $('heroArtist').textContent = `${r.a} · ${r.y}`;
+    $('price').textContent = '€' + r.p; $('meta1').textContent = 'LP · ' + r.y; $('meta2').textContent = r.n + ' tracks';
+    $('crumb').textContent = `crate 03 / 0${i + 1}`;
+    $('label').style.setProperty('--lab', r.lab);
+    $('tracks').innerHTML = [0, 1].map(k => `<div><span><b>A${k + 1}</b>${TRACKS[(i + k * 3) % 6]}</span><span>${3 + (i + k) % 3}:${String(12 + i * 7 + k * 19).slice(-2)}</span></div>`).join('');
+  }
+  const names = (i, on) => {             // only the one being opened carries the shared names
+    const el = tiles[i];
+    el.querySelector('.sleeve').style.viewTransitionName = on ? 'sleeve' : '';
+    el.querySelector('.t').style.viewTransitionName = on ? 'title' : '';
+  };
+  $('heroSleeve').style.viewTransitionName = 'sleeve';
+  $('heroTitle').style.viewTransitionName = 'title';
+
+  function transition(update) {
+    const host = document;
+    if (!host.startViewTransition || reduce.matches) { update(); return; }
+    vtT = 0; vtOn = true;
+    vt = host.startViewTransition(update);
+  }
+  function openRecord(i) {
+    if (open >= 0 || vtOn) return;
+    open = i; setDetail(i); names(i, true); document.documentElement.dataset.dir = 'open';
+    transition(() => { names(i, false); $('grid').hidden = true; $('detail').hidden = false; $('live').textContent = RECORDS[i].t; });
+    $('back').focus({ preventScroll: true });
+  }
+  function closeRecord() {
+    if (open < 0 || vtOn || pendingClose) return;
+    pendingClose = true; closeT = 0; vinylTo = 0;           // the record slides home first, then the sleeve flies back
+  }
+  function doClose() {
+    const i = open; pendingClose = false; document.documentElement.dataset.dir = 'close';
+    $('vinyl').style.opacity = 0;
+    transition(() => { $('detail').hidden = true; $('grid').hidden = false; names(i, true); });
+    open = -1;
+    tiles[i].focus({ preventScroll: true });
+  }
+  tiles.forEach((el, i) => el.addEventListener('click', () => openRecord(i)));
+  $('back').addEventListener('click', closeRecord);
+  addEventListener('keydown', e => { if (e.key === 'Escape') closeRecord(); });
+
+  const vtAnims = () => document.getAnimations().filter(a => (a.effect?.pseudoElement || '').startsWith('::view-transition'));
+  function step(dt) {
+    if (vtOn) {
+      vtT += dt;
+      if (vtT >= DUR + 0.02) {
+        vtOn = false;
+        if (CAPTURE) vtAnims().forEach(a => a.finish());
+        if (open >= 0) { $('vinyl').style.opacity = 1; vinylTo = 1; }
+        else tiles.forEach((_, i) => names(i, false));
+      }
+    }
+    if (pendingClose) { closeT += dt; if (closeT >= 0.17) doClose(); }
+    // the record: a stiff spring out of the sleeve, a slower one back in; it turns while it's out
+    const k = vinylTo ? 260 : 900, c = vinylTo ? 20 : 52;
+    vinylV += (-(vinylX - vinylTo) * k - vinylV * c) * dt; vinylX += vinylV * dt;
+    spin += dt * 3.49 * Math.min(1, Math.max(0, vinylX));
+  }
+  function render() {
+    if (CAPTURE && vtOn) {                                   // the recorder owns the clock: pin every pseudo animation to sim time
+      const ms = vtT * 1000;
+      for (const a of vtAnims()) { a.pause(); const tm = a.effect.getComputedTiming(); a.currentTime = Math.min(ms, tm.endTime - 0.01); }
+    }
+    $('vinyl').style.transform = `translateX(${(vinylX * 168).toFixed(2)}px)`;
+    $('label').style.transform = $('sheen').style.transform = '';
+    $('label').style.transform = `rotate(${spin.toFixed(4)}rad)`;
+  }
+
+  Reel({
+    step, render,
+    geom: () => {
+      const r = card.getBoundingClientRect(), k = r.width / 800;
+      const tc = i => { const b = tiles[i].querySelector('.sleeve').getBoundingClientRect(); return [(b.left + b.width / 2 - r.left) / k, (b.top + b.height / 2 - r.top) / k]; };
+      return { left: r.left, top: r.top, k, tiles: RECORDS.map((_, i) => tc(i)), back: [80, 68] };
+    },
+  });
+  window.__vtSettle = async () => { if (vt && vtOn) { try { await vt.ready; } catch (e) {} await new Promise(r => requestAnimationFrame(() => r())); render(); } return 1; };
+  window.__state = () => ({ open, vtOn, vtT, vinylX, n: vtAnims().length });
+})();
+</script>
+</body>
+</html>

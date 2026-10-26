@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cookie banner · Done right #24 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px 360px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 540px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+  .demo-tags b { color: #1D1B18; font-weight: 500; }
+  .demo footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid rgba(40, 32, 20, .14); display: flex; gap: 16px; align-items: center; }
+  .demo-reset { font: inherit; font-size: .8125rem; color: #4F4A43; background: none; border: 0; text-decoration: underline; cursor: pointer; min-height: 48px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  /* The banner: a card in the corner, not a wall. The page stays usable. */
+  .consent {
+    position: fixed; left: 16px; bottom: 16px; z-index: 10;
+    width: min(100% - 32px, 440px);
+    padding: 22px;
+    border: 1px solid rgba(40, 32, 20, .14); border-radius: 20px;
+    background: #FFFFFF; color: #1D1B18;
+    box-shadow: 0 24px 60px -24px rgba(29, 27, 24, .45);
+  }
+  .consent[hidden], .consent [hidden] { display: none; }
+  .consent-title { margin: 0 0 6px; font-size: 1.125rem; line-height: 1.3; font-weight: 600; }
+  .consent-title:focus { outline: none; }
+  .consent-text { margin: 0; color: #4F4A43; font-size: .9375rem; }
+
+  /* Reject and Accept: one class, so same size, same colour, same weight. */
+  .consent-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .consent-btn {
+    min-height: 48px; padding: 0 16px;
+    border: 1.5px solid #1D1B18; border-radius: 12px;
+    background: #1D1B18; color: #FFFFFF;
+    font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .consent-btn:hover { background: #3A3631; border-color: #3A3631; }
+  .consent-more { grid-column: 1 / -1; background: #FFFFFF; color: #1D1B18; }
+  .consent-more:hover { background: #F2EFEA; border-color: #1D1B18; }
+  .consent-btn:focus-visible,
+  .consent-open:focus-visible,
+  .consent-opt input:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 3px; }
+
+  /* Choose: nothing optional is ticked until the person ticks it. */
+  .consent-choose { margin: 14px 0 0; padding: 0; border: 0; display: grid; }
+  .consent-choose legend { padding: 0; margin-bottom: 4px; font-weight: 600; font-size: .9375rem; }
+  .consent-opt {
+    display: grid; grid-template-columns: 20px 1fr; column-gap: 12px; align-items: start;
+    min-height: 48px; padding: 10px 0; border-top: 1px solid rgba(40, 32, 20, .10);
+    cursor: pointer;
+  }
+  .consent-opt input { grid-row: span 2; width: 20px; height: 20px; margin: 2px 0 0; accent-color: #1D1B18; }
+  .consent-opt b { font-weight: 600; }
+  .consent-opt small { color: #5A544B; font-size: .875rem; line-height: 1.4; }
+
+  /* After a choice: say what happened, in the same spot. */
+  .consent-msg { margin: 0 0 14px; font-weight: 500; }
+  .consent-msg:focus { outline: none; }
+  .consent-open {
+    min-height: 48px; padding: 0; border: 0; background: none;
+    color: #1D1B18; font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<main class="demo">
+  <!-- First in the DOM, so a keyboard user meets it first. It never steals focus. -->
+  <section class="consent" id="consent" aria-labelledby="consent-title" data-key="consent" hidden>
+    <form class="consent-form">
+      <h2 class="consent-title" id="consent-title" tabindex="-1">Cookies on this site</h2>
+      <p class="consent-text">Necessary cookies keep you signed in. With your OK we'd also count page visits and load embedded videos. No ads, nothing sold.</p>
+      <fieldset class="consent-choose" hidden>
+        <legend>Choose what we can use</legend>
+        <label class="consent-opt">
+          <input type="checkbox" checked disabled>
+          <b>Necessary</b>
+          <small>Sign-in and this choice. Always on.</small>
+        </label>
+        <label class="consent-opt">
+          <input type="checkbox" name="analytics">
+          <b>Analytics</b>
+          <small>Which pages get read. No names.</small>
+        </label>
+        <label class="consent-opt">
+          <input type="checkbox" name="media">
+          <b>Embedded videos</b>
+          <small>YouTube and Vimeo players.</small>
+        </label>
+      </fieldset>
+      <div class="consent-actions">
+        <button class="consent-btn" value="reject">Reject all</button>
+        <button class="consent-btn" value="accept">Accept all</button>
+        <button class="consent-btn consent-more" type="button"
+                aria-expanded="false">Choose</button>
+        <button class="consent-btn consent-more" value="save"
+                hidden>Save my choices</button>
+      </div>
+    </form>
+    <div class="consent-done" hidden>
+      <p class="consent-msg" role="status" tabindex="-1"></p>
+      <button class="consent-btn consent-hide" type="button">Hide this message</button>
+    </div>
+  </section>
+
+  <!-- Tags wait as text/plain until their purpose gets a yes. -->
+  <script type="text/plain" data-consent="analytics">
+    (window.tagsRan ??= []).push('analytics');
+    document.dispatchEvent(new Event('tagsran'));
+  </script>
+  <script type="text/plain" data-consent="media">
+    (window.tagsRan ??= []).push('media');
+    document.dispatchEvent(new Event('tagsran'));
+  </script>
+
+  <p class="demo-eyebrow">Done right #24 · @zellap.app</p>
+  <h1>A cookie banner that's actually fair</h1>
+  <p class="demo-lede">Reject all sits next to Accept all: same size, same style, one click. Nothing optional is pre-ticked, nothing loads before a yes, the choice is remembered, and changing your mind is as easy as giving it.</p>
+  <p class="demo-notes demo-tags">Tags that ran on this page: <b id="tags">none</b></p>
+
+  <footer>
+    <button class="consent-open" type="button" aria-controls="consent">Cookie settings</button>
+    <button class="demo-reset" type="button" onclick="localStorage.removeItem('consent'); location.reload()">Forget my choice (demo)</button>
+  </footer>
+  <p class="demo-notes">Reject, then reload: the banner stays gone and no tag runs.<br>"Cookie settings" reopens it with your current choice ticked.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  // Bump `version` when the purposes change: everyone is asked again.
+  const CONSENT = { version: 2, maxAge: 365 * 24 * 60 * 60 * 1000 };
+
+  const readConsent = (key) => {
+    try {
+      const c = JSON.parse(localStorage.getItem(key));
+      const fresh = c && Date.now() - c.at < CONSENT.maxAge;
+      if (fresh && c.v === CONSENT.version) return c;
+    } catch {}
+    return null;   // not asked yet, new purposes, or a year old
+  };
+
+  const saveConsent = (key, choice) => {
+    const c = { v: CONSENT.version, ...choice, at: Date.now() };
+    try { localStorage.setItem(key, JSON.stringify(c)); } catch {}
+    return c;
+  };
+
+  // A tag runs once, and only if its purpose got a yes.
+  const runAllowed = (c) => {
+    for (const tag of document.querySelectorAll('script[data-consent]')) {
+      if (!c[tag.dataset.consent]) continue;
+      const s = document.createElement('script');
+      if (tag.dataset.src) s.src = tag.dataset.src;
+      else s.textContent = tag.textContent;
+      tag.replaceWith(s);
+    }
+  };
+
+  const parts = (banner) => ({
+    form: banner.querySelector('.consent-form'),
+    choose: banner.querySelector('.consent-choose'),
+    more: banner.querySelector('.consent-more[type="button"]'),
+    save: banner.querySelector('.consent-more[value="save"]'),
+    done: banner.querySelector('.consent-done'),
+    msg: banner.querySelector('.consent-msg'),
+    boxes: [...banner.querySelectorAll('.consent-choose input[name]')],
+  });
+
+  const showChoices = (banner, c = {}) => {
+    const p = parts(banner);
+    p.boxes.forEach((b) => { b.checked = !!c[b.name]; });   // never pre-ticked
+    p.choose.hidden = p.save.hidden = false;
+    p.more.hidden = true;
+    p.more.setAttribute('aria-expanded', 'true');
+  };
+
+  for (const banner of document.querySelectorAll('.consent')) {
+    const key = banner.dataset.key || 'consent';
+    const p = parts(banner);
+    const stored = readConsent(key);
+    if (stored) runAllowed(stored);
+    else banner.hidden = false;   // shown, but focus stays where it is
+
+    p.more.addEventListener('click', () => {
+      showChoices(banner);
+      p.boxes[0].focus();
+    });
+
+    p.form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const how = e.submitter.value;   // reject | accept | save
+      const choice = Object.fromEntries(p.boxes.map((b) =>
+        [b.name, how === 'accept' || (how === 'save' && b.checked)]));
+      const c = saveConsent(key, choice);
+      runAllowed(c);   // a withdrawn yes stops on the next page load
+      const on = p.boxes.filter((b) => c[b.name]).map((b) => b.closest('label').querySelector('b').textContent.toLowerCase());
+      p.form.hidden = true;
+      p.done.hidden = false;
+      p.msg.textContent = (how === 'reject' ? 'You rejected all optional cookies.'
+        : how === 'accept' ? 'You accepted all cookies.'
+        : on.length ? `Saved: necessary + ${on.join(' + ')}.` : 'Saved: necessary cookies only.')
+        + ' Change it any time in Cookie settings.';
+      p.msg.focus();
+    });
+
+    banner.querySelector('.consent-hide').addEventListener('click', () => {
+      banner.hidden = true;
+    });
+  }
+
+  // Changing your mind: the same banner, your current choice ticked.
+  for (const open of document.querySelectorAll('.consent-open')) {
+    open.addEventListener('click', () => {
+      const banner = document.getElementById(open.getAttribute('aria-controls'));
+      const p = parts(banner);
+      showChoices(banner, readConsent(banner.dataset.key || 'consent') || {});
+      p.form.hidden = false;
+      p.done.hidden = true;
+      banner.hidden = false;
+      banner.querySelector('.consent-title').focus();
+    });
+  }
+</script>
+<script>
+  // Demo only: show which tags ran.
+  const showTags = () => { document.getElementById('tags').textContent = (window.tagsRan || []).join(', ') || 'none'; };
+  document.addEventListener('tagsran', showTags);
+  showTags();
+</script>
+</body>
+</html>

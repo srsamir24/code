@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wilting Password</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<style>/* inlined from ../_kit/reel.css */
+/* Shared shell for the Cursed UI pages: palette, backdrop, hook/outro, reel canvas, cursor. */
+:root{
+  --bg:#f3f2ee; --ink:#121214; --ink-2:#5f5f66; --ink-3:#8d8c92;
+  --line:rgba(18,18,20,.085); --line-2:#e6e3dc;
+  --gold-1:#ffd772; --gold-2:#f2a43a; --gold-ink:#a8681a;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Satoshi",ui-sans-serif,sans-serif; -webkit-font-smoothing:antialiased;
+  overflow:hidden; -webkit-user-select:none; user-select:none;
+}
+.backdrop{position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(60% 45% at 50% 46%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bg),var(--bg));
+}
+.backdrop::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(18,18,20,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(18,18,20,.045) 1px,transparent 1px);
+  background-size:28px 28px; background-position:center;
+  -webkit-mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+          mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+}
+.stage{position:relative;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
+
+.tag{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 9px;border-radius:99px;
+  background:#fff;border:1px solid var(--line);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);
+  box-shadow:0 4px 10px -6px rgba(40,34,20,.18)}
+.tag i,.outro i{display:block;width:7px;height:7px;border-radius:50%;background:linear-gradient(var(--gold-1),var(--gold-2))}
+.hook{font-weight:900;font-size:27px;line-height:1.12;letter-spacing:-.025em;text-align:center;max-width:430px;text-wrap:balance}
+.handle{display:block;margin-top:10px;font-weight:500;font-size:12.5px;letter-spacing:.01em;color:var(--ink-3)}
+.outro{font-weight:900;font-size:30px;letter-spacing:-.025em;color:var(--ink);opacity:0;text-align:center}
+.outro span{display:inline-flex;align-items:center;gap:10px}
+.outro i{width:14px;height:14px}
+.outro b{display:inline-block;font-weight:900;background:var(--ink);color:#fff;border-radius:10px;padding:1px 10px 3px;margin:0 1px;letter-spacing:.01em}
+.outro small{display:block;margin-top:14px;font-weight:700;font-size:19px;letter-spacing:-.01em;color:#34343a}
+.outro small em{font-style:normal;font-weight:500;color:var(--ink-2)}
+
+.card{position:relative;width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:30px;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 40px 70px -32px rgba(40,34,20,.22),0 10px 24px -12px rgba(0,0,0,.08);
+}
+.app{display:flex;align-items:center;gap:12px}
+.icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.x{margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-3)}
+
+/* reel mode: fixed 540x960 phone canvas (recorded at 2x = 1080x1920) */
+body.reel .stage{display:block;width:540px;height:960px;margin:0 auto;padding:0}
+body.reel .tag{position:absolute;top:154px;left:50%;transform:translateX(-50%)}
+body.reel .hook{position:absolute;top:198px;left:50%;transform:translateX(-50%);width:450px;font-size:30px}
+body.reel .card{position:absolute;top:318px;left:60px}
+body.reel .outro{position:absolute;top:192px;left:0;right:0;font-size:25px}
+body:not(.reel) .outro{display:none}
+body.reel, body.reel *{cursor:none !important}
+#cursor{position:fixed;left:0;top:0;width:0;height:0;z-index:99;pointer-events:none;display:none}
+body.reel #cursor{display:block}
+#cursor svg{position:absolute;left:0;top:0;overflow:visible;filter:drop-shadow(0 3px 5px rgba(0,0,0,.25))}
+#ring{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;border:2px solid rgba(18,18,20,.5);opacity:0}
+</style>
+<style>/* inlined from component.css */
+/* Cursed UI #11: the password strength meter is a plant, and it wilts as the password gets "stronger". Scoped to .cu-pw */
+.cu-pw{--ink:#121214;--ink-2:#5f5f66;--ink-3:#8d8c92;--line:rgba(18,18,20,.085);--line-2:#e6e3dc;--gold-1:#ffd772;--gold-2:#f2a43a;--red:#c23a31;--green:#23894a;
+  position:relative;padding:24px 26px 22px;font-family:"Satoshi",ui-sans-serif,sans-serif;color:var(--ink)}
+.cu-pw .app{display:flex;align-items:center;gap:12px}
+.cu-pw .icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.cu-pw .app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.cu-pw .app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.cu-pw .pane{display:flex;gap:14px;margin-top:16px}
+.cu-pw .pot{position:relative;width:150px;height:196px;flex:none;border-radius:18px;background:linear-gradient(180deg,#f8f6f0,#f1eee6);border:1px solid var(--line-2);overflow:hidden}
+.cu-pw .pot > svg{position:absolute;inset:0;width:100%;height:100%}
+.cu-pw .water{position:absolute;left:8px;top:8px;height:30px;padding:0 10px 0 8px;border-radius:9px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;gap:7px;
+  font:700 12.5px "Satoshi",sans-serif;color:var(--ink-2);cursor:pointer;transform-origin:30% 60%}
+.cu-pw .water svg{flex:none;display:block}
+.cu-pw .say{position:absolute;left:50%;top:44px;transform:translateX(-50%);padding:4px 10px 5px;border-radius:99px;background:var(--ink);color:#fff;font-weight:700;font-size:13.5px;white-space:nowrap;opacity:0;pointer-events:none}
+.cu-pw .side{flex:1;min-width:0;padding-top:2px}
+.cu-pw .str small{display:block;font-size:12.5px;font-weight:700;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase}
+.cu-pw .str b{display:inline-block;margin-top:2px;font-weight:900;font-size:22px;letter-spacing:-.02em;transform-origin:0 70%;white-space:nowrap}
+.cu-pw .bar{height:6px;border-radius:9px;background:#eeebe4;margin-top:8px;overflow:hidden}
+.cu-pw .bar i{display:block;height:100%;width:0;border-radius:9px}
+.cu-pw .rules{list-style:none;padding:0;margin-top:12px;height:135px}
+.cu-pw .rules li{display:flex;align-items:center;gap:8px;height:0;opacity:0;overflow:hidden;font-size:14.5px;font-weight:700;color:var(--red);white-space:nowrap}
+.cu-pw .rules li.ok{color:var(--green)}
+.cu-pw .rules li i{width:17px;height:17px;border-radius:50%;flex:none;display:grid;place-items:center;background:#fdecea}
+.cu-pw .rules li.ok i{background:#e3f4e8}
+.cu-pw .rules li em{font-style:normal;font-weight:500;color:var(--ink-3);margin-left:2px;font-variant-numeric:tabular-nums}
+.cu-pw .fld{display:block;position:relative;margin-top:14px;height:56px;border:1.5px solid var(--line-2);border-radius:15px;background:#fff;padding:7px 14px 0}
+.cu-pw .fld.focus{border-color:#cfcac0;box-shadow:0 0 0 4px rgba(18,18,20,.04)}
+.cu-pw .fld small{display:block;font-size:12px;font-weight:700;color:var(--ink-3);letter-spacing:.02em}
+.cu-pw .fld .v{display:block;margin-top:1px;font-size:18px;font-weight:500;white-space:nowrap;height:24px;overflow:hidden;letter-spacing:-.005em}
+.cu-pw .fld .v .ph{color:#b3b0a9}
+.cu-pw .caret{display:inline-block;width:2px;height:20px;margin:0 -1px;vertical-align:-4px;background:var(--ink);border-radius:1px}
+.cu-pw .fld input{position:absolute;inset:0;width:100%;border:0;outline:0;background:transparent;color:transparent;caret-color:transparent;opacity:0;cursor:text;font-size:16px}
+.cu-pw .go{margin-top:12px;width:100%;height:52px;border:0;border-radius:15px;background:var(--ink);color:#fff;font:700 16px "Satoshi",sans-serif;letter-spacing:-.01em;cursor:pointer;box-shadow:0 8px 18px -10px rgba(0,0,0,.6)}
+.cu-pw .go.ok{background:var(--green)}
+</style>
+<style>
+/* reel framing: a wider card so the plant gets a ~400px (2x) panel */
+body.reel .card{width:456px;left:42px}
+body.reel .cu-pw .pot{width:196px;height:236px}
+</style>
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="stage">
+  <div class="tag"><i></i>Cursed UI #11</div>
+  <header class="hook">Stronger password, sadder plant.<span class="handle">@zellap.app</span></header>
+
+  <main class="card" id="card"></main>
+
+  <footer class="outro" id="outro"><span><i></i>Comment <b>CODE</b> for the source</span><small>Follow for more cursed UI <em>&middot; @zellap.app</em></small></footer>
+</div>
+
+<script>/* inlined from ../_kit/reel.js */
+/* Shared runtime for the Cursed UI pages.
+   - a simulation clock (K.now, ms) advanced by K.tick(ms): rAF in the browser, stepped by the recorder (?manual)
+   - tweens, easing, the hook <-> outro swap (window.__outro), and the reel cursor driven by real pointer events
+   - opts.embedded: a private clock for a component mounted elsewhere (the game): no reel cursor, no globals, own rAF loop,
+     K.stop() ends it. Pointer position is still tracked (K.px/K.py) */
+window.ReelKit = function (opts) {
+  if (opts.embedded) return ReelKit.embedded(opts);
+  const qs = new URLSearchParams(location.search);
+  const REEL = qs.has('reel'), MANUAL = qs.has('manual');
+  if (REEL) document.body.classList.add('reel');
+
+  const K = { REEL, MANUAL, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  /* critically-ish damped spring step: z = damping ratio */
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+
+  /* ---------- cursor ---------- */
+  document.body.insertAdjacentHTML('beforeend', `<div id="cursor">
+    <div id="ring"></div>
+    <svg id="c-arrow" width="26" height="34" viewBox="0 0 26 34"><path d="M2 2 L2 26 L8.2 20.4 L12.4 30.4 L16.6 28.6 L12.5 18.9 L20.8 18.6 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg id="c-hand" width="30" height="34" viewBox="0 0 30 34" style="display:none;left:-9px;top:-2px"><path d="M10 15V5.2a2.6 2.6 0 0 1 5.2 0V13 M15.2 12.6a2.5 2.5 0 0 1 5 0v1.8 M20.2 13.6a2.5 2.5 0 0 1 5 0v6.2c0 6.6-4 11.2-10 11.2-4.6 0-6.7-2.2-9.4-6.5L3 19.6a2.5 2.5 0 0 1 4.2-2.7L10 20.8V15" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg id="c-grab" width="30" height="30" viewBox="0 0 30 30" style="display:none;left:-15px;top:-13px"><path d="M8.2 11.4a2.4 2.4 0 0 1 4.8 0v-1a2.4 2.4 0 0 1 4.8 0v1a2.4 2.4 0 0 1 4.8 0v1.4a2.4 2.4 0 0 1 4.6.9v4.8c0 5.6-3.8 9.4-9.4 9.4-4.2 0-6.4-1.8-8.6-5.2l-2.4-3.8a2.3 2.3 0 0 1 3.4-3z M13 11.4v4 M17.8 11.4v4 M22.6 12.8v3" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  </div>`);
+  const $ = id => document.getElementById(id);
+  const cur = $('cursor'), ring = $('ring'), shapes = { arrow: $('c-arrow'), hand: $('c-hand'), grab: $('c-grab') };
+  let curScale = 1;
+  function moveCursor() {
+    if (!REEL) return;
+    const el = document.elementFromPoint(K.px, K.py);
+    const kind = (opts.cursorKind && opts.cursorKind(el)) || 'arrow';
+    for (const k in shapes) shapes[k].style.display = k === kind ? '' : 'none';
+    cur.style.transform = `translate(${K.px}px,${K.py}px) scale(${curScale})`;
+  }
+  K.moveCursor = moveCursor;
+  window.addEventListener('pointermove', e => { K.px = e.clientX; K.py = e.clientY; moveCursor(); });
+  window.addEventListener('pointerleave', () => { K.px = K.py = -999; });
+  window.addEventListener('pointerdown', () => {
+    K.down = true;
+    if (!REEL) return;
+    K.tween(90, p => { curScale = 1 - .14 * p; moveCursor(); });
+    K.tween(300, p => { curScale = .86 + .14 * p; moveCursor(); }, K.ease.back, 120);
+    K.tween(480, p => { ring.style.opacity = (1 - p) * .9; ring.style.transform = `scale(${.4 + p * 1.1})`; });
+  });
+  window.addEventListener('pointerup', () => { K.down = false; moveCursor(); });
+
+  /* ---------- hook <-> outro ---------- */
+  let outroOn = false;
+  window.__outro = on => {
+    if (on === outroOn) return; outroOn = on;
+    const hook = document.querySelector('.hook'), outro = document.querySelector('.outro');
+    K.tween(440, p => { const q = on ? p : 1 - p;
+      hook.style.opacity = K.clamp(1 - q / .45, 0, 1);   // strictly sequential: never two lines at once
+      const o = K.clamp((q - .55) / .45, 0, 1);
+      outro.style.opacity = o; outro.style.transform = `translateY(${(1 - o) * 10}px)`; }, K.ease.lin);
+  };
+
+  /* ---------- clock ---------- */
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  window.__tick = tick;
+  K.start = () => {
+    if (!MANUAL) {
+      let last = performance.now();
+      requestAnimationFrame(function loop(t) { tick(Math.min(50, t - last)); last = t; requestAnimationFrame(loop); });
+    } else tick(16);
+  };
+  return K;
+};
+
+ReelKit.embedded = function (opts) {
+  const K = { REEL: false, MANUAL: false, embedded: true, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+  K.moveCursor = () => {};
+  const mv = e => { K.px = e.clientX; K.py = e.clientY; };
+  const dn = () => { K.down = true; }, up = () => { K.down = false; };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerdown', dn); window.addEventListener('pointerup', up);
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  K.tick = tick;
+  let raf = 0, alive = false;
+  K.start = () => {
+    if (alive) return; alive = true;
+    let last = performance.now();
+    raf = requestAnimationFrame(function loop(t) { if (!alive) return; tick(Math.min(50, t - last)); last = t; raf = requestAnimationFrame(loop); });
+  };
+  K.stop = () => {
+    alive = false; cancelAnimationFrame(raf);
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerdown', dn); window.removeEventListener('pointerup', up);
+  };
+  return K;
+};
+</script>
+<script>/* inlined from component.js */
+/* Cursed UI #11: the password strength meter is a plant. Every rule you satisfy makes the password "stronger"
+   and the plant sadder, until it is a dead stick with a "Very strong" label.
+
+   Self-contained level. Needs ../_kit/reel.js (ReelKit clock) and component.css.
+     const api = CursedUI.wiltingPassword.init(el, { onWin })   // el: an empty container, e.g. a .card
+     el.addEventListener('cursed:win', e => ...)               // also 'cursed:lose'
+     api.reset(); api.destroy();
+   Rules show up one at a time: a number, a symbol, an uppercase letter, an emoji, 24+ characters.
+   Each satisfied rule costs the plant 20 % health. Water gives +22 % (twice; a third time drowns it).
+   Water can't bring back a dead plant. Clearing the password lets it regrow.
+   Win: Create account with every rule met and the plant still alive.
+   Pass { K } to drive it from an outside clock (the reel page does); otherwise it runs its own rAF loop. */
+(function () {
+  const CU = window.CursedUI = window.CursedUI || {};
+  const RULES = [
+    ['A number', v => /\d/.test(v)],
+    ['A symbol', v => /[!@#$%^&*()_+\-=\[\]{};:'"\\|,.<>\/?~`]/.test(v)],
+    ['An uppercase letter', v => /[A-Z]/.test(v)],
+    ['An emoji', v => /\p{Extended_Pictographic}/u.test(v)],
+    ['24+ characters', v => [...v].length >= 24]];
+  const STRENGTH = [['Weak', '#c23a31'], ['Fair', '#d9822b'], ['Good', '#c9a227'], ['Strong', '#5aa35a'], ['Very strong', '#23894a'], ['Unbreakable', '#167a3e']];
+  const TH = [.9, .78, .64, .5, .36, .22, .08];               // petal k drops when health falls below TH[k]
+  const mix = (a, b, t) => { const p = s => [1, 3, 5].map(i => parseInt(s.slice(i, i + 2), 16)); const A = p(a), B = p(b);
+    return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`; };
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+  CU.wiltingPassword = {
+    id: 'wilting-password', n: 11,
+    title: 'Stronger password, sadder plant',
+    goal: 'Create an account with a password that meets every rule. Keep the plant alive.',
+    init(root, opts = {}) {
+      root.classList.add('cu-pw');
+      root.innerHTML = `
+        <div class="app"><div class="icon" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="5.2" fill="#fff"/><ellipse cx="13" cy="13" rx="11" ry="4.6" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.4" transform="rotate(-24 13 13)"/><circle cx="22.6" cy="8.6" r="2" fill="#f2a43a"/></svg></div>
+          <div><b>Orbit</b><span>Create account</span></div></div>
+        <div class="pane">
+          <div class="pot" data-pot><svg viewBox="0 0 150 196" width="150" height="196" data-svg></svg>
+            <button class="water" data-water aria-label="Water the plant"><svg width="20" height="16" viewBox="0 0 20 16"><path d="M4 6h9v7.5a1.5 1.5 0 0 1-1.5 1.5h-6A1.5 1.5 0 0 1 4 13.5zM13 8l5-4M4 8.5C1.5 8.5 1 11 2.6 12.4" fill="none" stroke="#5f8fb8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Water</button>
+            <div class="say" data-say></div></div>
+          <div class="side">
+            <div class="str"><small>Strength</small><b data-str>Weak</b></div>
+            <div class="bar"><i data-bar></i></div>
+            <ul class="rules" data-rules></ul>
+          </div>
+        </div>
+        <label class="fld" data-fld><small>New password</small><span class="v" data-v></span><input data-in spellcheck="false" autocomplete="new-password" aria-label="New password"></label>
+        <button class="go" data-go>Create account</button>`;
+      const q = s => root.querySelector(`[data-${s}]`);
+      const svg = q('svg'), inp = q('in'), vEl = q('v'), fld = q('fld'), strEl = q('str'), bar = q('bar'), rulesEl = q('rules'), say = q('say'), go = q('go'), waterBtn = q('water');
+      const NS = 'http://www.w3.org/2000/svg';
+      const mk = (tag, attrs, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+
+      /* ---------- the plant ---------- */
+      mk('path', { d: 'M38 150h74l-9 40H47z', fill: '#d9895b' });
+      mk('path', { d: 'M38 150h74l-1.6 7H39.6z', fill: '#000', opacity: '.08' });
+      mk('rect', { x: 34, y: 142, width: 82, height: 12, rx: 4, fill: '#e39a6c' });
+      mk('ellipse', { cx: 75, cy: 143, rx: 34, ry: 3.4, fill: '#6b4a33' });
+      const crack = mk('path', { d: 'M78 155l-5 9 6 7-4 9', fill: 'none', stroke: '#7a4426', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0 });
+      const stem = mk('path', { fill: 'none', 'stroke-width': 4.2, 'stroke-linecap': 'round' });
+      const leaves = [.36, .54, .72].map((t, i) => ({ t, side: i % 2 ? 1 : -1, el: mk('path', { d: 'M0 0Q14 -10 30 0Q14 10 0 0z' }), rib: null }));
+      leaves.forEach(l => l.rib = mk('path', { d: 'M3 0H26', fill: 'none', stroke: 'rgba(0,0,0,.18)', 'stroke-width': 1.2, 'stroke-linecap': 'round' }));
+      const petals = TH.map((th, k) => ({ th, k, el: mk('ellipse', { rx: 6.2, ry: 11.5 }), on: true, grow: 1 }));
+      const disc = mk('circle', { r: 7.6 });
+      const fx = mk('g', {});
+      const falling = [], drops = [];
+
+      const own = !opts.K;
+      const K = opts.K || ReelKit({ embedded: true, update: dt => api.update(dt), render: () => api.render() });
+      const timers = [];
+      const later = (ms, fn) => timers.push({ at: K.now + ms, fn });
+
+      let value = '', water = 0, dead = false, done = false, focused = false, lastInput = 0, sat = 0, revealed = 0, shownStr = '';
+      const h = { x: 1, v: 0 }, sayS = { x: 0, v: 0 }, rows = [];
+      let sayOn = false;
+
+      RULES.forEach(([label]) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<i><svg width="9" height="9" viewBox="0 0 9 9"><path d="M1.5 1.5l6 6M7.5 1.5l-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></i><span>${label}</span><em></em>`;
+        rulesEl.appendChild(li);
+        rows.push({ li, vis: { x: 0, v: 0 }, ok: false });
+      });
+      const ICON_X = '<svg width="9" height="9" viewBox="0 0 9 9"><path d="M1.5 1.5l6 6M7.5 1.5l-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+      const ICON_OK = '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M1.8 5.2l2.2 2.2 4.2-4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+      function talk(t, ms = 1400) { say.textContent = t; sayOn = true; later(ms, () => sayOn = false); }
+      function target() { return dead ? 0 : K.clamp(1 - .2 * sat + .22 * water, 0, 1); }
+
+      function evaluate() {
+        const len = [...value].length;
+        let first = RULES.findIndex(([, f]) => !f(value)); if (first < 0) first = RULES.length;
+        revealed = len < 8 ? 0 : Math.min(RULES.length, first + 1);
+        const prevSat = sat;
+        sat = 0;
+        rows.forEach((r, i) => {
+          const shown = i < revealed, ok = shown && RULES[i][1](value);
+          if (ok) sat++;
+          if (shown && ok !== r.ok) {                                        // (a hidden row keeps its last state while it folds away)
+            r.ok = ok; r.li.className = ok ? 'ok' : ''; r.li.querySelector('i').innerHTML = ok ? ICON_OK : ICON_X;
+            if (ok) K.tween(360, p => r.li.style.transform = `translateX(${(4 * Math.sin(Math.PI * p)).toFixed(2)}px)`); }
+          if (i === 4 && shown) r.li.querySelector('em').textContent = !ok ? `${len}/24` : '';
+        });
+        if (!value) { dead = false; water = 0; }
+        if (sat > prevSat && target() <= 0.001) dead = true;
+        const st = value ? STRENGTH[sat] : ['Empty', '#8d8c92'];
+        if (st[0] !== shownStr) {
+          shownStr = st[0]; strEl.textContent = st[0]; strEl.style.color = st[1];
+          if (value) K.tween(420, p => strEl.style.transform = `scale(${1 + .16 * (1 - p)})`, K.ease.out);
+        }
+        bar.style.width = (value ? (sat + 1) / 6 * 100 : 0) + '%'; bar.style.background = st[1];
+      }
+      function onInput() { value = inp.value; lastInput = K.now; evaluate(); }
+
+      function doWater() {
+        if (done) return;
+        K.tween(500, p => waterBtn.style.transform = `rotate(${(-22 * Math.sin(Math.PI * p)).toFixed(2)}deg)`, K.ease.out);
+        for (let i = 0; i < 5; i++) later(90 + i * 70, () => drops.push({ x: 48 + i * 4, y: 40, vy: 40, el: mk('ellipse', { rx: 2.2, ry: 3.4, fill: '#7fb6e0' }, fx) }));
+        if (dead) { later(500, () => talk('Too late.', 2000)); return; }
+        water++;
+        if (water > 2) { dead = true; later(500, () => talk('Overwatered.')); }
+        else later(500, () => talk('A little better.', 1000));
+      }
+      function create() {
+        if (done) return;
+        if (sat < RULES.length) { K.tween(400, p => go.style.transform = `translateX(${(7 * Math.sin(p * Math.PI * 4) * (1 - p)).toFixed(2)}px)`, K.ease.lin); return; }
+        if (dead) { talk("Can't. The plant is dead."); root.dispatchEvent(new CustomEvent('cursed:lose', { bubbles: true, detail: { id: 'wilting-password' } })); if (opts.onLose) opts.onLose(); return; }
+        done = true; go.textContent = 'Account created'; go.classList.add('ok'); talk('It made it!', 4000);
+        root.dispatchEvent(new CustomEvent('cursed:win', { bubbles: true, detail: { id: 'wilting-password' } }));
+        if (opts.onWin) opts.onWin();
+      }
+
+      const offs = [];
+      const on = (el, ev, fn) => { el.addEventListener(ev, fn); offs.push(() => el.removeEventListener(ev, fn)); };
+      on(inp, 'input', onInput);
+      on(inp, 'focus', () => { focused = true; lastInput = K.now; fld.classList.add('focus'); });
+      on(inp, 'blur', () => { focused = false; fld.classList.remove('focus'); });
+      on(inp, 'keydown', e => { if (e.key === 'Enter') create(); });
+      on(waterBtn, 'mousedown', e => e.preventDefault());
+      on(waterBtn, 'click', doWater);
+      on(go, 'click', create);
+
+      function update(dt) {
+        for (let i = timers.length - 1; i >= 0; i--) if (K.now >= timers[i].at) timers.splice(i, 1)[0].fn();
+        K.spring(h, target(), 70, .95, dt);
+        K.spring(sayS, sayOn ? 1 : 0, 420, .7, dt);
+        rows.forEach((r, i) => K.spring(r.vis, i < revealed ? 1 : 0, 380, .8, dt));
+        const H = K.clamp(h.x, 0, 1);
+        petals.forEach(p => {
+          if (p.on && H < p.th - .01) {                                       // let go: becomes a falling particle
+            p.on = false;
+            const r = p.el.getAttribute('transform');
+            const f = { el: p.el.cloneNode(), x: 0, y: 0, vx: (p.k % 2 ? 1 : -1) * (18 + p.k * 4), vy: -10, rot: 0, vr: (p.k % 2 ? 1 : -1) * 160, life: 1, base: r };
+            fx.appendChild(f.el); falling.push(f);
+          } else if (!p.on && H > p.th + .03) { p.on = true; p.grow = 0; }
+          if (p.on && p.grow < 1) p.grow = Math.min(1, p.grow + dt * 2.6);
+        });
+        for (let i = falling.length - 1; i >= 0; i--) {
+          const f = falling[i];
+          f.vy += 260 * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.rot += f.vr * dt; f.vx *= .985;
+          if (f.y > 70) f.life -= dt * 2.2;
+          if (f.life <= 0) { f.el.remove(); falling.splice(i, 1); }
+        }
+        for (let i = drops.length - 1; i >= 0; i--) {
+          const d = drops[i]; d.vy += 600 * dt; d.y += d.vy * dt;
+          if (d.y > 140) { d.el.remove(); drops.splice(i, 1); }
+        }
+      }
+
+      function render() {
+        const H = K.clamp(h.x, -.05, 1.05), w = 1 - K.clamp(H, 0, 1);
+        const B = [75, 143], C = [75 + 8 * w, 143 - 62 + 8 * w];
+        const th = (-90 + w * 168) * Math.PI / 180, L = 46 - 6 * w;
+        const T = [C[0] + L * Math.cos(th), C[1] + L * Math.sin(th)];
+        const P = t => [(1 - t) ** 2 * B[0] + 2 * (1 - t) * t * C[0] + t * t * T[0], (1 - t) ** 2 * B[1] + 2 * (1 - t) * t * C[1] + t * t * T[1]];
+        const D = t => Math.atan2(2 * (1 - t) * (C[1] - B[1]) + 2 * t * (T[1] - C[1]), 2 * (1 - t) * (C[0] - B[0]) + 2 * t * (T[0] - C[0]));
+        const green = mix('#4f9a5e', '#a08a58', w);
+        stem.setAttribute('d', `M${B[0]} ${B[1]}Q${C[0].toFixed(2)} ${C[1].toFixed(2)} ${T[0].toFixed(2)} ${T[1].toFixed(2)}`);
+        stem.setAttribute('stroke', green);
+        leaves.forEach(l => {
+          const [x, y] = P(l.t), a = D(l.t) * 180 / Math.PI + l.side * (48 + w * 105), s = .75 + .25 * K.clamp(H, 0, 1);
+          const tr = `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${a.toFixed(2)}) scale(${s.toFixed(3)} ${(s * (.7 + .3 * K.clamp(H, 0, 1))).toFixed(3)})`;
+          l.el.setAttribute('transform', tr); l.rib.setAttribute('transform', tr);
+          l.el.setAttribute('fill', mix('#5aa469', '#b39a62', w));
+        });
+        const fr = th * 180 / Math.PI + 90, pc = mix('#ffc94a', '#b98e4a', w), ps = .72 + .28 * K.clamp(H, 0, 1);
+        petals.forEach(p => {
+          if (!p.on) { p.el.setAttribute('opacity', 0); return; }
+          const a = fr + p.k * 360 / 7, g = p.grow * ps;
+          p.el.setAttribute('opacity', 1); p.el.setAttribute('fill', pc);
+          p.el.setAttribute('transform', `translate(${T[0].toFixed(2)} ${T[1].toFixed(2)}) rotate(${a.toFixed(2)}) translate(0 -11) scale(${g.toFixed(3)})`);
+        });
+        disc.setAttribute('cx', T[0].toFixed(2)); disc.setAttribute('cy', T[1].toFixed(2));
+        disc.setAttribute('fill', mix('#8a561c', '#5a4630', w)); disc.setAttribute('r', (5.5 + 2.1 * K.clamp(H, 0, 1)).toFixed(2));
+        falling.forEach(f => { f.el.setAttribute('transform', `translate(${f.x.toFixed(2)} ${f.y.toFixed(2)}) ${f.base} rotate(${f.rot.toFixed(1)})`); f.el.setAttribute('opacity', K.clamp(f.life, 0, 1).toFixed(3)); });
+        drops.forEach(d => d.el.setAttribute('transform', `translate(${d.x} ${d.y.toFixed(2)})`));
+        crack.setAttribute('opacity', K.clamp((.06 - H) / .06, 0, 1).toFixed(3));
+        rows.forEach(r => { const v = K.clamp(r.vis.x, 0, 1.1); r.li.style.height = (27 * K.clamp(v, 0, 1)).toFixed(2) + 'px'; r.li.style.opacity = K.clamp(v * 1.4 - .3, 0, 1).toFixed(3); });
+        const s = sayS.x;
+        say.style.opacity = K.clamp(s * 1.5, 0, 1).toFixed(3);
+        say.style.transform = `translateX(-50%) translateY(${(6 * (1 - s)).toFixed(2)}px) scale(${(.85 + .15 * s).toFixed(3)})`;
+        const blink = focused && ((K.now - lastInput) % 1060) < 560;
+        const caret = focused ? `<span class="caret"${blink ? '' : ' style="opacity:0"'}></span>` : '';
+        const html = value ? esc(value) + caret : caret + '<span class="ph">Make it strong</span>';
+        if (vEl.innerHTML !== html) vEl.innerHTML = html;
+        if (vEl.scrollWidth > vEl.clientWidth) vEl.scrollLeft = vEl.scrollWidth;
+      }
+
+      function reset() {
+        timers.length = 0; value = ''; inp.value = ''; water = 0; dead = false; done = false; sayOn = false;
+        go.textContent = 'Create account'; go.classList.remove('ok');
+        falling.forEach(f => f.el.remove()); falling.length = 0; drops.forEach(d => d.el.remove()); drops.length = 0;
+        petals.forEach(p => { p.on = true; p.grow = 1; });
+        h.x = 1; h.v = 0; sayS.x = sayS.v = 0; rows.forEach(r => { r.vis.x = r.vis.v = 0; r.ok = false; r.li.className = ''; r.li.querySelector('i').innerHTML = ICON_X; r.li.querySelector('em').textContent = ''; });
+        shownStr = ''; evaluate();
+      }
+      function clearAnimated(ms = 700) {                                        // hold backspace until it's empty
+        const n = [...value].length; if (!n) return;
+        for (let i = 1; i <= n; i++) later(ms * i / n, () => { const a = [...inp.value]; a.pop(); inp.value = a.join(''); onInput(); });
+      }
+
+      const api = {
+        update, render, reset, clearAnimated,
+        el: { root, input: inp, water: waterBtn, go, fld },
+        destroy() { offs.forEach(f => f()); if (own) K.stop(); root.innerHTML = ''; root.classList.remove('cu-pw'); }
+      };
+      reset();
+      if (own) K.start();
+      return api;
+    }
+  };
+})();
+</script>
+<script>
+(() => {
+  let api;
+  const K = ReelKit({
+    cursorKind: el => el && el.closest('button') ? 'hand' : 'arrow',
+    update: dt => api.update(dt), render: () => api.render()
+  });
+  api = CursedUI.wiltingPassword.init(document.getElementById('card'), { K });
+  const c = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  window.__pt = k => c(api.el[k]);
+  window.__clear = () => api.clearAnimated(650);
+  K.start();
+})();
+</script>
+</body>
+</html>

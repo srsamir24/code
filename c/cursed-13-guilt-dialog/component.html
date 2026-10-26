@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guilt Dialog</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<style>/* inlined from ../_kit/reel.css */
+/* Shared shell for the Cursed UI pages: palette, backdrop, hook/outro, reel canvas, cursor. */
+:root{
+  --bg:#f3f2ee; --ink:#121214; --ink-2:#5f5f66; --ink-3:#8d8c92;
+  --line:rgba(18,18,20,.085); --line-2:#e6e3dc;
+  --gold-1:#ffd772; --gold-2:#f2a43a; --gold-ink:#a8681a;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Satoshi",ui-sans-serif,sans-serif; -webkit-font-smoothing:antialiased;
+  overflow:hidden; -webkit-user-select:none; user-select:none;
+}
+.backdrop{position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(60% 45% at 50% 46%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bg),var(--bg));
+}
+.backdrop::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(18,18,20,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(18,18,20,.045) 1px,transparent 1px);
+  background-size:28px 28px; background-position:center;
+  -webkit-mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+          mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+}
+.stage{position:relative;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
+
+.tag{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 9px;border-radius:99px;
+  background:#fff;border:1px solid var(--line);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);
+  box-shadow:0 4px 10px -6px rgba(40,34,20,.18)}
+.tag i,.outro i{display:block;width:7px;height:7px;border-radius:50%;background:linear-gradient(var(--gold-1),var(--gold-2))}
+.hook{font-weight:900;font-size:27px;line-height:1.12;letter-spacing:-.025em;text-align:center;max-width:430px;text-wrap:balance}
+.handle{display:block;margin-top:10px;font-weight:500;font-size:12.5px;letter-spacing:.01em;color:var(--ink-3)}
+.outro{font-weight:900;font-size:30px;letter-spacing:-.025em;color:var(--ink);opacity:0;text-align:center}
+.outro span{display:inline-flex;align-items:center;gap:10px}
+.outro i{width:14px;height:14px}
+.outro b{display:inline-block;font-weight:900;background:var(--ink);color:#fff;border-radius:10px;padding:1px 10px 3px;margin:0 1px;letter-spacing:.01em}
+.outro small{display:block;margin-top:14px;font-weight:700;font-size:19px;letter-spacing:-.01em;color:#34343a}
+.outro small em{font-style:normal;font-weight:500;color:var(--ink-2)}
+
+.card{position:relative;width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:30px;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 40px 70px -32px rgba(40,34,20,.22),0 10px 24px -12px rgba(0,0,0,.08);
+}
+.app{display:flex;align-items:center;gap:12px}
+.icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.x{margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-3)}
+
+/* reel mode: fixed 540x960 phone canvas (recorded at 2x = 1080x1920) */
+body.reel .stage{display:block;width:540px;height:960px;margin:0 auto;padding:0}
+body.reel .tag{position:absolute;top:154px;left:50%;transform:translateX(-50%)}
+body.reel .hook{position:absolute;top:198px;left:50%;transform:translateX(-50%);width:450px;font-size:30px}
+body.reel .card{position:absolute;top:318px;left:60px}
+body.reel .outro{position:absolute;top:192px;left:0;right:0;font-size:25px}
+body:not(.reel) .outro{display:none}
+body.reel, body.reel *{cursor:none !important}
+#cursor{position:fixed;left:0;top:0;width:0;height:0;z-index:99;pointer-events:none;display:none}
+body.reel #cursor{display:block}
+#cursor svg{position:absolute;left:0;top:0;overflow:visible;filter:drop-shadow(0 3px 5px rgba(0,0,0,.25))}
+#ring{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;border:2px solid rgba(18,18,20,.5);opacity:0}
+</style>
+<style>/* inlined from component.css */
+/* Cursed UI #13: an "Are you sure?" alert that guilt-trips harder every time you say no. Scoped to .cu-gd */
+.cu-gd{--ink:#121214;--ink-2:#5f5f66;--ink-3:#8d8c92;--line:rgba(18,18,20,.085);--line-2:#e6e3dc;
+  --tint:oklch(.58 .2 256);
+  position:relative;overflow:hidden;height:404px;padding:24px 26px 0;font-family:"Satoshi",ui-sans-serif,sans-serif;color:var(--ink)}
+.cu-gd h1{margin-top:16px;font-weight:700;font-size:28px;letter-spacing:-.025em;line-height:1.1}
+.cu-gd .list{list-style:none;padding:0;margin-top:12px}
+.cu-gd .list li{display:flex;gap:12px;align-items:center;padding:11px 8px;margin:0 -8px;border-radius:12px;border-top:1px solid var(--line);cursor:pointer}
+.cu-gd .av{width:36px;height:36px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff}
+.cu-gd .list div{flex:1;min-width:0}
+.cu-gd .list b{display:flex;justify-content:space-between;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.cu-gd .list b time{font-weight:500;font-size:12.5px;color:var(--ink-3)}
+.cu-gd .list span{display:block;margin-top:1px;font-size:13.5px;color:var(--ink-3);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.cu-gd .scrim{position:absolute;inset:0;border-radius:inherit;background:rgba(18,16,22,.3);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.cu-gd .alert{position:absolute;left:50%;top:50%;width:352px;margin:-150px 0 0 -176px;border-radius:20px;overflow:hidden;text-align:center;
+  background:rgba(250,249,246,.86);-webkit-backdrop-filter:blur(26px) saturate(1.8);backdrop-filter:blur(26px) saturate(1.8);
+  box-shadow:0 0 0 1px rgba(255,255,255,.5) inset,0 30px 60px -24px rgba(10,8,20,.5),0 8px 20px -10px rgba(10,8,20,.25)}
+.cu-gd .body{padding:22px 22px 18px}
+.cu-gd .mascot{display:block;margin:0 auto 12px;width:78px;height:78px;filter:drop-shadow(0 6px 10px rgba(20,16,40,.22))}
+.cu-gd .t{font-weight:700;font-size:23px;letter-spacing:-.02em;line-height:1.2}
+.cu-gd .m{margin-top:6px;min-height:42px;font-weight:500;font-size:16.5px;line-height:1.3;color:#45444b;text-wrap:balance}
+.cu-gd .btns{display:flex;height:58px;border-top:1px solid rgba(60,60,67,.18)}
+.cu-gd .btns button{border:0;background:none;padding:0 3px;font-family:inherit;letter-spacing:-.01em;cursor:pointer;white-space:nowrap;overflow:hidden;color:var(--tint)}
+.cu-gd .no{font-weight:500;font-size:17px;border-right:1px solid rgba(60,60,67,.18) !important}
+.cu-gd .yes{font-weight:700;font-size:17px}
+.cu-gd .yes span{display:inline-block}
+.cu-gd .press{background:rgba(60,60,67,.08) !important}
+</style>
+<style>
+/* reel framing: card 1.1x (86 % of the width), bottom lands near y 1530 (2x px) */
+body.reel .card{transform:scale(1.1);transform-origin:50% 0}
+</style>
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="stage">
+  <div class="tag"><i></i>Cursed UI #13</div>
+  <header class="hook">Try saying no to notifications.<span class="handle">@zellap.app</span></header>
+
+  <main class="card" id="card"></main>
+
+  <footer class="outro" id="outro"><span><i></i>Comment <b>CODE</b> for the source</span><small>Follow for more cursed UI <em>&middot; @zellap.app</em></small></footer>
+</div>
+
+<script>/* inlined from ../_kit/reel.js */
+/* Shared runtime for the Cursed UI pages.
+   - a simulation clock (K.now, ms) advanced by K.tick(ms): rAF in the browser, stepped by the recorder (?manual)
+   - tweens, easing, the hook <-> outro swap (window.__outro), and the reel cursor driven by real pointer events
+   - opts.embedded: a private clock for a component mounted elsewhere (the game): no reel cursor, no globals, own rAF loop,
+     K.stop() ends it. Pointer position is still tracked (K.px/K.py) */
+window.ReelKit = function (opts) {
+  if (opts.embedded) return ReelKit.embedded(opts);
+  const qs = new URLSearchParams(location.search);
+  const REEL = qs.has('reel'), MANUAL = qs.has('manual');
+  if (REEL) document.body.classList.add('reel');
+
+  const K = { REEL, MANUAL, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  /* critically-ish damped spring step: z = damping ratio */
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+
+  /* ---------- cursor ---------- */
+  document.body.insertAdjacentHTML('beforeend', `<div id="cursor">
+    <div id="ring"></div>
+    <svg id="c-arrow" width="26" height="34" viewBox="0 0 26 34"><path d="M2 2 L2 26 L8.2 20.4 L12.4 30.4 L16.6 28.6 L12.5 18.9 L20.8 18.6 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg id="c-hand" width="30" height="34" viewBox="0 0 30 34" style="display:none;left:-9px;top:-2px"><path d="M10 15V5.2a2.6 2.6 0 0 1 5.2 0V13 M15.2 12.6a2.5 2.5 0 0 1 5 0v1.8 M20.2 13.6a2.5 2.5 0 0 1 5 0v6.2c0 6.6-4 11.2-10 11.2-4.6 0-6.7-2.2-9.4-6.5L3 19.6a2.5 2.5 0 0 1 4.2-2.7L10 20.8V15" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg id="c-grab" width="30" height="30" viewBox="0 0 30 30" style="display:none;left:-15px;top:-13px"><path d="M8.2 11.4a2.4 2.4 0 0 1 4.8 0v-1a2.4 2.4 0 0 1 4.8 0v1a2.4 2.4 0 0 1 4.8 0v1.4a2.4 2.4 0 0 1 4.6.9v4.8c0 5.6-3.8 9.4-9.4 9.4-4.2 0-6.4-1.8-8.6-5.2l-2.4-3.8a2.3 2.3 0 0 1 3.4-3z M13 11.4v4 M17.8 11.4v4 M22.6 12.8v3" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  </div>`);
+  const $ = id => document.getElementById(id);
+  const cur = $('cursor'), ring = $('ring'), shapes = { arrow: $('c-arrow'), hand: $('c-hand'), grab: $('c-grab') };
+  let curScale = 1;
+  function moveCursor() {
+    if (!REEL) return;
+    const el = document.elementFromPoint(K.px, K.py);
+    const kind = (opts.cursorKind && opts.cursorKind(el)) || 'arrow';
+    for (const k in shapes) shapes[k].style.display = k === kind ? '' : 'none';
+    cur.style.transform = `translate(${K.px}px,${K.py}px) scale(${curScale})`;
+  }
+  K.moveCursor = moveCursor;
+  window.addEventListener('pointermove', e => { K.px = e.clientX; K.py = e.clientY; moveCursor(); });
+  window.addEventListener('pointerleave', () => { K.px = K.py = -999; });
+  window.addEventListener('pointerdown', () => {
+    K.down = true;
+    if (!REEL) return;
+    K.tween(90, p => { curScale = 1 - .14 * p; moveCursor(); });
+    K.tween(300, p => { curScale = .86 + .14 * p; moveCursor(); }, K.ease.back, 120);
+    K.tween(480, p => { ring.style.opacity = (1 - p) * .9; ring.style.transform = `scale(${.4 + p * 1.1})`; });
+  });
+  window.addEventListener('pointerup', () => { K.down = false; moveCursor(); });
+
+  /* ---------- hook <-> outro ---------- */
+  let outroOn = false;
+  window.__outro = on => {
+    if (on === outroOn) return; outroOn = on;
+    const hook = document.querySelector('.hook'), outro = document.querySelector('.outro');
+    K.tween(440, p => { const q = on ? p : 1 - p;
+      hook.style.opacity = K.clamp(1 - q / .45, 0, 1);   // strictly sequential: never two lines at once
+      const o = K.clamp((q - .55) / .45, 0, 1);
+      outro.style.opacity = o; outro.style.transform = `translateY(${(1 - o) * 10}px)`; }, K.ease.lin);
+  };
+
+  /* ---------- clock ---------- */
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  window.__tick = tick;
+  K.start = () => {
+    if (!MANUAL) {
+      let last = performance.now();
+      requestAnimationFrame(function loop(t) { tick(Math.min(50, t - last)); last = t; requestAnimationFrame(loop); });
+    } else tick(16);
+  };
+  return K;
+};
+
+ReelKit.embedded = function (opts) {
+  const K = { REEL: false, MANUAL: false, embedded: true, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+  K.moveCursor = () => {};
+  const mv = e => { K.px = e.clientX; K.py = e.clientY; };
+  const dn = () => { K.down = true; }, up = () => { K.down = false; };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerdown', dn); window.addEventListener('pointerup', up);
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  K.tick = tick;
+  let raf = 0, alive = false;
+  K.start = () => {
+    if (alive) return; alive = true;
+    let last = performance.now();
+    raf = requestAnimationFrame(function loop(t) { if (!alive) return; tick(Math.min(50, t - last)); last = t; raf = requestAnimationFrame(loop); });
+  };
+  K.stop = () => {
+    alive = false; cancelAnimationFrame(raf);
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerdown', dn); window.removeEventListener('pointerup', up);
+  };
+  return K;
+};
+</script>
+<script>/* inlined from component.js */
+/* Cursed UI #13: "Turn on notifications?" Say no and it asks if you're sure. Then it gets personal.
+   Every "no" makes the alert sadder, the no-button smaller and greyer, and the yes-button wider.
+
+   Self-contained level. Needs ../_kit/reel.js (ReelKit clock) and component.css.
+     const api = CursedUI.guiltDialog.init(el, { onWin, onLose, reopen })   // el: an empty container, e.g. a .card
+     el.addEventListener('cursed:win', e => ...)                            // also 'cursed:lose' (bubbles)
+     api.reset(); api.destroy();
+   Rules: "Turn on" loses. Say no five times (through all the guilt) and the alert finally closes: win.
+   { reopen: true } (the reel): after the last no it closes, then comes right back at step one.
+   Pass { K } to drive it from an outside clock (the reel page does); otherwise it runs its own rAF loop. */
+(function () {
+  const CU = window.CursedUI = window.CursedUI || {};
+  const STEPS = [
+    ['Turn on notifications?', 'Get a ping when something happens.', 'Not now'],
+    ['Are you sure?', 'You might miss something important.', "I'm sure"],
+    ['Really sure?', 'We built this app for you. Personally.', 'Yes, really'],
+    ['Wow. Okay.', 'Orbit will just sit here. In silence.', 'Sorry, Orbit'],
+    ['Orbit is crying now.', 'Hope it was worth it.', "I'm a monster"]];
+  //            no-button share, font size, color (blue -> grey)
+  const LOOK = [[.5, 17, 0], [.44, 16.5, .25], [.38, 16, .5], [.33, 15.5, .75], [.3, 15, 1]];   // shrinks, but stays readable
+  const MAIL = [
+    ['MC', 'oklch(.62 .12 30)', 'Mira Chen', '9:41', 'Landing v3: two small notes on the hero'],
+    ['DB', 'oklch(.5 .03 260)', 'Deploy bot', '9:12', 'Build #482 passed in 41s'],
+    ['JN', 'oklch(.6 .11 150)', 'Jonas', '8:57', 'lunch? the ramen place again?'],
+    ['OR', 'oklch(.32 .02 280)', 'Orbit', 'Mon', 'Your weekly summary is ready']];
+
+  CU.guiltDialog = {
+    id: 'guilt-dialog', n: 13,
+    title: 'Try saying no to notifications',
+    goal: 'Say no to notifications.',
+    init(root, opts = {}) {
+      root.classList.add('cu-gd');
+      root.innerHTML = `
+        <div class="app">
+          <div class="icon" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="5.2" fill="#fff"/><ellipse cx="13" cy="13" rx="11" ry="4.6" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.4" transform="rotate(-24 13 13)"/><circle cx="22.6" cy="8.6" r="2" fill="#f2a43a"/></svg></div>
+          <div><b>Orbit</b><span>Mail &middot; 4 unread</span></div>
+        </div>
+        <h1>Inbox</h1>
+        <ul class="list">${MAIL.map(([i, c, n, t, s]) => `<li><span class="av" style="background:${c}">${i}</span><div><b>${n}<time>${t}</time></b><span>${s}</span></div></li>`).join('')}</ul>
+        <div class="scrim" data-scrim></div>
+        <div class="alert" data-alert role="alertdialog" aria-modal="true" aria-labelledby="gd-t" aria-describedby="gd-m">
+          <div class="body">
+            <svg class="mascot" viewBox="0 0 58 58" aria-hidden="true">
+              <defs><linearGradient id="gd-bg" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="#2d2b36"/><stop offset="1" stop-color="#0f0e13"/></linearGradient></defs>
+              <rect width="58" height="58" rx="15" fill="url(#gd-bg)"/>
+              <g data-ring><ellipse cx="29" cy="30" rx="23" ry="8" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="2" transform="rotate(-22 29 30)"/></g>
+              <circle cx="29" cy="30" r="13" fill="#fff"/>
+              <circle data-moon cx="49" cy="13" r="3.4" fill="#f2a43a"/>
+              <g fill="none" stroke="#121214" stroke-width="1.7" stroke-linecap="round">
+                <g data-face="0"><path d="M24.8 33q4.2 3.6 8.4 0"/></g>
+                <g data-face="1"><path d="M26 33.6h6"/></g>
+                <g data-face="2"><path d="M22.8 25.9l3.6-1.1M35.2 25.9l-3.6-1.1"/><path d="M25.6 34.4q3.4-2.6 6.8 0"/></g>
+                <g data-face="3"><path d="M22.8 25.6l3.6-1.3M35.2 25.6l-3.6-1.3"/><path d="M25.2 35q3.8-3.4 7.6 0"/></g>
+                <g data-face="4"><path d="M23.2 27.6q1.6 1.7 3.2 0M31.6 27.6q1.6 1.7 3.2 0"/><path d="M24.6 35.4q1.1-3.2 2.2-.6q1.1-2.6 2.2-.2q1.1-2.4 2.2 0q1.1-2.4 2.2.8"/></g>
+              </g>
+              <g data-eyes fill="#121214"><circle cx="24.8" cy="28.6" r="1.45"/><circle cx="33.2" cy="28.6" r="1.45"/></g>
+              <g data-tears fill="oklch(.72 .13 235)"><path data-tear d="M24.4 29.6q2.1 3.4 0 5q-2.1-1.6 0-5z"/><path data-tear d="M33.6 29.6q2.1 3.4 0 5q-2.1-1.6 0-5z"/></g>
+            </svg>
+            <div class="t" id="gd-t" data-t></div>
+            <div class="m" id="gd-m" data-m></div>
+          </div>
+          <div class="btns"><button class="no" data-no></button><button class="yes" data-yes><span>Turn on</span></button></div>
+        </div>`;
+      const q = s => root.querySelector(`[data-${s}]`);
+      const alert = q('alert'), scrim = q('scrim'), tEl = q('t'), mEl = q('m'), no = q('no'), yes = q('yes');
+      const mascot = root.querySelector('.mascot'), faces = [...root.querySelectorAll('[data-face]')], eyes = q('eyes'), tears = [...root.querySelectorAll('[data-tear]')], ring = q('ring');
+
+      const own = !opts.K;
+      const K = opts.K || ReelKit({ embedded: true, update: (dt) => api.update(dt), render: () => api.render() });
+      const timers = [];
+      const later = (ms, fn) => timers.push({ at: K.now + ms, fn });
+
+      let step = 0, open = true, busy = false, shake = 0, textA = 1, mood = [1, 0, 0, 0, 0], closeA = 1, scrimA = 1;
+      const look = { share: { x: .5, v: 0 }, fs: { x: 17, v: 0 }, grey: { x: 0, v: 0 } };
+      const vis = { x: 1, v: 0 };
+      const sad = { x: 0, v: 0 };                     // 0..4, drives tears and the ring slipping
+
+      function setText(i) { tEl.textContent = STEPS[i][0]; mEl.textContent = STEPS[i][1]; no.textContent = STEPS[i][2]; }
+      function go(i, animate = true) {
+        step = i;
+        if (!animate) { setText(i); mood = mood.map((_, k) => k === i ? 1 : 0); return; }
+        setText(i);                                                // swap at once under a small pop: never a blank alert
+        K.tween(300, p => textA = p, K.ease.back);
+        const from = mood.slice();
+        K.tween(300, p => { mood = from.map((v, k) => K.lerp(v, k === i ? 1 : 0, p)); }, K.ease.inOut, 60);
+      }
+      function nope() {
+        K.tween(420, p => shake = Math.sin(p * Math.PI * 4) * 9 * (1 - p), K.ease.lin);
+      }
+      function flash(btn) { btn.classList.add('press'); later(150, () => btn.classList.remove('press')); }
+      function sayNo() {
+        if (busy || !open) return;
+        flash(no);
+        if (step < STEPS.length - 1) { nope(); go(step + 1); fire('cursed:lose', 'guilt'); return; }
+        busy = true; close();                                // fine. it closes.
+        if (opts.reopen) later(1300, popBack);
+        else fire('cursed:win');
+      }
+      function sayYes() {
+        if (busy || !open) return;
+        flash(yes); busy = true; close(); fire('cursed:lose', 'yes');
+        later(900, popBack);
+      }
+      /* closing is sequential: the alert is gone (4 frames) before the dim lifts, so the two never overlap */
+      function close() {
+        open = false;
+        K.tween(130, p => closeA = 1 - p, K.ease.inOut);
+        K.tween(240, p => scrimA = 1 - p, K.ease.inOut, 110);
+      }
+      /* and it comes back hard: dim first, then the alert springs in from .85 with an overshoot */
+      function popBack() {
+        go(0, false); sad.x = sad.v = 0;
+        look.share.x = LOOK[0][0]; look.fs.x = LOOK[0][1]; look.grey.x = LOOK[0][2]; look.share.v = look.fs.v = look.grey.v = 0;
+        vis.x = vis.v = 0; closeA = 1; open = true; busy = false;
+        K.tween(90, p => scrimA = p * 1.25, K.ease.out);
+        K.tween(160, p => scrimA = 1.25 - .25 * p, K.ease.inOut, 90);
+      }
+      function closeNow() { open = false; busy = true; closeA = 0; scrimA = 0; vis.x = vis.v = 0; }
+      function fire(name, why) {
+        root.dispatchEvent(new CustomEvent(name, { bubbles: true, detail: { id: 'guilt-dialog', why } }));
+        if (name === 'cursed:win' && opts.onWin) opts.onWin();
+        if (name === 'cursed:lose' && opts.onLose) opts.onLose(why);
+      }
+
+      const offs = [];
+      const on = (el, ev, fn) => { el.addEventListener(ev, fn); offs.push(() => el.removeEventListener(ev, fn)); };
+      on(no, 'click', sayNo);
+      root.querySelectorAll('.list li').forEach(li => on(li, 'click', () => {
+        if (open) return;
+        K.tween(420, p => li.style.background = `rgba(18,18,20,${(.06 * (1 - p)).toFixed(3)})`, K.ease.out);
+      }));
+      on(yes, 'click', sayYes);
+
+      function update(dt) {
+        for (let i = timers.length - 1; i >= 0; i--) if (K.now >= timers[i].at) timers.splice(i, 1)[0].fn();
+        const L = LOOK[step];
+        K.spring(look.share, L[0], 260, .78, dt);
+        K.spring(look.fs, L[1], 260, .9, dt);
+        K.spring(look.grey, L[2], 200, .95, dt);
+        if (open) K.spring(vis, 1, 420, .5, dt);
+        K.spring(sad, step, 120, .9, dt);
+      }
+      function render() {
+        const v = vis.x;
+        const op = open ? K.clamp(v * 2.4, 0, 1) : K.clamp(closeA, 0, 1);
+        const sc = open ? .85 + .15 * v : .93 + .07 * K.clamp(closeA, 0, 1);
+        alert.style.opacity = op.toFixed(3);
+        alert.style.transform = `translateX(${shake.toFixed(2)}px) scale(${sc.toFixed(4)})`;
+        alert.style.pointerEvents = open ? '' : 'none';
+        scrim.style.opacity = K.clamp(scrimA, 0, 1).toFixed(3);
+        scrim.style.background = `rgba(18,16,22,${(.26 + .05 * K.clamp(sad.x, 0, 4) + .12 * K.clamp(scrimA - 1, 0, .25) / .25).toFixed(3)})`;
+        const tp = 1 + .06 * (1 - textA);
+        tEl.style.transform = `scale(${tp.toFixed(4)})`;
+        mEl.style.transform = `translateY(${((1 - textA) * 3).toFixed(2)}px)`;
+        const s = look.share.x;
+        no.style.flex = `0 0 ${(s * 100).toFixed(2)}%`;
+        yes.style.flex = '1 1 0';
+        no.style.fontSize = look.fs.x.toFixed(2) + 'px';
+        const g = K.clamp(look.grey.x, 0, 1);
+        no.style.color = `color-mix(in oklch, var(--tint) ${((1 - g) * 100).toFixed(1)}%, #6f6d75)`;
+        yes.firstChild.style.transform = `scale(${(1 + .045 * K.clamp(sad.x, 0, 4)).toFixed(4)})`;
+        faces.forEach((f, k) => f.style.opacity = mood[k].toFixed(3));
+        eyes.style.opacity = K.clamp(1 - mood[4], 0, 1).toFixed(3);
+        /* the mascot watches the pointer (pupils follow it) and breathes on a 2 s period, so it never freezes */
+        const mr = mascot.getBoundingClientRect();
+        if (mr.width && K.px > -900) {
+          const ex = K.px - (mr.left + mr.width / 2), ey = K.py - (mr.top + mr.height / 2), en = Math.hypot(ex, ey) || 1;
+          const k = Math.min(1, en / 120) * 1.5;
+          eyes.setAttribute('transform', `translate(${(ex / en * k).toFixed(2)} ${(ey / en * k).toFixed(2)})`);
+        }
+        const br = Math.sin(K.now / 3000 * Math.PI * 2);
+        mascot.style.transform = `translateY(${(br * 1.6).toFixed(2)}px) rotate(${(br * (1 + K.clamp(sad.x, 0, 4)) * .6).toFixed(2)}deg)`;
+        /* "Turn on" fills in as the guilt grows: the preferred action gets louder every step */
+        const fillA = K.clamp((sad.x - 1) / 3, 0, 1);
+        yes.style.background = `color-mix(in oklch, var(--tint) ${(fillA * 100).toFixed(1)}%, transparent)`;
+        yes.style.color = fillA > .45 ? '#fff' : '';
+        const ph = (K.now % 1000) / 1000, cry = K.clamp(sad.x - 2.4, 0, 1.6);
+        tears.forEach((t, k) => {
+          const on = k === 0 ? K.clamp(cry / .6, 0, 1) : K.clamp((cry - .8) / .6, 0, 1);
+          const p = (ph + k * .45) % 1;
+          t.style.opacity = (on * (p < .75 ? 1 : (1 - p) * 4)).toFixed(3);
+          t.style.transform = `translateY(${(p * 10).toFixed(2)}px)`;
+        });
+        const slip = K.clamp(sad.x - 3, 0, 1.2);
+        ring.style.transform = `translate(0px,${(slip * 6).toFixed(2)}px) rotate(${(slip * 16).toFixed(2)}deg)`;
+        ring.style.transformOrigin = '29px 30px';
+      }
+      function reset() {
+        timers.length = 0; busy = false; open = true; go(0, false); shake = 0; textA = 1; closeA = 1; scrimA = 1;
+        vis.x = 1; vis.v = 0; sad.x = sad.v = 0;
+        look.share.x = .5; look.fs.x = 17; look.grey.x = 0; look.share.v = look.fs.v = look.grey.v = 0;
+      }
+
+      const api = {
+        update, render, reset, popBack, closeNow,
+        el: { root, no, yes, alert, row: i => root.querySelectorAll('.list li')[i] },
+        destroy() { offs.forEach(f => f()); if (own) K.stop(); root.innerHTML = ''; root.classList.remove('cu-gd'); }
+      };
+      reset();
+      if (own) K.start();
+      return api;
+    }
+  };
+})();
+</script>
+<script>
+(() => {
+  let api;
+  const K = ReelKit({
+    cursorKind: el => el && el.closest('button') ? 'hand' : 'arrow',
+    update: dt => api.update(dt), render: () => api.render()
+  });
+  api = CursedUI.guiltDialog.init(document.getElementById('card'), { K });
+  const c = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  window.__pt = k => c(api.el[k]);
+  window.__row = i => c(api.el.row(i));
+  window.__popBack = () => api.popBack();
+  window.__closeNow = () => api.closeNow();
+  K.start();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rocker Theme Switch</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>/* inlined from ../_shared/reel.css */
+/* Shared look for "Interaction #N" pages: paper tokens + the Reel overlay layer.
+   The overlay layer only shows with ?capture (html.reel). Fonts: General Sans + Geist Mono. */
+:root {
+  --paper: #ECE8E0;
+  --card: #FAF8F4;
+  --ink: #1D1B18;
+  --ink-2: #57524A;
+  --muted: #9A948A;
+  --hair: rgba(40, 32, 20, .10);
+  --hair-strong: rgba(40, 32, 20, .16);
+  --accent: #D9502B;
+  --code-bg: #1E1C19;
+  --sans: "General Sans", ui-sans-serif, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(1200px 900px at 50% 38%, rgba(255,255,255,.55), transparent 70%),
+    radial-gradient(900px 700px at 50% 110%, rgba(120,100,70,.10), transparent 70%);
+}
+.stage { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+
+.card {
+  position: relative;
+  background: linear-gradient(180deg, #FCFBF8 0%, var(--card) 100%);
+  border-radius: 36px;
+  border: 1px solid var(--hair);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 1px 1px rgba(40,30,15,.04),
+    0 6px 12px -4px rgba(40,30,15,.06),
+    0 30px 60px -20px rgba(40,30,15,.16),
+    0 70px 120px -40px rgba(40,30,15,.18);
+}
+
+/* ---------- reel overlays (capture mode only) ---------- */
+.hook, .handle, .chip, .end, .codecard, #cursor, .big, .tint { display: none; pointer-events: none; }
+.reel body { user-select: none; -webkit-user-select: none; }
+.reel .stage { width: 1080px; height: 1920px; display: block; }
+.reel .card { position: absolute; left: var(--card-left, 80px); top: var(--card-top, 640px); scale: var(--card-scale, 1.1); transform-origin: 0 0; }
+.reel .hook, .reel .handle, .reel .chip, .reel .end, .reel .codecard, .reel #cursor, .reel .big, .reel .tint { display: block; }
+
+.tint { position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(900px 1300px at 50% 46%, transparent 50%, rgba(150,95,50,.10) 100%), rgba(230,170,110,.035); }
+.handle {
+  position: absolute; left: 0; right: 0; top: 300px; text-align: center;
+  font-family: var(--mono); font-size: 30px; color: var(--muted); letter-spacing: .02em;
+}
+.handle b { font-weight: 500; color: var(--accent); }
+.hook {
+  position: absolute; left: 80px; right: 80px; top: 356px; text-align: center;
+  font-size: 96px; font-weight: 600; letter-spacing: -.035em; line-height: 1.02; color: var(--ink);
+  text-wrap: balance;
+}
+.hook em { font-style: normal; color: var(--accent); }
+.chip { position: absolute; left: 0; right: 0; top: var(--chip-top, 1400px); text-align: center; }
+.chip span {
+  display: inline-flex; align-items: center; gap: 14px;
+  font-family: var(--mono); font-size: 28px; color: var(--ink-2);
+  padding: 14px 26px; border-radius: 999px; border: 1px solid var(--hair-strong);
+  background: rgba(250,248,244,.7);
+}
+.chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+.chip b { font-weight: 400; }
+.big { position: absolute; left: 0; right: 0; top: var(--big-top, 1440px); text-align: center; opacity: 0;
+  font-family: var(--mono); font-weight: 300; font-size: 132px; letter-spacing: -.05em; color: var(--accent); line-height: 1; }
+.big small { font-size: 30px; letter-spacing: .02em; color: var(--ink-2); font-weight: 400; display: block; margin-top: 10px; }
+.end {
+  position: absolute; left: 120px; right: 120px; top: var(--end-top, 1160px); text-align: center; opacity: 0;
+  font-size: 42px; font-weight: 500; letter-spacing: -.02em; line-height: 1.25; color: var(--ink);
+}
+.end b { font-weight: 600; color: var(--accent); }
+.end span { color: var(--muted); }
+.codecard {
+  position: absolute; left: 70px; top: var(--code-top, 640px); width: 890px; opacity: 0;
+  background: var(--code-bg); color: #E9E4DA; border-radius: 36px;
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 40px 90px -30px rgba(30,20,10,.45), 0 10px 24px -8px rgba(30,20,10,.25);
+  padding: 44px 46px 50px;
+}
+.codecard .file { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 25px; color: #8C857A; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 30px; }
+.codecard pre { font-family: var(--mono); font-size: 30px; line-height: 1.7; white-space: pre; margin: 0 -18px; }
+.codecard .ln { display: block; padding: 0 18px; border-radius: 10px; transition: none; }
+.codecard .ln.on { background: rgba(255,255,255,.07); box-shadow: inset 4px 0 0 var(--accent); }
+.c { color: #A39C90; } .k { color: #E8A27F; } .n { color: #F2C66D; } .o { color: #9C958A; }
+.hl.on { color: #fff; background: rgba(217,80,43,.30); border-radius: 6px; padding: 0 4px; margin: 0 -4px; }
+
+#cursor { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 50; pointer-events: none; }
+#cursor .tip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  background: rgba(29,27,24,.16); border: 2.5px solid rgba(29,27,24,.62);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.75), 0 8px 18px rgba(30,20,10,.22); }
+#cursor.down .tip { transform: scale(.88); background: rgba(29,27,24,.26); border-color: rgba(29,27,24,.8); }
+#cursor .rip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  border: 3px solid var(--accent); opacity: 0; }
+</style>
+<style>
+  :root { --card-top: 650px; --card-left: 68px; --card-scale: 1.18; --chip-top: 1430px; --big-top: 1420px; --code-top: 640px; --end-top: 1180px; }
+  .card { width: 800px; height: 620px; background: none; }
+  .nudge { position: absolute; inset: 0; }
+  .face { position: absolute; inset: 0; border-radius: 36px; overflow: hidden; }
+  .face.light { background: linear-gradient(180deg, #FCFBF8 0%, var(--card) 100%); color: var(--ink); --m: var(--muted); --h: var(--hair); --bar: rgba(40,32,20,.09); --acc: var(--accent); }
+  .face.dark { background: linear-gradient(180deg, #2A2724 0%, #1F1D1A 100%); color: #EFEAE1; --m: #8E877C; --h: rgba(255,255,255,.08); --bar: rgba(255,255,255,.08); --acc: #F08A5D;
+               box-shadow: inset 0 1px 0 rgba(255,255,255,.07); }
+  .meta { position: absolute; left: 56px; right: 56px; top: 50px; display: flex; justify-content: space-between;
+          font-family: var(--mono); font-size: 23px; color: var(--m); }
+  .meta b { font-weight: 400; color: var(--acc); }
+  .word { position: absolute; left: 50px; top: 104px; font-size: 156px; font-weight: 600; letter-spacing: -.055em; line-height: 1; }
+  .sub { position: absolute; left: 58px; top: 288px; font-family: var(--mono); font-size: 22px; color: var(--m); }
+  .bars { position: absolute; left: 58px; top: 352px; }
+  .bars i { display: block; height: 14px; border-radius: 7px; background: var(--bar); margin-bottom: 18px; }
+  .foot { position: absolute; left: 56px; right: 56px; bottom: 42px; display: flex; justify-content: space-between;
+          font-family: var(--mono); font-size: 22px; color: var(--m); border-top: 1px solid var(--h); padding-top: 22px; }
+  canvas#sw { position: absolute; z-index: 3; left: 440px; top: 96px; width: 320px; height: 440px; touch-action: none; }
+  button.rock { position: absolute; z-index: 4; left: 520px; top: 168px; width: 160px; height: 276px; opacity: 0; border: 0; padding: 0; background: none; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent; }
+  button.rock:focus-visible { opacity: 1; outline: 3px solid var(--accent); outline-offset: 8px; border-radius: 22px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="tint" id="tint"></div>
+  <div class="handle"><b>Interaction #8</b> · @zellap.app</div>
+  <h1 class="hook">Flip it. Watch the <em>light</em> move.</h1>
+
+  <div class="card" id="card">
+    <div class="nudge" id="nudge">
+      <template id="tpl">
+        <div class="meta"><span>Settings · <b>Appearance</b></span><span>Tue 10.11</span></div>
+        <div class="word"></div>
+        <div class="sub"></div>
+        <div class="bars"><i style="width:330px"></i><i style="width:290px"></i><i style="width:210px"></i></div>
+        <div class="foot"><span class="hint">press the raised side</span><span>rocker switch</span></div>
+      </template>
+      <div class="face light" id="faceL" style="z-index:1"></div>
+      <div class="face dark" id="faceD" style="z-index:0"></div>
+      <canvas id="sw" width="640" height="880"></canvas>
+      <button class="rock" id="rock" role="switch" aria-checked="false" aria-label="Dark theme"></button>
+    </div>
+    <span class="sr" role="status" aria-live="polite" id="live"></span>
+  </div>
+
+  <div class="codecard" id="code">
+    <div class="file"><span>rocker.js</span><span>every tick, dt = 1/1440 s</span></div>
+<pre><span class="ln">f <span class="o">=</span> <span class="k">Math</span>.tanh(<span class="n">5</span> <span class="o">*</span> x);    <span class="c">// detent spring</span></span><span class="ln">v <span class="o">+=</span> (f <span class="o">+</span> <span class="hl">finger <span class="o">*</span> <span class="n">1.7</span></span>) <span class="o">*</span> A <span class="o">*</span> dt;</span><span class="ln">x <span class="o">+=</span> v <span class="o">*</span> dt;</span><span class="ln"><span class="k">if</span> (<span class="k">Math</span>.abs(x) <span class="o">&gt;</span> <span class="n">1</span>) v <span class="o">*=</span> <span class="o">-</span><span class="n">0.3</span>; <span class="c">// bounce</span></span><span class="ln"><span class="c">// the room light, on the tilted face:</span></span><span class="ln">shine <span class="o">=</span> dot(faceNormal(<span class="hl">x <span class="o">*</span> TILT</span>), LIGHT);</span></pre>
+  </div>
+
+  <div class="chip" id="chip"><span><i></i><b id="chipText">1× real time</b></span></div>
+  <div class="big" id="big">0.5×<small>slow motion</small></div>
+  <p class="end" id="end">Comment <b>CODE</b> for the source.<br><span>Follow for more.</span></p>
+  <div id="cursor"><div class="tip"></div></div>
+</div>
+
+<script>/* inlined from ../_shared/reel.js */
+// Shared runtime for "Interaction #N" pages.
+// Normal use: a fixed-step rAF loop drives the component (stable at any refresh rate).
+// ?capture: the recorder drives time frame by frame via __tick(dt), and the overlay via __overlay(o).
+window.Reel = function ({ step, render, DT = 1 / 1440, geom = () => ({}) }) {
+  const CAPTURE = new URLSearchParams(location.search).has('capture');
+  if (CAPTURE) document.documentElement.classList.add('reel');
+  const $ = id => document.getElementById(id);
+  const advance = seconds => {           // whole fixed steps only, so the sim never depends on frame timing
+    const n = Math.round(seconds / DT);
+    for (let i = 0; i < n; i++) step(DT);
+  };
+  render();
+  if (!CAPTURE) {
+    let last = performance.now(), acc = 0;
+    const frame = now => {
+      acc += Math.min(0.05, (now - last) / 1000); last = now;
+      while (acc >= DT) { step(DT); acc -= DT; }
+      render(); requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    return CAPTURE;
+  }
+  const cur = $('cursor');
+  cur.style.transform = 'translate(-200px,-200px)';
+  // a press ring that grows out of the fingertip, on simulated time (so it slows down in slow motion too)
+  const rip = document.createElement('i'); rip.className = 'rip'; cur.appendChild(rip);
+  let ripT = 9;
+  addEventListener('pointerdown', () => { cur.classList.add('down'); ripT = 0; }, true);
+  addEventListener('pointerup', () => cur.classList.remove('down'), true);
+  const drawRip = () => {
+    const u = Math.min(1, ripT / 0.45), e = 1 - (1 - u) ** 3;
+    rip.style.transform = `scale(${(0.9 + 0.9 * e).toFixed(4)})`;
+    rip.style.opacity = (u < 1 ? 0.55 * (1 - u) : 0).toFixed(3);
+  };
+  drawRip();
+  window.__tick = sec => { advance(sec); ripT += sec; drawRip(); render(); };
+  window.__geom = geom;
+  window.__overlay = o => {
+    // sequential, never two text layers at once: card out, then code in (and back)
+    const card = $('card'), code = $('code');
+    card.style.opacity = o.card;
+    card.style.transform = `translateY(${(1 - o.card) * -18}px)`;
+    code.style.opacity = o.code;
+    code.style.transform = `translateY(${(1 - o.code) * 22}px)`;
+    $('chip').style.opacity = o.chipA ?? o.card * (1 - o.big);
+    $('end').style.opacity = o.code;
+    $('big').style.opacity = o.big; $('big').style.transform = `scale(${0.94 + 0.06 * o.big})`;
+    $('tint').style.opacity = o.tint;
+    document.querySelectorAll('.hl').forEach(el => el.classList.toggle('on', !!o.hl));
+    document.querySelectorAll('#code .ln').forEach((el, i) => el.classList.toggle('on', i === o.line));
+    cur.style.opacity = o.cursor ?? o.card;
+    $('chipText').textContent = o.chip;
+    if (o.cx !== undefined) cur.style.transform = `translate(${o.cx}px, ${o.cy}px)`;
+  };
+  return CAPTURE;
+};
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const card = $('card'), cv = $('sw'), ctx = cv.getContext('2d');
+
+  // ---------- two faces of the same card: light underneath, dark revealed from the switch ----------
+  for (const [id, word, sub] of [['faceL', 'Light', 'theme · paper white'], ['faceD', 'Dark', 'theme · lamp off']]) {
+    const f = $(id); f.append($('tpl').content.cloneNode(true));
+    f.querySelector('.word').textContent = word; f.querySelector('.sub').textContent = sub;
+  }
+
+  // switch geometry (canvas units, 320 x 440; centre of the rocker)
+  const OX = 160, OY = 234, PW = 236, PH = 344, CW = 152, CH = 264, RW = 136, L = 120;
+  const SW_X = 440 + OX, SW_Y = 96 + OY;            // rocker centre in card units
+  const TILT = 0.2, CONC = 24, DOME = 6, H0 = -2, OBL = 0.2, OBLX = 0.16;  // max tilt (rad), concave dish depth, pivot height, view obliqueness
+  const LX = -0.35, LY = -0.75, LZ = 0.56;           // the room light: from the top left
+  const A = 70, PUSH = 1.7, DAMP = 6, REST = 0.3;
+
+  let x = 1, v = 0, push = 0, held = 0, heldT = 0, keyT = 0;   // x = +1: top half pressed (light), -1: bottom pressed (dark)
+  let dark = false, from = 0, rev = 1, nud = 0, nudV = 0;   // rev: 0..1 reveal of the current theme over the previous one
+  const REV_T = 0.5, R_MAX = 720;
+
+  // ---------- input ----------
+  const local = e => { const r = card.getBoundingClientRect(), k = 800 / r.width; return { x: (e.clientX - r.left) * k, y: (e.clientY - r.top) * k }; };
+  const rock = $('rock');
+  rock.addEventListener('pointerdown', e => {
+    e.preventDefault(); rock.setPointerCapture(e.pointerId);
+    held = local(e).y < SW_Y ? 1 : -1;               // top half pushes towards light, bottom towards dark
+  });
+  const up = () => { held = 0; };
+  rock.addEventListener('pointerup', up);
+  rock.addEventListener('pointercancel', up);
+  rock.addEventListener('click', e => { if (e.detail === 0) { held = 0; keyT = 0.16; } });   // keyboard: Space / Enter
+  function setTheme(d) {
+    if (d === dark) return;
+    from = dark ? 1 : 0;
+    dark = d; rev = reduce.matches ? 1 : 0;
+    $('faceL').style.zIndex = d ? 0 : 1; $('faceD').style.zIndex = d ? 1 : 0;
+    rock.setAttribute('aria-checked', d);
+    $('live').textContent = d ? 'Dark theme' : 'Light theme';
+  }
+
+  // ---------- physics ----------
+  function step(dt) {
+    if (keyT > 0) { keyT -= dt; push = x > 0 ? -1 : 1; if (keyT <= 0) push = 0; }
+    else { heldT = held ? heldT + dt : 0; push = held * Math.min(1, 0.35 + heldT / 0.12); }   // a finger leans in, it doesn't hit
+    const f = Math.tanh(5 * x) * (1 - 0.45 * x * x);     // detent: pushes away from the middle, holds it on the stop
+    v += ((f + push * PUSH) * A - v * DAMP) * dt;
+    x += v * dt;
+    if (Math.abs(x) > 1) {                                // end stop: a little bounce, the card feels the click
+      const hit = Math.abs(v); x = Math.sign(x); v *= -REST;
+      if (hit > 2 && !reduce.matches) nudV += hit * 9;
+    }
+    if ((x < 0) !== dark) setTheme(x < 0);
+    if (rev < 1) rev = Math.min(1, rev + dt / REV_T);
+    nudV += (-nud * 1500 - nudV * 26) * dt; nud += nudV * dt;
+  }
+
+  // ---------- render ----------
+  const mix = (a, b, t) => a.map((c, i) => c + (b[i] - c) * t);
+  const rgb = c => `rgb(${c.map(Math.round).join(',')})`;
+  const clamp = (u, a = 0, b = 1) => Math.min(b, Math.max(a, u));
+  const face = document.createElement('canvas'); face.width = 640; face.height = 880;
+  const fx = face.getContext('2d');
+  const rr = (c, x0, y0, w, h, r) => { c.beginPath(); c.roundRect(x0, y0, w, h, r); };
+
+  function sun(c, cx, cy, s) {
+    c.beginPath(); c.arc(cx, cy, 9 * s, 0, 7); c.fill();
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4;
+      c.beginPath(); c.moveTo(cx + Math.cos(a) * 15 * s, cy + Math.sin(a) * 15 * s); c.lineTo(cx + Math.cos(a) * 21 * s, cy + Math.sin(a) * 21 * s); c.stroke(); }
+  }
+  const mc = document.createElement('canvas'); mc.width = mc.height = 128;
+  const mx = mc.getContext('2d');
+  function moon(c, cx, cy, s) {                       // a crescent: one disc, minus a smaller one
+    mx.clearRect(0, 0, 128, 128); mx.globalCompositeOperation = 'source-over';
+    mx.fillStyle = c.fillStyle; mx.beginPath(); mx.arc(64, 64, 34, 0, 7); mx.fill();
+    mx.globalCompositeOperation = 'destination-out';
+    mx.beginPath(); mx.arc(84, 50, 28, 0, 7); mx.fill();
+    c.drawImage(mc, cx - 32 * s, cy - 32 * s, 64 * s, 64 * s);
+  }
+
+  function render() {
+    const th = x * TILT, sn = Math.sin(th), cs = Math.cos(th);
+    // reveal over the whole card
+    const r = (ease(rev) * R_MAX).toFixed(1);
+    const top = dark ? $('faceD') : $('faceL');
+    top.style.clipPath = rev >= 1 ? 'none' : `circle(${r}px at ${SW_X}px ${SW_Y}px)`;
+    (dark ? $('faceL') : $('faceD')).style.clipPath = 'none';
+    $('nudge').style.transform = `translateY(${nud.toFixed(3)}px)`;
+    for (const h of document.querySelectorAll('.hint')) h.textContent = held ? 'let it snap' : 'press the raised side';
+
+    ctx.setTransform(2, 0, 0, 2, 0, 0); ctx.clearRect(0, 0, 320, 440);
+    // the switch is wiped by the same circle as the card: old theme underneath, new theme inside the circle
+    const D = dark ? 1 : 0;
+    if (rev >= 1) drawSwitch(D, th, sn, cs);
+    else {
+      drawSwitch(from, th, sn, cs);
+      ctx.save(); ctx.beginPath(); ctx.arc(OX, OY, +r, 0, 7); ctx.clip();
+      drawSwitch(D, th, sn, cs);
+      ctx.restore();
+    }
+  }
+  function drawSwitch(dk, th, sn, cs) {
+    const hv = vv => { const a = Math.sqrt(vv * vv + 36), u = (a - L / 2) / (L / 2);   // two shallow, slightly domed faces in a V
+      return H0 + CONC * a / L + DOME * (1 - u * u) + vv * sn; };
+    const h = hv;                                                      // height of the face above the plate
+    const sy = (vv, hh) => OY + vv * cs - hh * OBL;                    // screen y (higher = shifted up a touch)
+    const plate = mix([240, 236, 229], [56, 52, 47], dk), plateHi = mix([255, 255, 253], [96, 90, 82], dk);
+    const plateLo = mix([214, 207, 196], [24, 22, 20], dk);
+
+    // wall plate, lit from the top left
+    ctx.save();
+    ctx.shadowColor = `rgba(40,28,12,${(0.22 + 0.2 * dk).toFixed(3)})`; ctx.shadowBlur = 26; ctx.shadowOffsetX = 7; ctx.shadowOffsetY = 14;
+    let g = ctx.createLinearGradient(OX - PW / 2, OY - PH / 2, OX + PW / 2, OY + PH / 2);
+    g.addColorStop(0, rgb(plateHi)); g.addColorStop(0.5, rgb(plate)); g.addColorStop(1, rgb(plateLo));
+    ctx.fillStyle = g; rr(ctx, OX - PW / 2, OY - PH / 2, PW, PH, 46); ctx.fill();
+    ctx.restore();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = `rgba(255,255,255,${(0.75 - 0.5 * dk).toFixed(3)})`;
+    rr(ctx, OX - PW / 2 + 1.5, OY - PH / 2 + 1.5, PW - 3, PH - 3, 45); ctx.stroke();
+
+    // the raised end throws its shadow onto the plate, down and to the right
+    ctx.save();
+    rr(ctx, OX - PW / 2, OY - PH / 2, PW, PH, 46); ctx.clip();
+    ctx.filter = 'blur(7px)';
+    ctx.fillStyle = `rgba(30,18,6,${(0.30 + 0.15 * dk).toFixed(3)})`;
+    ctx.beginPath();
+    const N = 40, ptsR = [], ptsL = [];
+    for (let i = 0; i <= N; i++) {
+      const vv = -L + 2 * L * i / N, hh = Math.max(0, h(vv)) * 1.15;
+      ptsR.push([OX + RW / 2 + hh * 0.49, sy(vv, 0) + hh * 0.83]); ptsL.push([OX - RW / 2 + hh * 0.49, sy(vv, 0) + hh * 0.83]);
+    }
+    [...ptsR, ...ptsL.reverse()].forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    // the cavity: dark floor, walls lit where they face the light
+    const cx0 = OX - CW / 2, cy0 = OY - CH / 2;
+    ctx.save();
+    rr(ctx, cx0, cy0, CW, CH, 24); ctx.fillStyle = rgb(mix([46, 40, 34], [12, 11, 10], dk)); ctx.fill();
+    ctx.clip();
+    // inner lip: bottom and right walls face the light; how much shows depends on how deep the rocker end sits there
+    const botDepth = clamp((12 - h(L)) / 40), topDepth = clamp((12 - h(-L)) / 40);
+    g = ctx.createLinearGradient(0, cy0 + CH - 22, 0, cy0 + CH);
+    g.addColorStop(0, 'rgba(255,244,228,0)'); g.addColorStop(1, `rgba(255,244,228,${(0.10 + 0.55 * botDepth * (1 - 0.6 * dk)).toFixed(3)})`);
+    ctx.fillStyle = g; ctx.fillRect(cx0, cy0 + CH - 22, CW, 22);
+    g = ctx.createLinearGradient(0, cy0, 0, cy0 + 26);
+    g.addColorStop(0, `rgba(0,0,0,${(0.25 + 0.45 * topDepth).toFixed(3)})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(cx0, cy0, CW, 26);
+    g = ctx.createLinearGradient(cx0 + CW - 10, 0, cx0 + CW, 0);
+    g.addColorStop(0, 'rgba(255,244,228,0)'); g.addColorStop(1, `rgba(255,244,228,${(0.22 * (1 - 0.6 * dk)).toFixed(3)})`);
+    ctx.fillStyle = g; ctx.fillRect(cx0 + CW - 10, cy0, 10, CH);
+    ctx.restore();
+
+    // ---- the rocker, drawn into its own layer row by row ----
+    fx.setTransform(2, 0, 0, 2, 0, 0); fx.clearRect(0, 0, 320, 440);
+    const body = mix([246, 242, 236], [118, 110, 100], dk), side = mix([178, 170, 158], [40, 37, 33], dk);
+    const xl = OX - RW / 2;
+    // its body first (seen where the face lifts away from it), then the face
+    for (let vv = -L; vv <= L; vv += 0.5) {
+      const hh = h(vv), y0 = sy(vv, hh), y1 = sy(vv, -26);
+      fx.fillStyle = rgb(side); fx.fillRect(xl - hh * OBLX, y0, RW + (hh + 26) * OBLX, Math.max(0.5, y1 - y0));
+    }
+    for (let vv = -L; vv <= L; vv += 0.5) {
+      const s = (hv(vv + 0.25) - hv(vv - 0.25)) / 0.5;   // slope along the rocker (+ = rising towards the bottom)
+      const n = 1 / Math.hypot(1, s);
+      const diff = clamp((-LY * s + LZ) * n * 1.0);
+      const gloss = Math.exp(-(((s - 0.03) / 0.11) ** 2)) * (0.20 - 0.08 * dk);   // the window's reflection: where the face is level
+      const k = 0.36 + 0.72 * diff;
+      const c = body.map(ch => Math.min(255, ch * k + 255 * gloss));
+      fx.fillStyle = rgb(c);
+      fx.fillRect(xl - h(vv) * OBLX, sy(vv, h(vv)) - 0.3, RW, 1.1);
+    }
+    // rounded long edges: left catches the light, right falls away
+    fx.globalCompositeOperation = 'source-atop';
+    g = fx.createLinearGradient(xl, 0, xl + RW, 0);
+    g.addColorStop(0, 'rgba(255,255,255,.35)'); g.addColorStop(0.07, 'rgba(255,255,255,0)');
+    g.addColorStop(0.88, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${(0.22 + 0.15 * dk).toFixed(3)})`);
+    fx.fillStyle = g; fx.fillRect(xl, 0, RW, 440);
+    // printed icons, on the face (they ride the tilt)
+    const lightOn = clamp((x + 1) / 2);
+    const ink = on => { const g = dk > 0.5 ? [205, 197, 185] : [120, 112, 100], c = mix(g, [217, 80, 43], on * on * (3 - 2 * on));
+      return `rgba(${c.map(Math.round).join(',')},${(0.6 + 0.4 * on).toFixed(3)})`; };   // follows the tilt, not the state
+    fx.lineWidth = 3.2; fx.lineCap = 'round';
+    fx.fillStyle = fx.strokeStyle = ink(lightOn); sun(fx, OX - h(-L * 0.52) * OBLX, sy(-L * 0.52, h(-L * 0.52)), cs * 0.95);
+    fx.fillStyle = fx.strokeStyle = ink(1 - lightOn); moon(fx, OX - 3 - h(L * 0.52) * OBLX, sy(L * 0.52, h(L * 0.52)), cs * 0.95);
+    fx.globalCompositeOperation = 'source-over';
+    // the rocker sits inside the cavity: anything below plate level is hidden by the lip
+    ctx.save();
+    ctx.beginPath(); ctx.roundRect(cx0, cy0 - 10, CW, CH + 10, 24); ctx.clip();
+    ctx.shadowColor = 'rgba(20,12,4,.35)'; ctx.shadowBlur = 8; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 4;
+    ctx.drawImage(face, 0, 0, 320, 440);
+    ctx.restore();
+  }
+  const ease = u => 1 - (1 - clamp(u)) ** 3;
+
+  Reel({
+    step, render,
+    geom: () => {
+      const r = card.getBoundingClientRect(), k = r.width / 800;
+      return { left: r.left, top: r.top, k, sx: SW_X, sy: SW_Y, half: L * 0.5 };
+    },
+  });
+  document.fonts.ready.then(render);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The same cancel flow, built honestly · Done right #20 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 520px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .sub {
+    position: relative;
+    padding: 24px;
+    border: 1px solid rgba(40, 32, 20, .14);
+    border-radius: 20px;
+    background: #FFFFFF;
+    color: #1D1B18;
+  }
+  .sub-panel { display: grid; gap: 16px; }
+  .sub-panel[hidden] { display: none; }
+  .sub-count {
+    margin: 0 0 -10px;
+    font-size: .8125rem; font-weight: 500; letter-spacing: .02em;
+    color: #5A544B;
+  }
+  .sub-title { margin: 0; font-size: 1.375rem; line-height: 1.25; font-weight: 600; letter-spacing: -.01em; }
+  .sub-title:focus { outline: none; }   /* focus is moved here by script, not by the user */
+
+  .sub-facts { display: grid; gap: 8px; margin: 0; }
+  .sub-facts div { display: flex; justify-content: space-between; gap: 16px; }
+  .sub-facts dt { color: #4F4A43; }
+  .sub-facts dd { margin: 0; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  .sub-what { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; color: #4F4A43; }
+  .sub-what li { position: relative; padding-left: 20px; }
+  .sub-what li::before {
+    content: ""; position: absolute; left: 4px; top: 9px;
+    width: 7px; height: 7px; border-radius: 50%; background: #1D1B18;
+  }
+  .sub-what b, .sub-sum b { color: #1D1B18; font-weight: 600; }
+  .sub-sum, .sub-offer, .sub-note { margin: 0; color: #4F4A43; }
+  .sub-offer { padding: 14px 16px; border-radius: 12px; background: #F4F1EB; }
+  .sub-note { font-size: .875rem; }
+
+  /* Every choice in the flow looks the same. Same size, same weight. */
+  .sub-btn {
+    min-height: 48px;
+    padding: 0 18px;
+    border: 1.5px solid #1D1B18;
+    border-radius: 12px;
+    background: #FFFFFF;
+    color: #1D1B18;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .sub-btn:hover { background: #F2EFEA; }
+  .sub-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .sub-back {
+    justify-self: start;
+    min-height: 44px;
+    margin: -10px 0 -6px -10px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: #1D1B18;
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .sub-back::before { content: "← " / ""; }   /* arrow is not part of the name */
+  .sub-back:hover { background: #F2EFEA; }
+  .sub-btn:focus-visible,
+  .sub-back:focus-visible {
+    outline: 2.5px solid #1D1B18;
+    outline-offset: 3px;
+  }
+
+  /* Pause: nothing is picked for you. */
+  .sub-months { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+  .sub-months legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
+  .sub-months label {
+    display: flex; align-items: center; gap: 12px;
+    min-height: 48px; padding: 0 14px;
+    border: 1.5px solid #857E73; border-radius: 12px;
+    cursor: pointer;
+  }
+  .sub-months label:has(:checked) { border-color: #1D1B18; background: #F4F1EB; }
+  .sub-months input { width: 20px; height: 20px; margin: 0; accent-color: #1D1B18; }
+  .sub-months input:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 3px; }
+  .sub-months span { color: #4F4A43; }
+  .sub-months b { color: #1D1B18; font-weight: 600; }
+
+  .sub-reason { display: grid; gap: 6px; font-weight: 500; font-size: .9375rem; }
+  .sub-reason span { color: #5A544B; font-weight: 400; }
+  .sub-reason b { color: #1D1B18; font-weight: 600; }
+  .sub-reason select {
+    min-height: 44px; padding: 0 12px;
+    border: 1px solid #857E73; border-radius: 10px;
+    background: #FFFFFF; color: #1D1B18; font: inherit;
+  }
+  .sub-reason select:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 2px; }
+
+  .sub-error { margin: -6px 0 0; font-size: .875rem; font-weight: 500; color: #B3261E; }
+  .sub-error[hidden] { display: none; }
+  /* One status line for the whole flow. Shown on Billing, read out on every step. */
+  .sub-status { margin: 16px 0 0; font-size: .9375rem; font-weight: 500; color: #2D6A3E; }
+  .sub-status:empty { display: none; }
+  .sub[data-step]:not([data-step="billing"]) .sub-status {
+    position: absolute; width: 1px; height: 1px; margin: 0;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #20 · @zellap.app</p>
+  <h1>The same cancel flow, built honestly</h1>
+  <p class="demo-lede">A labelled button in Billing, the consequences in plain words, a pause offered once with no pressure, equal buttons, and an undo that lasts until the end date. Three clicks, start to finish.</p>
+
+  <section class="sub" id="pro" aria-label="Subscription" data-ends="14 Dec 2026">
+    <div class="sub-panel" data-step="billing">
+      <h2 class="sub-title" tabindex="-1">Billing</h2>
+      <dl class="sub-facts">
+        <div><dt>Plan</dt><dd>Pro · €12 / month</dd></div>
+        <div><dt>Next charge</dt><dd>14 Dec 2026</dd></div>
+      </dl>
+      <button class="sub-btn" type="button" data-go="what">Cancel subscription</button>
+    </div>
+
+    <div class="sub-panel" data-step="what" hidden>
+      <button class="sub-back" type="button">Back</button>
+      <p class="sub-count">Step 1 of 2</p>
+      <h2 class="sub-title" tabindex="-1">Here's what happens</h2>
+      <ul class="sub-what">
+        <li><b>You keep Pro until 14 Dec 2026.</b> You've paid for it.</li>
+        <li><b>No more charges.</b> Nothing after today.</li>
+        <li><b>Your projects stay.</b> They turn read-only on 14 Dec.</li>
+      </ul>
+      <p class="sub-offer">Need a break instead? You can pause for 1 to 3 months. Skip this if you'd rather cancel.</p>
+      <div class="sub-actions">
+        <button class="sub-btn" type="button" data-go="pause">Pause instead</button>
+        <button class="sub-btn" type="button" data-go="confirm">Continue to cancel</button>
+      </div>
+    </div>
+
+    <div class="sub-panel" data-step="pause" hidden>
+      <button class="sub-back" type="button">Back</button>
+      <p class="sub-count">Step 2 of 2</p>
+      <h2 class="sub-title" tabindex="-1">Pause Pro</h2>
+      <fieldset class="sub-months">
+        <legend>Pause for</legend>
+        <label><input type="radio" name="pro-months" value="14 Jan 2027"><span><b>1 month</b> · back 14 Jan</span></label>
+        <label><input type="radio" name="pro-months" value="14 Feb 2027"><span><b>2 months</b> · back 14 Feb</span></label>
+        <label><input type="radio" name="pro-months" value="14 Mar 2027"><span><b>3 months</b> · back 14 Mar</span></label>
+      </fieldset>
+      <p class="sub-error" hidden>Choose how long to pause.</p>
+      <button class="sub-btn" type="button" data-go="paused">Pause subscription</button>
+    </div>
+
+    <div class="sub-panel" data-step="confirm" hidden>
+      <button class="sub-back" type="button">Back</button>
+      <p class="sub-count">Step 2 of 2</p>
+      <h2 class="sub-title" tabindex="-1">Cancel your Pro subscription?</h2>
+      <p class="sub-sum">Pro ends <b>14 Dec 2026</b>. You won't be charged again.</p>
+      <label class="sub-reason">
+        <span><b>Why are you leaving?</b> Optional</span>
+        <select name="reason">
+          <option value="">Skip</option>
+          <option>Too expensive</option>
+          <option>Missing a feature</option>
+          <option>Switching to another tool</option>
+        </select>
+      </label>
+      <div class="sub-actions">
+        <button class="sub-btn" type="button" data-go="billing">Keep subscription</button>
+        <button class="sub-btn" type="button" data-go="cancelled">Cancel subscription</button>
+      </div>
+    </div>
+
+    <div class="sub-panel" data-step="cancelled" hidden>
+      <h2 class="sub-title" tabindex="-1">Cancelled.</h2>
+      <p class="sub-sum">You have Pro until <b>14 Dec 2026</b>. We've emailed you a receipt.</p>
+      <button class="sub-btn" type="button" data-go="billing">Undo cancellation</button>
+      <p class="sub-note">You can undo this until 14 Dec 2026.</p>
+    </div>
+
+    <div class="sub-panel" data-step="paused" hidden>
+      <h2 class="sub-title" tabindex="-1">Paused.</h2>
+      <p class="sub-sum">No charges until <b class="sub-resume"></b>. Your projects stay as they are.</p>
+      <button class="sub-btn" type="button" data-go="billing">Resume now</button>
+    </div>
+    <p class="sub-status" role="status"></p>
+  </section>
+
+  <p class="demo-notes">Back or Esc goes one step back and never cancels anything.<br>"Undo cancellation" works until the paid period ends.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  // Back goes one step up. It never cancels anything.
+  const BACK = {
+    what: 'billing', pause: 'what', confirm: 'what',
+  };
+
+  for (const sub of document.querySelectorAll('.sub')) {
+    const panel = (s) => sub.querySelector(`.sub-panel[data-step="${s}"]`);
+    const status = sub.querySelector('.sub-status');
+    const trigger = panel('billing').querySelector('[data-go="what"]');
+    const error = sub.querySelector('.sub-error');
+    const ends = sub.dataset.ends;
+    let step = 'billing';
+
+    // Each heading is described by its "Step 1 of 2".
+    for (const p of sub.querySelectorAll('.sub-panel')) {
+      const count = p.querySelector('.sub-count');
+      if (!count) continue;
+      count.id = `${sub.id}-${p.dataset.step}-count`;
+      p.querySelector('.sub-title').setAttribute('aria-describedby', count.id);
+    }
+    if (error) {
+      error.id = `${sub.id}-pause-error`;
+      sub.querySelector('.sub-months').setAttribute('aria-describedby', error.id);
+    }
+
+    // Show one step and move focus to its heading.
+    const show = (next, focus) => {
+      panel(step).hidden = true;
+      panel(next).hidden = false;
+      step = sub.dataset.step = next;
+      (focus || panel(next).querySelector('.sub-title')).focus();
+    };
+
+    const say = {
+      'confirm>billing': `Nothing changed. Pro renews ${ends}.`,
+      'cancelled>billing': `Cancellation undone. Pro renews ${ends}.`,
+      'paused>billing': `Pause ended. Pro renews ${ends}.`,
+    };
+
+    const go = (next) => {
+      if (next === 'paused') {
+        const pick = sub.querySelector('.sub-months :checked');
+        if (!pick) {
+          error.hidden = false;
+          sub.querySelectorAll('.sub-months input').forEach((i) => i.setAttribute('aria-invalid', 'true'));
+          sub.querySelector('.sub-months input').focus();
+          return;
+        }
+        sub.querySelector('.sub-resume').textContent = pick.value;
+      }
+      const from = step;
+      show(next, next === 'billing' ? trigger : null);
+      if (next === 'cancelled') status.textContent = `Cancelled. You have Pro until ${ends}.`;
+      else if (next === 'paused') status.textContent = `Paused. No charges until ${sub.querySelector('.sub-resume').textContent}.`;
+      else status.textContent = say[`${from}>${next}`] || '';
+    };
+
+    const back = () => {
+      if (!BACK[step]) return;
+      const to = BACK[step];
+      show(to, to === 'billing' ? trigger : null);
+    };
+
+    sub.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.classList.contains('sub-back')) back();
+      else if (b.dataset.go) go(b.dataset.go);
+    });
+    sub.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !BACK[step]) return;
+      e.preventDefault();
+      back();   // Esc = Back. Never "cancel".
+    });
+    sub.addEventListener('change', (e) => {
+      if (!e.target.closest('.sub-months')) return;
+      error.hidden = true;
+      sub.querySelectorAll('.sub-months input').forEach((i) => i.removeAttribute('aria-invalid'));
+    });
+  }
+</script>
+</body>
+</html>

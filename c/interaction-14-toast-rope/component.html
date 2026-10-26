@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toast on a Rope</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>/* inlined from ../_shared/reel.css */
+/* Shared look for "Interaction #N" pages: paper tokens + the Reel overlay layer.
+   The overlay layer only shows with ?capture (html.reel). Fonts: General Sans + Geist Mono. */
+:root {
+  --paper: #ECE8E0;
+  --card: #FAF8F4;
+  --ink: #1D1B18;
+  --ink-2: #57524A;
+  --muted: #9A948A;
+  --hair: rgba(40, 32, 20, .10);
+  --hair-strong: rgba(40, 32, 20, .16);
+  --accent: #D9502B;
+  --code-bg: #1E1C19;
+  --sans: "General Sans", ui-sans-serif, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(1200px 900px at 50% 38%, rgba(255,255,255,.55), transparent 70%),
+    radial-gradient(900px 700px at 50% 110%, rgba(120,100,70,.10), transparent 70%);
+}
+.stage { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+
+.card {
+  position: relative;
+  background: linear-gradient(180deg, #FCFBF8 0%, var(--card) 100%);
+  border-radius: 36px;
+  border: 1px solid var(--hair);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 1px 1px rgba(40,30,15,.04),
+    0 6px 12px -4px rgba(40,30,15,.06),
+    0 30px 60px -20px rgba(40,30,15,.16),
+    0 70px 120px -40px rgba(40,30,15,.18);
+}
+
+/* ---------- reel overlays (capture mode only) ---------- */
+.hook, .handle, .chip, .end, .codecard, #cursor, .big, .tint { display: none; pointer-events: none; }
+.reel body { user-select: none; -webkit-user-select: none; }
+.reel .stage { width: 1080px; height: 1920px; display: block; }
+.reel .card { position: absolute; left: var(--card-left, 80px); top: var(--card-top, 640px); scale: var(--card-scale, 1.1); transform-origin: 0 0; }
+.reel .hook, .reel .handle, .reel .chip, .reel .end, .reel .codecard, .reel #cursor, .reel .big, .reel .tint { display: block; }
+
+.tint { position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(900px 1300px at 50% 46%, transparent 50%, rgba(150,95,50,.10) 100%), rgba(230,170,110,.035); }
+.handle {
+  position: absolute; left: 0; right: 0; top: 300px; text-align: center;
+  font-family: var(--mono); font-size: 30px; color: var(--muted); letter-spacing: .02em;
+}
+.handle b { font-weight: 500; color: var(--accent); }
+.hook {
+  position: absolute; left: 80px; right: 80px; top: 356px; text-align: center;
+  font-size: 96px; font-weight: 600; letter-spacing: -.035em; line-height: 1.02; color: var(--ink);
+  text-wrap: balance;
+}
+.hook em { font-style: normal; color: var(--accent); }
+.chip { position: absolute; left: 0; right: 0; top: var(--chip-top, 1400px); text-align: center; }
+.chip span {
+  display: inline-flex; align-items: center; gap: 14px;
+  font-family: var(--mono); font-size: 28px; color: var(--ink-2);
+  padding: 14px 26px; border-radius: 999px; border: 1px solid var(--hair-strong);
+  background: rgba(250,248,244,.7);
+}
+.chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+.chip b { font-weight: 400; }
+.big { position: absolute; left: 0; right: 0; top: var(--big-top, 1440px); text-align: center; opacity: 0;
+  font-family: var(--mono); font-weight: 300; font-size: 132px; letter-spacing: -.05em; color: var(--accent); line-height: 1; }
+.big small { font-size: 30px; letter-spacing: .02em; color: var(--ink-2); font-weight: 400; display: block; margin-top: 10px; }
+.end {
+  position: absolute; left: 120px; right: 120px; top: var(--end-top, 1160px); text-align: center; opacity: 0;
+  font-size: 42px; font-weight: 500; letter-spacing: -.02em; line-height: 1.25; color: var(--ink);
+}
+.end b { font-weight: 600; color: var(--accent); }
+.end span { color: var(--muted); }
+.codecard {
+  position: absolute; left: 70px; top: var(--code-top, 640px); width: 890px; opacity: 0;
+  background: var(--code-bg); color: #E9E4DA; border-radius: 36px;
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 40px 90px -30px rgba(30,20,10,.45), 0 10px 24px -8px rgba(30,20,10,.25);
+  padding: 44px 46px 50px;
+}
+.codecard .file { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 25px; color: #8C857A; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 30px; }
+.codecard pre { font-family: var(--mono); font-size: 30px; line-height: 1.7; white-space: pre; margin: 0 -18px; }
+.codecard .ln { display: block; padding: 0 18px; border-radius: 10px; transition: none; }
+.codecard .ln.on { background: rgba(255,255,255,.07); box-shadow: inset 4px 0 0 var(--accent); }
+.c { color: #A39C90; } .k { color: #E8A27F; } .n { color: #F2C66D; } .o { color: #9C958A; }
+.hl.on { color: #fff; background: rgba(217,80,43,.30); border-radius: 6px; padding: 0 4px; margin: 0 -4px; }
+
+#cursor { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 50; pointer-events: none; }
+#cursor .tip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  background: rgba(29,27,24,.16); border: 2.5px solid rgba(29,27,24,.62);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.75), 0 8px 18px rgba(30,20,10,.22); }
+#cursor.down .tip { transform: scale(.88); background: rgba(29,27,24,.26); border-color: rgba(29,27,24,.8); }
+#cursor .rip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  border: 3px solid var(--accent); opacity: 0; }
+</style>
+<style>
+  :root { --card-top: 640px; --card-left: 68px; --card-scale: 1.18; --chip-top: 1505px; --big-top: 1490px; --code-top: 640px; --end-top: 1180px; }
+  .card { width: 800px; height: 680px; overflow: hidden; }
+  /* header: an overhang the toast hangs from and gets reeled back behind */
+  .bar { position: absolute; left: 0; right: 0; top: 0; height: 154px; z-index: 3;
+         background: linear-gradient(180deg, #FCFBF8, #F9F7F2); border-bottom: 1px solid var(--hair);
+         box-shadow: 0 1px 0 rgba(255,255,255,.8), 0 10px 22px -14px rgba(40,30,15,.22); border-radius: 36px 36px 0 0; }
+  .bar h2 { position: absolute; left: 56px; top: 46px; font-size: 44px; font-weight: 600; letter-spacing: -.03em; }
+  .bar p { position: absolute; left: 58px; top: 104px; font-family: var(--mono); font-size: 21px; color: var(--muted); }
+  .bar .av { position: absolute; right: 56px; top: 50px; width: 64px; height: 64px; border-radius: 50%;
+             background: #E4DED3; color: var(--ink-2); font-family: var(--mono); font-size: 22px; display: grid; place-items: center;
+             box-shadow: inset 0 0 0 1px var(--hair); }
+  .winch { position: absolute; left: 400px; top: 76px; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%;
+           background: radial-gradient(circle at 35% 30%, #6A655E, #2C2925 70%); box-shadow: 0 2px 4px rgba(30,20,10,.25), inset 0 0 0 1px rgba(255,255,255,.08); }
+  .winch i { position: absolute; inset: 4px; border-radius: 50%;
+             background: repeating-conic-gradient(rgba(255,255,255,.16) 0 6deg, transparent 6deg 15deg); }
+  .winch b { position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
+             background: radial-gradient(circle at 35% 30%, #EDEAE4, #9C978F); }
+  .winch s { position: absolute; left: 50%; top: 5px; width: 3px; height: 9px; margin-left: -1.5px; border-radius: 2px; background: var(--accent); }
+
+  .form { position: absolute; left: 56px; right: 56px; top: 192px; }
+  .f { border-bottom: 1px solid var(--hair); padding: 0 0 18px; margin-bottom: 30px; }
+  .f label { display: block; font-family: var(--mono); font-size: 20px; color: var(--muted); margin-bottom: 10px; }
+  .f div { font-size: 31px; letter-spacing: -.012em; color: var(--ink); }
+  .foot { position: absolute; left: 56px; right: 56px; bottom: 48px; display: flex; align-items: center; justify-content: space-between; }
+  .foot span { font-family: var(--mono); font-size: 21px; color: var(--muted); }
+  .foot span i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); margin-right: 10px; vertical-align: 2px; }
+  button.save { font: 500 28px var(--sans); letter-spacing: -.01em; color: #FAF8F4; background: var(--ink); border: 0; border-radius: 999px;
+                padding: 22px 38px; cursor: pointer; box-shadow: 0 1px 0 rgba(255,255,255,.12) inset, 0 8px 18px -8px rgba(30,20,10,.5);
+                touch-action: manipulation; transform: translateY(var(--press, 0px)) scale(calc(1 - var(--pressS, 0))); }
+  button.save:focus-visible, .toast button:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+
+  canvas#cv { position: absolute; left: 0; top: 0; width: 800px; height: 680px; z-index: 1; pointer-events: none; }
+  .toast { position: absolute; left: 0; top: 0; width: 650px; height: 140px; margin: -70px 0 0 -325px; z-index: 2;
+           display: flex; align-items: center; gap: 26px; padding: 0 26px 0 32px; border-radius: 30px;
+           background: linear-gradient(180deg, #FFFFFF, #FAF8F4); border: 1px solid var(--hair-strong);
+           box-shadow: inset 0 1px 0 #fff, 0 2px 3px rgba(40,30,15,.06), 0 18px 30px -12px rgba(40,30,15,.28);
+           will-change: transform; touch-action: none; cursor: pointer; }
+  .toast .ok { flex: none; width: 62px; height: 62px; border-radius: 50%; background: var(--accent); display: grid; place-items: center;
+               box-shadow: inset 0 -2px 0 rgba(0,0,0,.12); }
+  .toast .tx { flex: 1; min-width: 0; }
+  .toast .tt { font-size: 40px; font-weight: 500; letter-spacing: -.015em; }
+  .toast .ts { font-family: var(--mono); font-size: 24px; color: var(--muted); margin-top: 4px; }
+  .toast button { flex: none; width: 72px; height: 72px; border-radius: 50%; border: 0; background: none; color: var(--ink-2); cursor: pointer;
+                  display: grid; place-items: center; border-left: 1px solid transparent; position: relative; }
+  .toast button::before { content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 1px; background: var(--hair); }
+  /* the eyelet the rope is tied to */
+  .toast .eye { position: absolute; left: 50%; top: -26px; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%;
+                border: 5px solid #8F8A83; box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 1px 2px rgba(30,20,10,.35);
+                background: transparent; }
+  .toast .eye::after { content: ""; position: absolute; inset: -5px; border-radius: 50%;
+                       background: conic-gradient(from 200deg, rgba(255,255,255,.55), transparent 30%, rgba(0,0,0,.18) 55%, transparent 80%, rgba(255,255,255,.55));
+                       -webkit-mask: radial-gradient(circle, transparent 7.5px, #000 8px); mask: radial-gradient(circle, transparent 7.5px, #000 8px); }
+  .toast .tab { position: absolute; left: 50%; top: -6px; width: 34px; height: 12px; margin-left: -17px; border-radius: 6px 6px 0 0;
+                background: #FFFFFF; border: 1px solid var(--hair-strong); border-bottom: 0; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="tint" id="tint"></div>
+  <div class="handle"><b>Interaction #14</b> · @zellap.app</div>
+  <h1 class="hook">A toast that drops in on a <em>rope.</em></h1>
+
+  <div class="card" id="card">
+    <div class="form">
+      <div class="f"><label>Display name</label><div>Ada Lindqvist</div></div>
+      <div class="f"><label>Email</label><div>ada@lindqvist.studio</div></div>
+      <div class="f"><label>Bio</label><div>Type designer. Likes grids.</div></div>
+    </div>
+    <div class="foot"><span>Visible to your team</span><button class="save" id="save">Save changes</button></div>
+    <canvas id="cv" width="1600" height="1360"></canvas>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+      <span class="tab"></span><span class="eye"></span>
+      <span class="ok"><svg width="30" height="30" viewBox="0 0 22 22" fill="none"><path d="M4.5 11.5l4.2 4.2 8.8-9.4" stroke="#FFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span class="tx"><div class="tt" id="tt">Changes saved</div><div class="ts" id="ts">profile · just now</div></span>
+      <button id="close" aria-label="Dismiss"><svg width="26" height="26" viewBox="0 0 20 20"><path d="M4 4l12 12M16 4L4 16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="bar">
+      <h2>Profile</h2><p>account · public</p>
+      <div class="av">AL</div>
+    </div>
+  </div>
+
+  <div class="codecard" id="code">
+    <div class="file"><span>rope.js</span><span>every tick, dt = 1/1440 s</span></div>
+<pre><span class="ln"><span class="k">const</span> d <span class="o">=</span> dist(anchor, eyelet);</span><span class="ln"><span class="k">if</span> (d <span class="o">&gt;</span> len) pull <span class="o">=</span> <span class="hl">k <span class="o">*</span> (d <span class="o">-</span> len)</span>; <span class="c">// taut</span></span><span class="ln">v <span class="o">+=</span> (gravity <span class="o">+</span> pull <span class="o">*</span> dir) <span class="o">*</span> dt;</span><span class="ln">spin <span class="o">+=</span> <span class="hl">cross(arm, pull <span class="o">*</span> dir)</span> <span class="o">/</span> I <span class="o">*</span> dt;</span><span class="ln"><span class="k">if</span> (dismissed) len <span class="o">-=</span> <span class="n">2400</span> <span class="o">*</span> dt;  <span class="c">// reel in</span></span><span class="ln">pos <span class="o">+=</span> v <span class="o">*</span> dt;  angle <span class="o">+=</span> spin <span class="o">*</span> dt;</span></pre>
+  </div>
+
+  <div class="chip" id="chip"><span><i></i><b id="chipText">1× real time</b></span></div>
+  <div class="big" id="big">0.5×<small>slow motion</small></div>
+  <p class="end" id="end">Comment <b>CODE</b> for the source.<br><span>Follow for more.</span></p>
+  <div id="cursor"><div class="tip"></div></div>
+</div>
+
+<script>/* inlined from ../_shared/reel.js */
+// Shared runtime for "Interaction #N" pages.
+// Normal use: a fixed-step rAF loop drives the component (stable at any refresh rate).
+// ?capture: the recorder drives time frame by frame via __tick(dt), and the overlay via __overlay(o).
+window.Reel = function ({ step, render, DT = 1 / 1440, geom = () => ({}) }) {
+  const CAPTURE = new URLSearchParams(location.search).has('capture');
+  if (CAPTURE) document.documentElement.classList.add('reel');
+  const $ = id => document.getElementById(id);
+  const advance = seconds => {           // whole fixed steps only, so the sim never depends on frame timing
+    const n = Math.round(seconds / DT);
+    for (let i = 0; i < n; i++) step(DT);
+  };
+  render();
+  if (!CAPTURE) {
+    let last = performance.now(), acc = 0;
+    const frame = now => {
+      acc += Math.min(0.05, (now - last) / 1000); last = now;
+      while (acc >= DT) { step(DT); acc -= DT; }
+      render(); requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    return CAPTURE;
+  }
+  const cur = $('cursor');
+  cur.style.transform = 'translate(-200px,-200px)';
+  // a press ring that grows out of the fingertip, on simulated time (so it slows down in slow motion too)
+  const rip = document.createElement('i'); rip.className = 'rip'; cur.appendChild(rip);
+  let ripT = 9;
+  addEventListener('pointerdown', () => { cur.classList.add('down'); ripT = 0; }, true);
+  addEventListener('pointerup', () => cur.classList.remove('down'), true);
+  const drawRip = () => {
+    const u = Math.min(1, ripT / 0.45), e = 1 - (1 - u) ** 3;
+    rip.style.transform = `scale(${(0.9 + 0.9 * e).toFixed(4)})`;
+    rip.style.opacity = (u < 1 ? 0.55 * (1 - u) : 0).toFixed(3);
+  };
+  drawRip();
+  window.__tick = sec => { advance(sec); ripT += sec; drawRip(); render(); };
+  window.__geom = geom;
+  window.__overlay = o => {
+    // sequential, never two text layers at once: card out, then code in (and back)
+    const card = $('card'), code = $('code');
+    card.style.opacity = o.card;
+    card.style.transform = `translateY(${(1 - o.card) * -18}px)`;
+    code.style.opacity = o.code;
+    code.style.transform = `translateY(${(1 - o.code) * 22}px)`;
+    $('chip').style.opacity = o.chipA ?? o.card * (1 - o.big);
+    $('end').style.opacity = o.code;
+    $('big').style.opacity = o.big; $('big').style.transform = `scale(${0.94 + 0.06 * o.big})`;
+    $('tint').style.opacity = o.tint;
+    document.querySelectorAll('.hl').forEach(el => el.classList.toggle('on', !!o.hl));
+    document.querySelectorAll('#code .ln').forEach((el, i) => el.classList.toggle('on', i === o.line));
+    cur.style.opacity = o.cursor ?? o.card;
+    $('chipText').textContent = o.chip;
+    if (o.cx !== undefined) cur.style.transform = `translate(${o.cx}px, ${o.cy}px)`;
+  };
+  return CAPTURE;
+};
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const card = $('card'), cv = $('cv'), ctx = cv.getContext('2d'), toast = $('toast'), save = $('save');
+  const AX = 400, AY = 30;                 // where the rope is fixed, behind the header
+  const RO = 83;                          // eyelet centre above the toast centre
+  const Y0 = 76;                           // stowed: fully behind the header
+  const HANG = 236;                        // rope length when it has paid out
+  const G = 7000, K = 1300, C = 11, I = 32000, REEL = 2400;
+  const MSG = [['Changes saved', 'profile · just now']];          // one message, every time
+
+  const s = { mode: 'stowed', x: AX, y: Y0, vx: 0, vy: 0, a: 0, w: 0, L: 0, reelV: 0, n: 0, held: 0, press: 0 };
+  const stow = () => Object.assign(s, { mode: 'stowed', x: AX, y: Y0, vx: 0, vy: 0, a: 0, w: 0, L: 0, reelV: 0, held: 0 });
+
+  function drop() {
+    if (s.mode !== 'stowed') return;
+    const m = MSG[s.n++ % MSG.length];
+    $('tt').textContent = m[0]; $('ts').textContent = m[1];
+    toast.hidden = false;
+    s.press = 1;
+    if (reduce.matches) { Object.assign(s, { mode: 'hang', y: AY + HANG + RO, L: HANG }); return; }
+    Object.assign(s, { mode: 'drop', vx: 160, vy: 0, w: 0 });   // nudged out of the slot a touch sideways
+  }
+  function dismiss() {
+    if (s.mode !== 'drop' && s.mode !== 'hang') return;
+    if (reduce.matches) { stow(); toast.hidden = true; return; }
+    s.mode = 'reel'; s.reelV = 0;
+  }
+  save.addEventListener('click', drop);
+  toast.addEventListener('pointerdown', e => { e.preventDefault(); dismiss(); });
+  $('close').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dismiss(); } });
+  addEventListener('keydown', e => { if (e.key === 'Escape') dismiss(); });
+
+  const eyelet = () => [s.x + RO * Math.sin(s.a), s.y - RO * Math.cos(s.a)];
+  function step(dt) {
+    s.press *= Math.exp(-dt / 0.06);
+    if (s.mode === 'stowed') return;
+    if (s.mode === 'reel') { s.reelV = Math.min(REEL, s.reelV + 16000 * dt); s.L = Math.max(0, s.L - s.reelV * dt); }
+    const [px, py] = eyelet();
+    let dx = AX - px, dy = AY - py; const d = Math.hypot(dx, dy) || 1; dx /= d; dy /= d;
+    if (s.mode === 'drop') s.L = Math.min(HANG, Math.max(s.L, d));        // the spool pays out freely, then locks
+    const rx = px - s.x, ry = py - s.y;
+    const vpx = s.vx - s.w * ry, vpy = s.vy + s.w * rx;                    // eyelet velocity
+    // stretch rate is -(v·dir): the rope damps its own stretching, but can only ever pull
+    const T = d > s.L ? Math.max(0, K * (d - s.L) - C * (vpx * dx + vpy * dy)) : 0;
+    const fx = T * dx, fy = T * dy;
+    s.vx += fx * dt; s.vy += (fy + G) * dt;
+    s.w += (rx * fy - ry * fx) / I * dt;
+    const air = Math.exp(-(s.mode === 'reel' ? 3 : 1.1) * dt);
+    s.vx *= air; s.vy *= Math.exp(-0.4 * dt); s.w *= Math.exp(-(s.mode === 'reel' ? 9 : 5) * dt);
+    s.x += s.vx * dt; s.y += s.vy * dt; s.a += s.w * dt;
+    if (s.mode === 'drop' && s.L >= HANG && Math.abs(s.vy) < 4 && Math.abs(s.w) < 0.02 && Math.abs(s.vx) < 4) s.mode = 'hang';
+    if (s.mode === 'reel' && s.L <= 0) {
+      s.held += dt;
+      const hidden = s.y + 70 * Math.cos(s.a) + 325 * Math.abs(Math.sin(s.a)) < 150;
+      if (hidden || s.held > 0.4) { stow(); toast.hidden = true; }
+    }
+  }
+
+  // ---------- render ----------
+  ctx.scale(2, 2);
+  let wind = 0;
+  function render() {
+    ctx.clearRect(0, 0, 800, 680);
+    save.style.setProperty('--press', (s.press * 3).toFixed(2) + 'px');
+    save.style.setProperty('--pressS', (s.press * 0.04).toFixed(4));
+    if (s.mode === 'stowed') { toast.style.transform = `translate(${AX}px, ${Y0}px)`; return; }
+    toast.style.transform = `translate(${s.x.toFixed(2)}px, ${s.y.toFixed(2)}px) rotate(${s.a.toFixed(5)}rad)`;
+    const [px, py] = eyelet();
+    const d = Math.hypot(px - AX, py - AY), stretch = Math.max(0, d - s.L) / 40;
+    // soft contact shadow of the rope on the form behind it
+    ctx.save(); ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(40,30,15,.10)'; ctx.lineWidth = 5; ctx.filter = 'blur(3px)';
+    ctx.beginPath(); ctx.moveTo(AX + 8, AY); ctx.lineTo(px + 10, py + 6); ctx.stroke();
+    ctx.filter = 'none';
+    // the cord: thinner as it stretches, with a twist that runs as it pays out / reels in
+    const lw = 4.2 / Math.sqrt(1 + stretch * 0.9);
+    ctx.strokeStyle = '#2B2723'; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.moveTo(AX, AY); ctx.lineTo(px, py); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,245,230,.38)'; ctx.lineWidth = lw * 0.42; ctx.setLineDash([3.2, 4.6]);
+    ctx.lineDashOffset = -s.L;
+    ctx.beginPath(); ctx.moveTo(AX - 0.6, AY); ctx.lineTo(px - 0.6, py); ctx.stroke();
+    ctx.restore();
+  }
+
+  Reel({
+    step, render,
+    geom: () => {
+      const r = card.getBoundingClientRect(), k = r.width / 800;
+      return { left: r.left, top: r.top, k, ax: AX, hang: AY + HANG + RO };
+    },
+  });
+  document.fonts.ready.then(render);
+  window.__state = () => ({ ...s });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Good UX Captcha</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<style>/* inlined from ../_kit/reel.css */
+/* Shared shell for the Cursed UI pages: palette, backdrop, hook/outro, reel canvas, cursor. */
+:root{
+  --bg:#f3f2ee; --ink:#121214; --ink-2:#5f5f66; --ink-3:#8d8c92;
+  --line:rgba(18,18,20,.085); --line-2:#e6e3dc;
+  --gold-1:#ffd772; --gold-2:#f2a43a; --gold-ink:#a8681a;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Satoshi",ui-sans-serif,sans-serif; -webkit-font-smoothing:antialiased;
+  overflow:hidden; -webkit-user-select:none; user-select:none;
+}
+.backdrop{position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(60% 45% at 50% 46%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bg),var(--bg));
+}
+.backdrop::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(18,18,20,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(18,18,20,.045) 1px,transparent 1px);
+  background-size:28px 28px; background-position:center;
+  -webkit-mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+          mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+}
+.stage{position:relative;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
+
+.tag{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 9px;border-radius:99px;
+  background:#fff;border:1px solid var(--line);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);
+  box-shadow:0 4px 10px -6px rgba(40,34,20,.18)}
+.tag i,.outro i{display:block;width:7px;height:7px;border-radius:50%;background:linear-gradient(var(--gold-1),var(--gold-2))}
+.hook{font-weight:900;font-size:27px;line-height:1.12;letter-spacing:-.025em;text-align:center;max-width:430px;text-wrap:balance}
+.handle{display:block;margin-top:10px;font-weight:500;font-size:12.5px;letter-spacing:.01em;color:var(--ink-3)}
+.outro{font-weight:900;font-size:30px;letter-spacing:-.025em;color:var(--ink);opacity:0;text-align:center}
+.outro span{display:inline-flex;align-items:center;gap:10px}
+.outro i{width:14px;height:14px}
+.outro b{display:inline-block;font-weight:900;background:var(--ink);color:#fff;border-radius:10px;padding:1px 10px 3px;margin:0 1px;letter-spacing:.01em}
+.outro small{display:block;margin-top:14px;font-weight:700;font-size:19px;letter-spacing:-.01em;color:#34343a}
+.outro small em{font-style:normal;font-weight:500;color:var(--ink-2)}
+
+.card{position:relative;width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:30px;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 40px 70px -32px rgba(40,34,20,.22),0 10px 24px -12px rgba(0,0,0,.08);
+}
+.app{display:flex;align-items:center;gap:12px}
+.icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.x{margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-3)}
+
+/* reel mode: fixed 540x960 phone canvas (recorded at 2x = 1080x1920) */
+body.reel .stage{display:block;width:540px;height:960px;margin:0 auto;padding:0}
+body.reel .tag{position:absolute;top:154px;left:50%;transform:translateX(-50%)}
+body.reel .hook{position:absolute;top:198px;left:50%;transform:translateX(-50%);width:450px;font-size:30px}
+body.reel .card{position:absolute;top:318px;left:60px}
+body.reel .outro{position:absolute;top:192px;left:0;right:0;font-size:25px}
+body:not(.reel) .outro{display:none}
+body.reel, body.reel *{cursor:none !important}
+#cursor{position:fixed;left:0;top:0;width:0;height:0;z-index:99;pointer-events:none;display:none}
+body.reel #cursor{display:block}
+#cursor svg{position:absolute;left:0;top:0;overflow:visible;filter:drop-shadow(0 3px 5px rgba(0,0,0,.25))}
+#ring{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;border:2px solid rgba(18,18,20,.5);opacity:0}
+</style>
+<style>/* inlined from component.css */
+/* Cursed UI #12: an image CAPTCHA that asks for good UX in a grid made only of dark patterns. Scoped to .cu-cap */
+.cu-cap{--ink:#121214;--ink-2:#5f5f66;--ink-3:#8d8c92;--line:rgba(18,18,20,.085);--line-2:#e6e3dc;
+  --blue:oklch(.6 .16 258);--blue-2:oklch(.52 .18 264);--err:oklch(.56 .2 27);
+  position:relative;overflow:hidden;font-family:"Satoshi",ui-sans-serif,sans-serif;color:var(--ink)}
+.cu-cap .head{position:relative;margin:8px 8px 0;padding:11px 18px 11px;border-radius:22px 22px 4px 4px;color:#fff;overflow:hidden;
+  background:
+    radial-gradient(120% 140% at 0% 0%, oklch(.72 .13 240 / .55), transparent 60%),
+    radial-gradient(90% 120% at 100% 100%, oklch(.42 .17 270 / .6), transparent 65%),
+    linear-gradient(160deg,var(--blue),var(--blue-2))}
+.cu-cap .head::after{content:"";position:absolute;inset:0;opacity:.22;mix-blend-mode:overlay;pointer-events:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>")}
+.cu-cap .head small{display:block;font-weight:500;font-size:13.5px;letter-spacing:.005em;opacity:.92}
+.cu-cap .head b{display:block;font-weight:900;font-size:27px;letter-spacing:-.025em;line-height:1.08;margin:1px 0 2px}
+.cu-cap .head em{display:block;font-style:normal;font-weight:500;font-size:12.5px;opacity:.78}
+
+.cu-cap .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:4px 8px 0}
+.cu-cap .tile{position:relative;aspect-ratio:1;cursor:pointer;background:#fff}
+.cu-cap .tile:nth-child(7){border-bottom-left-radius:4px}
+.cu-cap .img{position:absolute;inset:0;overflow:hidden;transform-origin:50% 50%}
+.cu-cap .face{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:9px;text-align:center;
+  font-size:10px;line-height:1.15;font-weight:700;letter-spacing:-.005em}
+.cu-cap .face::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 1px rgba(18,18,20,.06);pointer-events:none}
+.cu-cap .chk{position:absolute;left:5px;top:5px;width:24px;height:24px;border-radius:50%;background:var(--blue);display:grid;place-items:center;
+  box-shadow:0 0 0 2px #fff,0 3px 8px -2px rgba(20,40,120,.45);opacity:0;transform:scale(.4);pointer-events:none}
+
+.cu-cap .foot{position:relative;display:flex;align-items:center;gap:4px;height:58px;margin:4px 8px 8px;padding:0 0 0 6px;border-top:1px solid var(--line)}
+.cu-cap .ico{width:34px;height:34px;border:0;border-radius:10px;background:none;color:#7a7980;display:grid;place-items:center;cursor:pointer;padding:0}
+.cu-cap .icons{display:flex;gap:2px}
+.cu-cap .err{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:230px;font-weight:700;font-size:13px;line-height:1.22;letter-spacing:-.005em;color:var(--err);opacity:0;pointer-events:none}
+.cu-cap .go{margin-left:auto;height:40px;min-width:96px;padding:0 18px;border:0;border-radius:11px;color:#fff;font:900 13.5px "Satoshi",sans-serif;letter-spacing:.09em;cursor:pointer;
+  background:linear-gradient(170deg,oklch(.64 .15 255),oklch(.53 .18 262));box-shadow:0 1px 0 rgba(255,255,255,.25) inset,0 8px 16px -8px oklch(.45 .18 262 / .8)}
+
+/* ---- the tiles: small, real-looking dark patterns ---- */
+.cu-cap .t-cookie{background:linear-gradient(#f6f2ea,#efe9de);justify-content:flex-end;padding:0}
+.cu-cap .t-cookie .pg{position:absolute;left:10px;right:10px;top:11px;display:grid;gap:5px}
+.cu-cap .t-cookie .pg i{display:block;height:5px;border-radius:3px;background:#ddd5c6}
+.cu-cap .t-cookie .pg i:nth-child(2){width:70%}
+.cu-cap .t-cookie .sh{position:relative;width:100%;background:#fff;padding:8px 9px 6px;border-top:1px solid rgba(0,0,0,.06);box-shadow:0 -6px 14px -8px rgba(0,0,0,.25)}
+.cu-cap .t-cookie .sh p{font-size:9.5px;font-weight:700;text-align:left}
+.cu-cap .t-cookie .btn{margin-top:5px;height:22px;border-radius:6px;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:10px;font-weight:900}
+.cu-cap .t-cookie .rej{display:block;margin-top:3px;font-size:6.5px;font-weight:500;color:#a19d94}
+
+.cu-cap .t-shame{background:radial-gradient(90% 80% at 30% 0%,oklch(.95 .06 90),oklch(.9 .07 70))}
+.cu-cap .t-shame big{font-size:19px;font-weight:900;letter-spacing:-.03em}
+.cu-cap .t-shame .btn{width:100%;height:22px;border-radius:99px;background:var(--ink);color:#ffd772;display:grid;place-items:center;font-size:10px;font-weight:900}
+.cu-cap .t-shame u{font-size:9px;font-weight:500;color:#7d7462;text-underline-offset:1.5px}
+
+.cu-cap .t-timer{background:radial-gradient(80% 70% at 50% 30%,#2a2530,#141217);color:#fff}
+.cu-cap .t-timer small{font-size:8px;letter-spacing:.14em;font-weight:900;color:#ffd772}
+.cu-cap .t-timer big{font-size:21px;font-weight:900;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:oklch(.7 .19 28)}
+.cu-cap .t-timer span{font-size:9px;font-weight:700;color:#a49fab}
+
+.cu-cap .t-pre{background:linear-gradient(170deg,oklch(.97 .015 250),oklch(.93 .025 250));align-items:flex-start;text-align:left;padding:12px}
+.cu-cap .t-pre .row{display:flex;gap:6px;align-items:flex-start;font-size:10px}
+.cu-cap .t-pre .bx{flex:none;width:14px;height:14px;border-radius:4px;background:var(--blue);display:grid;place-items:center;margin-top:-1px}
+.cu-cap .t-pre .row.off .bx{background:#fff;box-shadow:inset 0 0 0 1.5px #b9bdc8}
+.cu-cap .t-pre small{font-size:9px;font-weight:500;color:#7c8090;margin-left:20px;margin-top:-3px}
+
+.cu-cap .t-dl{background:#eef1ec;gap:4px}
+.cu-cap .t-dl .b{width:100%;height:19px;border-radius:5px;background:linear-gradient(#45b85f,#2f9a49);color:#fff;font-size:9px;font-weight:900;letter-spacing:.06em;display:flex;align-items:center;justify-content:center;gap:4px;position:relative}
+.cu-cap .t-dl .b:nth-child(2){background:linear-gradient(#3da2e8,#2a84cf)}
+.cu-cap .t-dl .b:nth-child(3){background:linear-gradient(#f08a3a,#d96d22)}
+.cu-cap .t-dl .b sup{position:absolute;right:3px;top:2px;font-size:5.5px;opacity:.8}
+.cu-cap .t-dl u{font-size:8.5px;font-weight:500;color:#8b9187}
+
+.cu-cap .t-tinyx{background:repeating-linear-gradient(135deg,#d9d6d0 0 6px,#d2cfc8 6px 12px)}
+.cu-cap .t-tinyx .m{position:relative;width:100%;padding:10px 8px 9px;border-radius:8px;background:#fff;box-shadow:0 8px 16px -8px rgba(0,0,0,.4)}
+.cu-cap .t-tinyx .m big{display:block;font-size:11.5px;font-weight:900;letter-spacing:-.02em}
+.cu-cap .t-tinyx .m .btn{margin-top:6px;height:20px;border-radius:5px;background:oklch(.6 .2 15);color:#fff;font-size:9px;font-weight:900;display:grid;place-items:center}
+.cu-cap .t-tinyx .m .tx{position:absolute;right:3px;top:2px;font-size:5px;color:#c9c6bf;font-weight:500}
+
+.cu-cap .t-spin{background:#fbfaf8}
+.cu-cap .t-spin .ring{width:28px;height:28px;border-radius:50%;border:3px solid #e6e3dc;border-top-color:var(--ink)}
+.cu-cap .t-spin span{font-size:9px;font-weight:500;color:var(--ink-3)}
+
+.cu-cap .t-scarce{background:linear-gradient(170deg,oklch(.96 .03 30),oklch(.91 .06 30))}
+.cu-cap .t-scarce big{font-size:16px;font-weight:900;color:oklch(.55 .21 27);letter-spacing:-.02em}
+.cu-cap .t-scarce span{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:700;color:#7a4b45}
+.cu-cap .t-scarce span i{width:6px;height:6px;border-radius:50%;background:oklch(.62 .2 27)}
+
+.cu-cap .t-fee{background:linear-gradient(170deg,oklch(.97 .03 155),oklch(.92 .05 155));gap:2px}
+.cu-cap .t-fee small{font-size:9px;font-weight:700;color:#3d6a4c}
+.cu-cap .t-fee big{font-size:30px;font-weight:900;letter-spacing:-.04em;line-height:1}
+.cu-cap .t-fee big sup{font-size:12px;vertical-align:14px}
+.cu-cap .t-fee span{font-size:8.5px;font-weight:700;color:#6f8f7a;line-height:1.15;margin-top:4px}
+
+.cu-cap .t-notif{background:#f1efea;align-items:stretch;justify-content:flex-start;padding:8px}
+.cu-cap .t-notif .p{background:#fff;border-radius:8px;padding:8px;text-align:left;box-shadow:0 6px 14px -8px rgba(0,0,0,.35)}
+.cu-cap .t-notif .p p{font-size:8.5px;font-weight:500;color:var(--ink-2)}
+.cu-cap .t-notif .p b{display:flex;gap:4px;align-items:center;font-size:9.5px;margin-top:3px}
+.cu-cap .t-notif .bs{display:flex;gap:4px;margin-top:7px;justify-content:flex-end}
+.cu-cap .t-notif .bs i{font-style:normal;font-size:8.5px;padding:3px 7px;border-radius:5px;box-shadow:inset 0 0 0 1px #dcd8d0}
+.cu-cap .t-notif .bs i+i{background:var(--blue);color:#fff;box-shadow:none}
+.cu-cap .t-notif .when{font-size:8.5px;font-weight:500;color:var(--ink-3);margin-top:6px;text-align:center}
+
+.cu-cap .t-roach{background:linear-gradient(170deg,#fff,#f2efe9);gap:3px}
+.cu-cap .t-roach big{font-size:14px;font-weight:900;letter-spacing:-.02em}
+.cu-cap .t-roach span{font-size:9px;line-height:1.15;font-weight:500;color:var(--ink-3)}
+
+.cu-cap .t-robot{background:#f6f5f3}
+.cu-cap .t-robot .r{display:flex;align-items:center;gap:6px;width:100%;padding:8px 6px;border-radius:4px;background:#fafafa;box-shadow:0 0 0 1px #d9d9d9,0 2px 4px rgba(0,0,0,.08);font-size:9px;font-weight:500;text-align:left}
+.cu-cap .t-robot .r i{width:15px;height:15px;border-radius:2px;background:#fff;box-shadow:inset 0 0 0 1.5px #c1c1c1;flex:none}
+.cu-cap .t-robot .r svg{margin-left:auto;flex:none}
+.cu-cap .t-robot span{font-size:8.5px;font-weight:500;color:var(--ink-3)}
+
+.cu-cap .t-auto{background:radial-gradient(90% 80% at 50% 35%,#33303a,#121116);color:#fff;justify-content:space-between;padding:10px 9px 9px}
+.cu-cap .t-auto .play{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center;margin-top:12px}
+.cu-cap .t-auto .bar{width:100%;display:flex;align-items:center;gap:5px;font-size:7.5px;font-weight:700;color:#ffd772}
+.cu-cap .t-auto .bar i{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.2);position:relative;overflow:hidden}
+.cu-cap .t-auto .bar i b{position:absolute;left:0;top:0;bottom:0;background:#fff;border-radius:2px}
+
+.cu-cap .t-nag{background:linear-gradient(170deg,oklch(.97 .02 280),oklch(.92 .04 285));gap:4px}
+.cu-cap .t-nag big{font-size:12px;font-weight:900}
+.cu-cap .t-nag .st{display:flex;gap:1px}
+.cu-cap .t-nag span{font-size:8.5px;font-weight:500;color:#7f7a92}
+
+.cu-cap .t-exit{background:linear-gradient(170deg,oklch(.95 .05 350),oklch(.9 .07 350));gap:4px}
+.cu-cap .t-exit big{font-size:14px;font-weight:900;letter-spacing:-.02em;line-height:1.05}
+.cu-cap .t-exit .btn{width:100%;height:20px;border-radius:99px;background:oklch(.55 .2 355);color:#fff;font-size:9px;font-weight:900;display:grid;place-items:center}
+.cu-cap .t-exit u{font-size:8px;font-weight:500;color:#a77d8d}
+.cu-cap .t-chat{background:linear-gradient(170deg,#fbfaf8,#f0ede7);align-items:flex-end;gap:4px;padding:10px}
+.cu-cap .t-chat .bub{max-width:92%;padding:4px 8px 5px;border-radius:10px 10px 3px 10px;background:var(--blue);color:#fff;font-size:9px;font-weight:700}
+.cu-cap .t-chat .bub.b2{align-self:flex-start;border-radius:10px 10px 10px 3px;background:#fff;color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.cu-cap .t-chat span{align-self:center;font-size:8.5px;font-weight:500;color:var(--ink-3);margin-top:2px}
+</style>
+<style>
+  .card.cu-cap{width:min(364px,100%)}
+  body.reel .card.cu-cap{top:296px;left:88px}
+</style>
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="stage">
+  <div class="tag"><i></i>Cursed UI #12</div>
+  <header class="hook">This CAPTCHA has no right answer.<span class="handle">@zellap.app</span></header>
+
+  <main class="card" id="card"></main>
+
+  <footer class="outro" id="outro"><span><i></i>Comment <b>CODE</b> for the source</span><small>Follow for more cursed UI <em>&middot; @zellap.app</em></small></footer>
+</div>
+
+<script>/* inlined from ../_kit/reel.js */
+/* Shared runtime for the Cursed UI pages.
+   - a simulation clock (K.now, ms) advanced by K.tick(ms): rAF in the browser, stepped by the recorder (?manual)
+   - tweens, easing, the hook <-> outro swap (window.__outro), and the reel cursor driven by real pointer events
+   - opts.embedded: a private clock for a component mounted elsewhere (the game): no reel cursor, no globals, own rAF loop,
+     K.stop() ends it. Pointer position is still tracked (K.px/K.py) */
+window.ReelKit = function (opts) {
+  if (opts.embedded) return ReelKit.embedded(opts);
+  const qs = new URLSearchParams(location.search);
+  const REEL = qs.has('reel'), MANUAL = qs.has('manual');
+  if (REEL) document.body.classList.add('reel');
+
+  const K = { REEL, MANUAL, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  /* critically-ish damped spring step: z = damping ratio */
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+
+  /* ---------- cursor ---------- */
+  document.body.insertAdjacentHTML('beforeend', `<div id="cursor">
+    <div id="ring"></div>
+    <svg id="c-arrow" width="26" height="34" viewBox="0 0 26 34"><path d="M2 2 L2 26 L8.2 20.4 L12.4 30.4 L16.6 28.6 L12.5 18.9 L20.8 18.6 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg id="c-hand" width="30" height="34" viewBox="0 0 30 34" style="display:none;left:-9px;top:-2px"><path d="M10 15V5.2a2.6 2.6 0 0 1 5.2 0V13 M15.2 12.6a2.5 2.5 0 0 1 5 0v1.8 M20.2 13.6a2.5 2.5 0 0 1 5 0v6.2c0 6.6-4 11.2-10 11.2-4.6 0-6.7-2.2-9.4-6.5L3 19.6a2.5 2.5 0 0 1 4.2-2.7L10 20.8V15" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg id="c-grab" width="30" height="30" viewBox="0 0 30 30" style="display:none;left:-15px;top:-13px"><path d="M8.2 11.4a2.4 2.4 0 0 1 4.8 0v-1a2.4 2.4 0 0 1 4.8 0v1a2.4 2.4 0 0 1 4.8 0v1.4a2.4 2.4 0 0 1 4.6.9v4.8c0 5.6-3.8 9.4-9.4 9.4-4.2 0-6.4-1.8-8.6-5.2l-2.4-3.8a2.3 2.3 0 0 1 3.4-3z M13 11.4v4 M17.8 11.4v4 M22.6 12.8v3" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  </div>`);
+  const $ = id => document.getElementById(id);
+  const cur = $('cursor'), ring = $('ring'), shapes = { arrow: $('c-arrow'), hand: $('c-hand'), grab: $('c-grab') };
+  let curScale = 1;
+  function moveCursor() {
+    if (!REEL) return;
+    const el = document.elementFromPoint(K.px, K.py);
+    const kind = (opts.cursorKind && opts.cursorKind(el)) || 'arrow';
+    for (const k in shapes) shapes[k].style.display = k === kind ? '' : 'none';
+    cur.style.transform = `translate(${K.px}px,${K.py}px) scale(${curScale})`;
+  }
+  K.moveCursor = moveCursor;
+  window.addEventListener('pointermove', e => { K.px = e.clientX; K.py = e.clientY; moveCursor(); });
+  window.addEventListener('pointerleave', () => { K.px = K.py = -999; });
+  window.addEventListener('pointerdown', () => {
+    K.down = true;
+    if (!REEL) return;
+    K.tween(90, p => { curScale = 1 - .14 * p; moveCursor(); });
+    K.tween(300, p => { curScale = .86 + .14 * p; moveCursor(); }, K.ease.back, 120);
+    K.tween(480, p => { ring.style.opacity = (1 - p) * .9; ring.style.transform = `scale(${.4 + p * 1.1})`; });
+  });
+  window.addEventListener('pointerup', () => { K.down = false; moveCursor(); });
+
+  /* ---------- hook <-> outro ---------- */
+  let outroOn = false;
+  window.__outro = on => {
+    if (on === outroOn) return; outroOn = on;
+    const hook = document.querySelector('.hook'), outro = document.querySelector('.outro');
+    K.tween(440, p => { const q = on ? p : 1 - p;
+      hook.style.opacity = K.clamp(1 - q / .45, 0, 1);   // strictly sequential: never two lines at once
+      const o = K.clamp((q - .55) / .45, 0, 1);
+      outro.style.opacity = o; outro.style.transform = `translateY(${(1 - o) * 10}px)`; }, K.ease.lin);
+  };
+
+  /* ---------- clock ---------- */
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  window.__tick = tick;
+  K.start = () => {
+    if (!MANUAL) {
+      let last = performance.now();
+      requestAnimationFrame(function loop(t) { tick(Math.min(50, t - last)); last = t; requestAnimationFrame(loop); });
+    } else tick(16);
+  };
+  return K;
+};
+
+ReelKit.embedded = function (opts) {
+  const K = { REEL: false, MANUAL: false, embedded: true, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+  K.moveCursor = () => {};
+  const mv = e => { K.px = e.clientX; K.py = e.clientY; };
+  const dn = () => { K.down = true; }, up = () => { K.down = false; };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerdown', dn); window.addEventListener('pointerup', up);
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  K.tick = tick;
+  let raf = 0, alive = false;
+  K.start = () => {
+    if (alive) return; alive = true;
+    let last = performance.now();
+    raf = requestAnimationFrame(function loop(t) { if (!alive) return; tick(Math.min(50, t - last)); last = t; raf = requestAnimationFrame(loop); });
+  };
+  K.stop = () => {
+    alive = false; cancelAnimationFrame(raf);
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerdown', dn); window.removeEventListener('pointerup', up);
+  };
+  return K;
+};
+</script>
+<script>/* inlined from component.js */
+/* Cursed UI #12: "Select all squares with good UX". An image CAPTCHA where every square is a dark pattern.
+   Pick some: "Please try again." Pick none: "Please select all matching images." It only ever uses real CAPTCHA wording.
+
+   Self-contained level. Needs ../_kit/reel.js (ReelKit clock) and component.css.
+     const api = CursedUI.captcha.init(el, { onWin, onLose })   // el: an empty container, e.g. a .card
+     el.addEventListener('cursed:win', e => ...)                // also 'cursed:lose' (bubbles)
+     api.reset(); api.destroy();
+   Rules: click squares to select (click again to unselect). VERIFY with any selected fails and swaps the selected
+   squares for new dark patterns. SKIP (nothing selected) fails too, hands you the same challenge again, and
+   quietly counts.
+   Win: SKIP three times in a row. The CAPTCHA admits there were none.
+   Periodic animations (spinner, blinking timer) run on 1 s periods, so a reel whose length is a whole number of
+   seconds loops seamlessly.
+   Pass { K } to drive it from an outside clock (the reel page does); otherwise it runs its own rAF loop. */
+(function () {
+  const CU = window.CursedUI = window.CursedUI || {};
+  const check = (c = '#fff', s = 12) => `<svg width="${s}" height="${s}" viewBox="0 0 12 12"><path d="M2.5 6.4l2.3 2.3 4.7-5" fill="none" stroke="${c}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const star = `<svg width="13" height="13" viewBox="0 0 12 12"><path d="M6 .9l1.55 3.2 3.5.48-2.55 2.45.62 3.48L6 8.86 2.88 10.5l.62-3.48L.95 4.58l3.5-.48z" fill="#f2a43a"/></svg>`;
+  const TILES = {
+    cookie: `<div class="pg"><i></i><i></i><i></i></div><div class="sh"><p>We value your privacy</p><div class="btn">Accept all</div><span class="rej">reject</span></div>`,
+    shame: `<big>10% off?</big><div class="btn">Yes please</div><u>No, I like paying more</u>`,
+    timer: `<small>SALE ENDS IN</small><big data-clock>00:00:09</big><span>resets every 10 s</span>`,
+    pre: `<div class="row"><span class="bx">${check('#fff', 10)}</span><span>Email me 14&times;/day</span></div><small>checked for you</small><div class="row"><span class="bx">${check('#fff', 10)}</span><span>Share my data with partners</span></div>`,
+    dl: `<div class="b">DOWNLOAD<sup>Ad</sup></div><div class="b">DOWNLOAD &#9656;<sup>Ad</sup></div><div class="b">START NOW<sup>Ad</sup></div><u>your-file.zip</u>`,
+    tinyx: `<div class="m"><span class="tx">&times;</span><big>Join 2M readers</big><div class="btn">Subscribe</div></div>`,
+    spin: `<div class="ring" data-spin></div><b>Almost there&hellip;</b><span>since 2019</span>`,
+    scarce: `<big>Only 1 left!</big><span><i data-pulse></i>38 people viewing</span>`,
+    fee: `<small>Free trial</small><big><sup>$</sup>0</big><span>*then $89/mo, billed yearly, non-refundable</span>`,
+    notif: `<div class="p"><p>zellap.app wants to</p><b><svg width="10" height="10" viewBox="0 0 10 10"><path d="M5 1a2.6 2.6 0 0 0-2.6 2.6v2L1.5 7.2h7L7.6 5.6v-2A2.6 2.6 0 0 0 5 1z" fill="#121214"/></svg>Show notifications</b><div class="bs"><i>Block</i><i>Allow</i></div></div><div class="when">0.0 s after page load</div>`,
+    roach: `<big>Cancel anytime*</big><span>*by fax, Tuesdays 9 to 9:15</span>`,
+    robot: `<div class="r"><i></i>I'm not a robot<svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 1.5a5.5 5.5 0 1 0 5.5 5.5" fill="none" stroke="#4a90e2" stroke-width="2.2" stroke-linecap="round"/><path d="M12.5 7A5.5 5.5 0 0 0 7 1.5" fill="none" stroke="#8d8c92" stroke-width="2.2" stroke-linecap="round"/></svg></div><span>a captcha, in your captcha</span>`,
+    auto: `<div class="play"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M3.5 2l6.5 4-6.5 4z" fill="#fff"/></svg></div><div class="bar"><svg width="11" height="11" viewBox="0 0 12 12"><path d="M1.5 4.5h2L6.5 2v8L3.5 7.5h-2z M8.2 3.6a3.4 3.4 0 0 1 0 4.8 M9.7 2.2a5.4 5.4 0 0 1 0 7.6" fill="none" stroke="#ffd772" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>AUTOPLAY<i><b style="width:64%"></b></i></div>`,
+    nag: `<big>Enjoying us?</big><div class="st">${star.repeat(5)}</div><span>asked 6 times today</span>`,
+    chat: `<div class="bub">Hi! Need help? &#128075;</div><div class="bub b2">Hi?</div><div class="bub b2">Hello??</div><span>it's a bot</span>`,
+    exit: `<big>Wait! Don't go!</big><div class="btn">Stay</div><u>leave and lose everything forever</u>`
+  };
+  const START = ['cookie', 'shame', 'timer', 'pre', 'dl', 'tinyx', 'spin', 'scarce', 'fee'];
+  const POOL = ['notif', 'roach', 'auto', 'robot', 'nag', 'exit', 'chat'];
+  const MSG = {
+    again: 'Please try again.',
+    match: 'Please select all matching images.',
+    more: 'Please also check the new images.',
+    won: 'Correct. There were none.'
+  };
+
+  CU.captcha = {
+    id: 'captcha', n: 12,
+    title: 'Select all squares with good UX',
+    goal: 'Pass the CAPTCHA.',
+    init(root, opts = {}) {
+      root.classList.add('cu-cap');
+      root.innerHTML = `
+        <div class="head"><small>Select all squares with</small><b>good UX</b><em>If there are none, click skip</em></div>
+        <div class="grid" data-grid role="group" aria-label="Image challenge"></div>
+        <div class="foot">
+          <div class="icons" data-icons>
+            <button class="ico" data-reload aria-label="Get a new challenge"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M14.6 8.6A5.6 5.6 0 1 1 12.9 4.6M13.4 1.8v3.2h-3.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <button class="ico" aria-label="Get an audio challenge"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 11.5V9a6 6 0 0 1 12 0v2.5M3 11h2.2v4H4a1 1 0 0 1-1-1zM15 11h-2.2v4H14a1 1 0 0 0 1-1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
+            <button class="ico" aria-label="Help"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 8.2v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="9" cy="5.6" r="1.05" fill="currentColor"/></svg></button>
+          </div>
+          <div class="err" data-err role="alert"></div>
+          <button class="go" data-go>SKIP</button>
+        </div>`;
+      const q = s => root.querySelector(`[data-${s}]`);
+      const grid = q('grid'), errEl = q('err'), icons = q('icons'), go = q('go');
+
+      const own = !opts.K;
+      const K = opts.K || ReelKit({ embedded: true, update: (dt) => api.update(dt), render: () => api.render() });
+      const timers = [];
+      const later = (ms, fn) => timers.push({ at: K.now + ms, fn });
+
+      const tiles = [];
+      for (let i = 0; i < 9; i++) {
+        grid.insertAdjacentHTML('beforeend', `<div class="tile" role="checkbox" aria-checked="false" tabindex="0"><div class="img"></div><span class="chk">${check('#fff', 13)}</span></div>`);
+        const el = grid.lastElementChild;
+        tiles.push({ el, img: el.querySelector('.img'), chk: el.querySelector('.chk'), kind: '', sel: false, s: { x: 0, v: 0 }, face: null });
+      }
+      const errS = { x: 0, v: 0 };
+      let errOn = false, pool = 0, skips = 0, verifies = 0, busy = false;
+
+      function setFace(t, kind, fade) {
+        const f = document.createElement('div');
+        f.className = 'face t-' + kind; f.innerHTML = TILES[kind];
+        t.kind = kind;
+        const old = t.face; t.face = f;
+        t.img.appendChild(f);
+        if (!fade) { if (old) old.remove(); return; }
+        const [a, b] = fade;
+        f.style.transform = 'perspective(420px) rotateY(-90deg)';
+        if (old) K.tween(a, p => old.style.transform = `perspective(420px) rotateY(${(90 * p).toFixed(2)}deg)`, t => t * t);
+        K.tween(b, p => f.style.transform = `perspective(420px) rotateY(${(-90 * (1 - p)).toFixed(2)}deg)`, K.ease.out, a);
+        later(a + 1, () => { if (old) old.remove(); });
+        later(a + b + 20, () => { if (t.face === f) f.style.transform = ''; });   // settle to exactly the unflipped render
+      }
+      function showErr(msg) {
+        errEl.textContent = msg; errOn = true;
+        K.tween(380, p => errEl.style.transform = `translate(${(Math.sin(p * Math.PI * 5) * 5 * (1 - p)).toFixed(2)}px,-50%)`, K.ease.lin);
+      }
+      function hideErr() { errOn = false; }
+      function toggle(t) {
+        if (busy) return;
+        t.sel = !t.sel; t.el.setAttribute('aria-checked', t.sel);
+        if (errOn) hideErr();
+        label();
+      }
+      function label() { go.textContent = tiles.some(t => t.sel) ? 'VERIFY' : 'SKIP'; }
+      function press() {
+        K.tween(80, p => go.style.transform = `scale(${1 - .06 * p})`);
+        K.tween(260, p => go.style.transform = `scale(${.94 + .06 * p})`, K.ease.back, 90);
+      }
+      function verify() {
+        if (busy) return;
+        press();
+        const picked = tiles.filter(t => t.sel);
+        if (!picked.length) {
+          skips++;
+          if (skips >= 3) { showErr(MSG.won); errEl.style.color = 'oklch(.5 .14 150)'; fire('cursed:win'); busy = true; return; }
+          showErr(MSG.match); fire('cursed:lose');
+          verifies = 0;                                              // "new" challenge: the same squares as before
+          let k = 0;
+          tiles.forEach((t, i) => { if (t.kind !== START[i]) later(140 + k++ * 90, () => setFace(t, START[i], [130, 200])); });
+          return;
+        }
+        skips = 0; verifies++;
+        busy = true;
+        showErr(verifies === 1 ? MSG.again : MSG.more);
+        fire('cursed:lose');
+        picked.forEach((t, i) => later(160 + i * 110, () => {
+          t.sel = false; t.el.setAttribute('aria-checked', 'false');
+          setFace(t, POOL[pool++ % POOL.length], [130, 200]);
+        }));
+        later(160 + picked.length * 110 + 300, () => { busy = false; label(); });
+      }
+      function reset(fadeMs) {
+        timers.length = 0; busy = false; skips = 0; verifies = 0; pool = 0;
+        tiles.forEach((t, i) => {
+          t.sel = false; t.el.setAttribute('aria-checked', 'false');
+          if (fadeMs) { if (t.kind !== START[i]) later(i * 40, () => setFace(t, START[i], [fadeMs * .45, fadeMs * .55])); }
+          else { t.s.x = t.s.v = 0; setFace(t, START[i]); }
+        });
+        hideErr(); if (!fadeMs) { errS.x = errS.v = 0; }
+        errEl.style.color = '';
+        label();
+      }
+      function fire(name) {
+        root.dispatchEvent(new CustomEvent(name, { bubbles: true, detail: { id: 'captcha' } }));
+        if (name === 'cursed:win' && opts.onWin) opts.onWin();
+        if (name === 'cursed:lose' && opts.onLose) opts.onLose();
+      }
+
+      const offs = [];
+      const on = (el, ev, fn) => { el.addEventListener(ev, fn); offs.push(() => el.removeEventListener(ev, fn)); };
+      tiles.forEach(t => {
+        on(t.el, 'click', () => toggle(t));
+        on(t.el, 'keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(t); } });
+      });
+      on(go, 'click', verify);
+      on(q('reload'), 'click', () => { if (busy) return; showErr(MSG.again); });
+
+      function update(dt) {
+        for (let i = timers.length - 1; i >= 0; i--) if (K.now >= timers[i].at) timers.splice(i, 1)[0].fn();
+        tiles.forEach(t => K.spring(t.s, t.sel ? 1 : 0, 520, .62, dt));
+        K.spring(errS, errOn ? 1 : 0, 300, .9, dt);
+      }
+      function render() {
+        const ph = (K.now % 1000) / 1000;
+        tiles.forEach(t => {
+          const s = t.s.x;
+          t.img.style.transform = `scale(${(1 - .14 * s).toFixed(4)})`;
+          t.chk.style.opacity = K.clamp(s * 1.5, 0, 1).toFixed(3);
+          t.chk.style.transform = `scale(${(.4 + .6 * s).toFixed(4)})`;
+          const spin = t.face && t.face.querySelector('[data-spin]');
+          if (spin) spin.style.transform = `rotate(${(ph * 360).toFixed(1)}deg)`;
+          const clk = t.face && t.face.querySelector('[data-clock]');
+          if (clk) { clk.textContent = '00:00:0' + (9 - Math.floor(K.now / 1000) % 10); clk.style.opacity = ph < .5 ? 1 : .7; }
+          const pu = t.face && t.face.querySelector('[data-pulse]');
+          if (pu) pu.style.boxShadow = `0 0 0 ${(ph * 5).toFixed(2)}px oklch(.62 .2 27 / ${(.45 * (1 - ph)).toFixed(3)})`;
+        });
+        const e = K.clamp(errS.x, 0, 1);
+        errEl.style.opacity = K.clamp((e - .35) / .65, 0, 1).toFixed(3);
+        icons.style.opacity = K.clamp(1 - e / .45, 0, 1).toFixed(3);
+        icons.style.pointerEvents = errOn ? 'none' : '';
+      }
+
+      const api = {
+        update, render, reset, verify, hideErr,
+        el: { root, go, grid, tile: i => tiles[i].el },
+        destroy() { offs.forEach(f => f()); if (own) K.stop(); root.innerHTML = ''; root.classList.remove('cu-cap'); }
+      };
+      reset();
+      if (own) K.start();
+      return api;
+    }
+  };
+})();
+</script>
+<script>
+(() => {
+  let api;
+  const K = ReelKit({
+    cursorKind: el => el && el.closest('button,.tile') ? 'hand' : 'arrow',
+    update: dt => api.update(dt), render: () => api.render()
+  });
+  api = CursedUI.captcha.init(document.getElementById('card'), { K });
+  const c = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  window.__pt = k => c(typeof k === 'number' ? api.el.tile(k) : api.el[k]);
+  window.__reset = () => api.reset(900);
+  window.__hideErr = () => api.hideErr();
+  K.start();
+})();
+</script>
+</body>
+</html>

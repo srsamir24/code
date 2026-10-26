@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Password requirements · Done right #21 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 520px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-card { background: #FFFFFF; border: 1px solid rgba(40, 32, 20, .12); border-radius: 24px; padding: 24px; box-shadow: 0 24px 50px -28px rgba(40, 32, 20, .28); }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+
+  .pw { display: grid; gap: 18px; color: #1D1B18; }
+  .pw-field { display: grid; gap: 6px; }
+  .pw-field > label { font-weight: 600; }
+  .pw-email {
+    width: 100%; height: 48px; padding: 0 14px;
+    border: 1.5px solid #857E73;      /* 4.0:1 on white */
+    border-radius: 12px; background: #FFFFFF; color: inherit; font: inherit;
+  }
+  .pw-email:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 2px; border-color: #1D1B18; }
+
+  .pw-box {
+    display: flex; align-items: center; height: 48px;
+    border: 1.5px solid #857E73; border-radius: 12px; background: #FFFFFF;
+  }
+  .pw-box:has(input:focus-visible) { border-color: #1D1B18; outline: 2.5px solid #1D1B18; outline-offset: 2px; }
+  .pw-box:has([aria-invalid="true"]) { border-color: #B3261E; }
+  .pw-input {
+    flex: 1; width: 0; min-width: 0; height: 100%;
+    padding: 0 8px 0 14px; border: 0; border-radius: 12px 0 0 12px;
+    background: transparent; color: inherit; font: inherit; font-size: 1.0625rem;
+  }
+  .pw-input:focus { outline: none; }
+
+  /* Show password: a real button. The name stays, aria-pressed carries the state. */
+  .pw-show {
+    flex: none; display: inline-flex; align-items: center; gap: 6px;
+    height: 44px; margin-right: 1px; padding: 0 12px;
+    border: 0; border-radius: 10px; background: transparent;
+    color: #1D1B18; font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer;
+  }
+  .pw-show:hover { background: #F2EFEA; }
+  .pw-show:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: -2px; }
+  .pw-show svg { width: 18px; height: 18px; }
+  .pw-show .eye-off, .pw-show[aria-pressed="true"] .eye { display: none; }
+  .pw-show[aria-pressed="true"] .eye-off { display: block; }
+
+  /* The rules are there before you type. */
+  .pw-intro { margin: 4px 0 0; font-size: .875rem; color: #5A544B; }
+  .pw-rules { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: .9375rem; }
+  .pw-rule { display: flex; align-items: center; gap: 10px; color: #5A544B; }
+  .pw-rule svg { flex: none; width: 20px; height: 20px; }
+  .pw-rule .i-done, .pw-rule .i-miss { display: none; }
+  /* met: a filled tick, not just a green colour */
+  .pw-rule[data-met="true"] { color: #1D1B18; }
+  .pw-rule[data-met="true"] .i-todo { display: none; }
+  .pw-rule[data-met="true"] .i-done { display: block; color: #2D6A3E; }
+  /* after a failed submit, what's missing gets a cross */
+  .pw[data-checked] .pw-rule[data-met="false"] { color: #B3261E; }
+  .pw[data-checked] .pw-rule[data-met="false"] .i-todo { display: none; }
+  .pw[data-checked] .pw-rule[data-met="false"] .i-miss { display: block; }
+
+  .pw-error {
+    display: flex; gap: 8px; margin: 0;
+    font-size: .875rem; font-weight: 500; color: #B3261E;   /* 6.5:1 */
+  }
+  .pw-error[hidden] { display: none; }
+  .pw-error::before {
+    content: "!"; flex: none; display: grid; place-items: center; margin-top: .1em;
+    width: 1.125rem; height: 1.125rem; border-radius: 50%;
+    background: #B3261E; color: #FFFFFF; font-weight: 700; font-size: .75rem;
+  }
+  .pw-submit {
+    justify-self: start; min-height: 48px; padding: 0 22px;
+    border: 0; border-radius: 12px; background: #1D1B18; color: #FFFFFF;
+    font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .pw-submit:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 3px; }
+  .pw-status { margin: 0; font-size: .9375rem; font-weight: 500; color: #2D6A3E; }
+  .pw-status:empty { display: none; }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #21 · @zellap.app</p>
+  <h1>Password requirements</h1>
+  <p class="demo-lede">The rules are visible before you type, each one ticks off with an icon and a word, paste works, nothing gets cut off, and a screen reader hears a rule only when it changes.</p>
+
+  <div class="demo-card">
+    <form class="pw" novalidate>
+      <div class="pw-field">
+        <label for="email">Email</label>
+        <input class="pw-email" id="email" type="email" name="email"
+               autocomplete="username" value="ana.berg@studio.no">
+      </div>
+      <div class="pw-field">
+        <label for="new-password">New password</label>
+        <div class="pw-box">
+          <input class="pw-input" id="new-password" type="password"
+                 name="new-password" autocomplete="new-password"
+                 spellcheck="false" autocapitalize="none"
+                 aria-describedby="pw-rules pw-intro pw-error">
+          <button class="pw-show" type="button" aria-pressed="false"
+                  aria-controls="new-password">
+            <svg class="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+            Show<span class="sr-only"> password</span>
+          </button>
+        </div>
+        <ul class="pw-rules" id="pw-rules">
+          <li class="pw-rule" data-rule="length" data-met="false"
+              data-error="Use at least 12 characters.">
+            <svg class="i-todo" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+            <svg class="i-done" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="M6.2 10.3l2.6 2.6 5-5.3" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="i-miss" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="M7.2 7.2l5.6 5.6M12.8 7.2l-5.6 5.6" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="pw-state sr-only">Not yet:</span>
+            <span class="pw-label">At least 12 characters</span>
+          </li>
+          <li class="pw-rule" data-rule="email" data-met="false"
+              data-error="Leave your email out of it.">
+            <svg class="i-todo" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+            <svg class="i-done" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="M6.2 10.3l2.6 2.6 5-5.3" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="i-miss" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="M7.2 7.2l5.6 5.6M12.8 7.2l-5.6 5.6" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="pw-state sr-only">Not yet:</span>
+            <span class="pw-label">Doesn't contain your email</span>
+          </li>
+          <li class="pw-rule" data-rule="common" data-met="false"
+              data-error="That one is on every hacker's list. Try a few random words.">
+            <svg class="i-todo" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+            <svg class="i-done" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="M6.2 10.3l2.6 2.6 5-5.3" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="i-miss" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="M7.2 7.2l5.6 5.6M12.8 7.2l-5.6 5.6" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="pw-state sr-only">Not yet:</span>
+            <span class="pw-label">Not a common password</span>
+          </li>
+        </ul>
+        <p class="pw-intro" id="pw-intro">Spaces, emoji and passphrases welcome. Up to 256 characters.</p>
+        <p class="pw-error" id="pw-error" hidden></p>
+      </div>
+      <button class="pw-submit" type="submit">Create account</button>
+      <p class="pw-status" role="status"></p>
+      <p class="pw-live sr-only" aria-live="polite"></p>
+    </form>
+  </div>
+
+  <p class="demo-notes">Try "password1234", then a long passphrase. Paste works.<br>Submit early to see what's missing, with a cross, not just red.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  // A tiny blocklist. In production, check a big one
+  // (e.g. the Have I Been Pwned range API) on the server.
+  const COMMON = ['password', 'passw0rd', '123456', 'qwerty', 'letmein',
+    'iloveyou', 'welcome', 'admin', 'monkey', 'dragon', 'football',
+    'sunshine', 'princess', 'abc123', '111111', 'zellap'];
+  const MAX = 256;                       // said upfront, never cut silently
+  const chars = (s) => [...s].length;    // an emoji counts as one
+
+  for (const form of document.querySelectorAll('.pw')) {
+    const email = form.querySelector('.pw-email');
+    const input = form.querySelector('.pw-input');
+    const show = form.querySelector('.pw-show');
+    const rules = [...form.querySelectorAll('.pw-rule')];
+    const error = form.querySelector('.pw-error');
+    const status = form.querySelector('.pw-status');
+    const live = form.querySelector('.pw-live');
+
+    const tests = {
+      length: (p) => chars(p) >= 12,
+      email: (p) => {
+        const name = email.value.split('@')[0].toLowerCase();
+        return name.length < 3 || !p.toLowerCase().includes(name);
+      },
+      common: (p) => !COMMON.some((w) => p.toLowerCase().includes(w)),
+    };
+
+    // Speak only rules that changed, once typing pauses.
+    let said = rules.map((r) => r.dataset.met);
+    let timer;
+    const announce = () => {
+      const changed = rules.filter((r, i) => r.dataset.met !== said[i]);
+      said = rules.map((r) => r.dataset.met);
+      if (!changed.length) return;
+      live.textContent = changed.map((r) => {
+        const name = r.querySelector('.pw-label').textContent;
+        const met = r.dataset.met === 'true';
+        return `${name}: ${met ? 'done' : 'not yet'}.`;
+      }).join(' ');
+    };
+
+    const update = () => {
+      const p = input.value;
+      for (const r of rules) {
+        const met = p !== '' && tests[r.dataset.rule](p);
+        r.dataset.met = met;
+        r.querySelector('.pw-state').textContent = met ? 'Done:' : 'Not yet:';
+      }
+      // After a failed submit, the message follows what's still missing.
+      if (input.getAttribute('aria-invalid') === 'true') {
+        const msg = valid();
+        error.textContent = msg;
+        error.hidden = !msg;
+        input.setAttribute('aria-invalid', String(!!msg));
+        if (!msg) delete form.dataset.checked;
+      }
+      clearTimeout(timer);
+      timer = setTimeout(announce, 900);
+    };
+
+    const valid = () => {
+      const missing = rules.filter((r) => r.dataset.met !== 'true');
+      if (missing.length) return missing.map((r) => r.dataset.error).join(' ');
+      const n = chars(input.value);
+      return n > MAX ? `Max ${MAX} characters. This one has ${n}.` : '';
+    };
+
+    form.addEventListener('input', update);
+
+    // A mouse click keeps focus and the caret in the field.
+    show.addEventListener('mousedown', (e) => e.preventDefault());
+    show.addEventListener('click', () => {
+      const on = show.getAttribute('aria-pressed') !== 'true';
+      const [a, b] = [input.selectionStart, input.selectionEnd];
+      input.type = on ? 'text' : 'password';
+      input.setSelectionRange(a, b);
+      show.setAttribute('aria-pressed', String(on));
+    });
+
+    // The button is never disabled: submitting tells you what's missing.
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      update();
+      const msg = valid();
+      status.textContent = '';
+      if (msg) {
+        form.dataset.checked = '';
+        error.textContent = msg;
+        error.hidden = false;
+        input.setAttribute('aria-invalid', 'true');
+        input.focus();
+        return;
+      }
+      input.type = 'password';           // so password managers offer to save it
+      show.setAttribute('aria-pressed', 'false');
+      status.textContent = 'Account created. Your password is saved.';
+    });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slingshot Refresh</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>/* inlined from ../_shared/reel.css */
+/* Shared look for "Interaction #N" pages: paper tokens + the Reel overlay layer.
+   The overlay layer only shows with ?capture (html.reel). Fonts: General Sans + Geist Mono. */
+:root {
+  --paper: #ECE8E0;
+  --card: #FAF8F4;
+  --ink: #1D1B18;
+  --ink-2: #57524A;
+  --muted: #9A948A;
+  --hair: rgba(40, 32, 20, .10);
+  --hair-strong: rgba(40, 32, 20, .16);
+  --accent: #D9502B;
+  --code-bg: #1E1C19;
+  --sans: "General Sans", ui-sans-serif, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(1200px 900px at 50% 38%, rgba(255,255,255,.55), transparent 70%),
+    radial-gradient(900px 700px at 50% 110%, rgba(120,100,70,.10), transparent 70%);
+}
+.stage { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+
+.card {
+  position: relative;
+  background: linear-gradient(180deg, #FCFBF8 0%, var(--card) 100%);
+  border-radius: 36px;
+  border: 1px solid var(--hair);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 1px 1px rgba(40,30,15,.04),
+    0 6px 12px -4px rgba(40,30,15,.06),
+    0 30px 60px -20px rgba(40,30,15,.16),
+    0 70px 120px -40px rgba(40,30,15,.18);
+}
+
+/* ---------- reel overlays (capture mode only) ---------- */
+.hook, .handle, .chip, .end, .codecard, #cursor, .big, .tint { display: none; pointer-events: none; }
+.reel body { user-select: none; -webkit-user-select: none; }
+.reel .stage { width: 1080px; height: 1920px; display: block; }
+.reel .card { position: absolute; left: var(--card-left, 80px); top: var(--card-top, 640px); scale: var(--card-scale, 1.1); transform-origin: 0 0; }
+.reel .hook, .reel .handle, .reel .chip, .reel .end, .reel .codecard, .reel #cursor, .reel .big, .reel .tint { display: block; }
+
+.tint { position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(900px 1300px at 50% 46%, transparent 50%, rgba(150,95,50,.10) 100%), rgba(230,170,110,.035); }
+.handle {
+  position: absolute; left: 0; right: 0; top: 300px; text-align: center;
+  font-family: var(--mono); font-size: 30px; color: var(--muted); letter-spacing: .02em;
+}
+.handle b { font-weight: 500; color: var(--accent); }
+.hook {
+  position: absolute; left: 80px; right: 80px; top: 356px; text-align: center;
+  font-size: 96px; font-weight: 600; letter-spacing: -.035em; line-height: 1.02; color: var(--ink);
+  text-wrap: balance;
+}
+.hook em { font-style: normal; color: var(--accent); }
+.chip { position: absolute; left: 0; right: 0; top: var(--chip-top, 1400px); text-align: center; }
+.chip span {
+  display: inline-flex; align-items: center; gap: 14px;
+  font-family: var(--mono); font-size: 28px; color: var(--ink-2);
+  padding: 14px 26px; border-radius: 999px; border: 1px solid var(--hair-strong);
+  background: rgba(250,248,244,.7);
+}
+.chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+.chip b { font-weight: 400; }
+.big { position: absolute; left: 0; right: 0; top: var(--big-top, 1440px); text-align: center; opacity: 0;
+  font-family: var(--mono); font-weight: 300; font-size: 132px; letter-spacing: -.05em; color: var(--accent); line-height: 1; }
+.big small { font-size: 30px; letter-spacing: .02em; color: var(--ink-2); font-weight: 400; display: block; margin-top: 10px; }
+.end {
+  position: absolute; left: 120px; right: 120px; top: var(--end-top, 1160px); text-align: center; opacity: 0;
+  font-size: 42px; font-weight: 500; letter-spacing: -.02em; line-height: 1.25; color: var(--ink);
+}
+.end b { font-weight: 600; color: var(--accent); }
+.end span { color: var(--muted); }
+.codecard {
+  position: absolute; left: 70px; top: var(--code-top, 640px); width: 890px; opacity: 0;
+  background: var(--code-bg); color: #E9E4DA; border-radius: 36px;
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 40px 90px -30px rgba(30,20,10,.45), 0 10px 24px -8px rgba(30,20,10,.25);
+  padding: 44px 46px 50px;
+}
+.codecard .file { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 25px; color: #8C857A; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 30px; }
+.codecard pre { font-family: var(--mono); font-size: 30px; line-height: 1.7; white-space: pre; margin: 0 -18px; }
+.codecard .ln { display: block; padding: 0 18px; border-radius: 10px; transition: none; }
+.codecard .ln.on { background: rgba(255,255,255,.07); box-shadow: inset 4px 0 0 var(--accent); }
+.c { color: #A39C90; } .k { color: #E8A27F; } .n { color: #F2C66D; } .o { color: #9C958A; }
+.hl.on { color: #fff; background: rgba(217,80,43,.30); border-radius: 6px; padding: 0 4px; margin: 0 -4px; }
+
+#cursor { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 50; pointer-events: none; }
+#cursor .tip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  background: rgba(29,27,24,.16); border: 2.5px solid rgba(29,27,24,.62);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.75), 0 8px 18px rgba(30,20,10,.22); }
+#cursor.down .tip { transform: scale(.88); background: rgba(29,27,24,.26); border-color: rgba(29,27,24,.8); }
+#cursor .rip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  border: 3px solid var(--accent); opacity: 0; }
+</style>
+<style>
+  :root { --card-top: 598px; --card-left: 80px; --card-scale: 1.15; --chip-top: 1676px; --big-top: 1652px; --code-top: 640px; --end-top: 1180px; }
+  .card { width: 800px; height: 900px; }
+  .head { position: absolute; left: 56px; right: 56px; top: 50px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; z-index: 1; }
+  .lbl { font-size: 34px; font-weight: 500; letter-spacing: -.015em; color: var(--ink); }
+  .sub { margin-top: 8px; font-family: var(--mono); font-size: 22px; color: var(--muted); }
+  .read { transform-origin: 75% 50%; font-family: var(--mono); font-weight: 300; font-size: 104px; letter-spacing: -.06em; line-height: .9; color: var(--ink);
+          font-variant-numeric: tabular-nums; text-align: right; }
+  .read small { font-size: 26px; letter-spacing: 0; color: var(--ink-2); font-weight: 400; margin-left: 12px; }
+  .read.live { color: var(--accent); }
+  canvas#cv { position: absolute; left: 0; top: 0; width: 800px; height: 900px; border-radius: 36px; touch-action: none; }
+  button.rf { position: absolute; right: 56px; top: 150px; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; }
+  button.rf:focus-visible { width: auto; height: auto; opacity: 1; padding: 8px 16px; font: 500 22px var(--sans); border-radius: 999px; background: var(--ink); color: #FAF8F4; outline: 3px solid var(--accent); outline-offset: 3px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="tint" id="tint"></div>
+  <div class="handle"><b>Interaction #16</b> · @zellap.app</div>
+  <h1 class="hook">Pull to refresh, with a <em>slingshot.</em></h1>
+
+  <div class="card" id="card">
+    <canvas id="cv" width="1600" height="1800"></canvas>
+    <div class="head">
+      <div><div class="lbl">Inbox</div><div class="sub" id="sub">pull down to refresh</div></div>
+      <div class="read" id="read"><span id="num">2</span><small>new</small></div>
+    </div>
+    <button class="rf" id="rf">Refresh</button>
+    <span class="sr" role="status" aria-live="polite" id="live"></span>
+  </div>
+
+  <div class="codecard" id="code">
+    <div class="file"><span>sling.js</span><span>every tick, dt = 1/1440 s</span></div>
+<pre><span class="ln"><span class="c">// held: 1:1 to 200px, then it resists</span></span><span class="ln">y <span class="o">=</span> <span class="hl">pull <span class="o">-</span> <span class="k">Math</span>.max(<span class="n">0</span>, pull <span class="o">-</span> <span class="n">200</span>) <span class="o">*</span> <span class="n">.66</span></span>;</span><span class="ln"><span class="c">// let go: two strands pull it home</span></span><span class="ln">v <span class="o">+=</span> <span class="o">-</span><span class="n">2</span> <span class="o">*</span> K <span class="o">*</span> y <span class="o">*</span> dt;</span><span class="ln">y <span class="o">+=</span> v <span class="o">*</span> dt;</span><span class="ln"><span class="k">if</span> (y <span class="o">&lt;</span> <span class="n">0</span> <span class="o">&amp;&amp;</span> loaded) <span class="hl">fire(pellet, v)</span>;</span></pre>
+  </div>
+
+  <div class="chip" id="chip"><span><i></i><b id="chipText">1× real time</b></span></div>
+  <div class="big" id="big">0.5×<small>slow motion</small></div>
+  <p class="end" id="end">Comment <b>CODE</b> for the source.<br><span>Follow for more.</span></p>
+  <div id="cursor"><div class="tip"></div></div>
+</div>
+
+<script>/* inlined from ../_shared/reel.js */
+// Shared runtime for "Interaction #N" pages.
+// Normal use: a fixed-step rAF loop drives the component (stable at any refresh rate).
+// ?capture: the recorder drives time frame by frame via __tick(dt), and the overlay via __overlay(o).
+window.Reel = function ({ step, render, DT = 1 / 1440, geom = () => ({}) }) {
+  const CAPTURE = new URLSearchParams(location.search).has('capture');
+  if (CAPTURE) document.documentElement.classList.add('reel');
+  const $ = id => document.getElementById(id);
+  const advance = seconds => {           // whole fixed steps only, so the sim never depends on frame timing
+    const n = Math.round(seconds / DT);
+    for (let i = 0; i < n; i++) step(DT);
+  };
+  render();
+  if (!CAPTURE) {
+    let last = performance.now(), acc = 0;
+    const frame = now => {
+      acc += Math.min(0.05, (now - last) / 1000); last = now;
+      while (acc >= DT) { step(DT); acc -= DT; }
+      render(); requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    return CAPTURE;
+  }
+  const cur = $('cursor');
+  cur.style.transform = 'translate(-200px,-200px)';
+  // a press ring that grows out of the fingertip, on simulated time (so it slows down in slow motion too)
+  const rip = document.createElement('i'); rip.className = 'rip'; cur.appendChild(rip);
+  let ripT = 9;
+  addEventListener('pointerdown', () => { cur.classList.add('down'); ripT = 0; }, true);
+  addEventListener('pointerup', () => cur.classList.remove('down'), true);
+  const drawRip = () => {
+    const u = Math.min(1, ripT / 0.45), e = 1 - (1 - u) ** 3;
+    rip.style.transform = `scale(${(0.9 + 0.9 * e).toFixed(4)})`;
+    rip.style.opacity = (u < 1 ? 0.55 * (1 - u) : 0).toFixed(3);
+  };
+  drawRip();
+  window.__tick = sec => { advance(sec); ripT += sec; drawRip(); render(); };
+  window.__geom = geom;
+  window.__overlay = o => {
+    // sequential, never two text layers at once: card out, then code in (and back)
+    const card = $('card'), code = $('code');
+    card.style.opacity = o.card;
+    card.style.transform = `translateY(${(1 - o.card) * -18}px)`;
+    code.style.opacity = o.code;
+    code.style.transform = `translateY(${(1 - o.code) * 22}px)`;
+    $('chip').style.opacity = o.chipA ?? o.card * (1 - o.big);
+    $('end').style.opacity = o.code;
+    $('big').style.opacity = o.big; $('big').style.transform = `scale(${0.94 + 0.06 * o.big})`;
+    $('tint').style.opacity = o.tint;
+    document.querySelectorAll('.hl').forEach(el => el.classList.toggle('on', !!o.hl));
+    document.querySelectorAll('#code .ln').forEach((el, i) => el.classList.toggle('on', i === o.line));
+    cur.style.opacity = o.cursor ?? o.card;
+    $('chipText').textContent = o.chip;
+    if (o.cx !== undefined) cur.style.transform = `translate(${o.cx}px, ${o.cy}px)`;
+  };
+  return CAPTURE;
+};
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const card = $('card'), cv = $('cv'), ctx = cv.getContext('2d');
+  const W = 800, H = 900, S = 2;
+  const BY = 176, AX = 30, BX = 770;                  // the band: rest line and its two pegs
+  const LT = BY + 20, ROW = 106, R = 34;              // list top, row height, pellet radius
+  const MAXP = 260, ARM = 96, K = 85;                 // pull resistance, fire threshold, band spring (per strand)
+  const G = 3000, KB2 = 700, KEEP = 0.45, FLY = 0.42;  // gravity on the pellet, the empty band's twang, speed the empty band keeps, flight time
+  const TX = 668, TY = 100;                           // the unread counter: what you are aiming at
+  const C = { sage: '#A9B8A0', cobalt: '#9FB0D8', mustard: '#E6C27A', rose: '#E9C2B4', cream: '#E8DFCC', lilac: '#C9BCD9' };
+  const BASE = [
+    ['Mira Okafor', 'Final type specimens', '09:41', C.rose],
+    ['Jonas Berg', 'Grid feedback, round 2', '09:12', C.sage],
+    ['Studio Fold', 'Invoice #2041 is ready', '08:57', C.cream],
+    ['Lena Park', 'Can we move the call?', '08:30', C.cobalt],
+    ['Arif Haddad', 'Logo sketches attached', 'Tue', C.mustard],
+    ['Noor Bakr', 'Re: colour tokens', 'Tue', C.lilac],
+    ['Theo Lind', 'Deploy went fine', 'Mon', C.sage],
+  ];
+  const INCOMING = [
+    ['Ada Lindqvist', 'New brief: a portfolio site', 'now', C.mustard],
+    ['Sam Ito', 'Your font licence is ready', 'now', C.cobalt],
+  ];
+
+  // ---------- state ----------
+  let rows, unread, inbox, held, start, finger, pull, lst, lstV, yb, ybV, vx, vxV, pel, phase, pt, flash, bump, bumpV, ring;
+  function reset() {
+    rows = BASE.map((m, i) => ({ m, h: 1, hv: 0, fresh: 0, unread: i < 2 }));
+    unread = 2; inbox = 0;
+    held = false; start = null; finger = { x: 400, y: 0 }; pull = 0;
+    lst = 0; lstV = 0; yb = 0; ybV = 0; vx = 400; vxV = 0;
+    pel = { x: 400, y: BY, vx: 0, vy: 0, s: 0, rot: 0, free: false, trail: [] };
+    phase = 'idle'; pt = 0; flash = 0; bump = 0; bumpV = 0; ring = 9;
+  }
+  reset();
+
+  // ---------- input ----------
+  const local = e => { const r = card.getBoundingClientRect(), k = W / r.width; return { x: (e.clientX - r.left) * k, y: (e.clientY - r.top) * k }; };
+  cv.addEventListener('pointerdown', e => {
+    if (phase !== 'idle') return;
+    const p = local(e);
+    if (p.y < BY - 24) return;                       // grab the band itself (or anywhere in the list)
+    e.preventDefault(); cv.setPointerCapture(e.pointerId);
+    held = true; start = p; finger = p; phase = 'pull'; pel.free = false; pel.trail = [];
+  });
+  cv.addEventListener('pointermove', e => { if (held) finger = local(e); });
+  const release = () => { if (!held) return; held = false; phase = yb > ARM ? 'fire' : 'back'; pt = 0; ybV = 0; vxV = 0; };
+  cv.addEventListener('pointerup', release);
+  cv.addEventListener('pointercancel', release);
+  $('rf').addEventListener('click', () => { if (phase === 'idle') { yb = MAXP * 0.7; lst = yb; pel.s = 1; vx = 400; phase = 'fire'; pt = 0; ybV = 0; } });
+
+  function arrive() {                                // the response lands: a new row unfolds at the top
+    const m = INCOMING[inbox++ % INCOMING.length];
+    rows.unshift({ m, h: 0, hv: 0, fresh: 1, unread: true });
+    unread++; flash = 1; pel.free = false; pel.s = 0; pel.trail = [];
+    $('live').textContent = `New message from ${m[0]}`;
+  }
+
+  function step(dt) {
+    pt += dt;
+    if (phase === 'pull') {
+      pull = Math.max(0, finger.y - start.y);
+      yb = pull - Math.max(0, pull - 200) * 0.66;   // 1:1 under your finger to 200 px, then it resists
+      lst = yb; ybV = 0; lstV = 0;
+      vx += (Math.max(160, Math.min(640, finger.x)) - vx) * Math.min(1, dt * 30);
+      pel.s = Math.min(1, pel.s + dt / 0.12);
+    } else if (phase === 'fire') {
+      // the band, with the pellet in its pouch, is pulled home by its two strands
+      if (!pel.free) {
+        ybV += -2 * K * yb * dt; yb += ybV * dt;
+        vxV += -2 * K * (vx - 400) * dt; vx += vxV * dt;
+      }
+      if (yb <= 0 && !pel.free) {                   // the pouch passes the rest line: the pellet flies on alone
+        // it flies on alone, on an arc that lands in the unread counter
+        pel.free = true; pel.y = BY - R; pel.x = vx;
+        pel.vx = (TX - pel.x) / FLY; pel.vy = (TY - pel.y) / FLY - G * FLY / 2;
+        ybV *= KEEP; vxV *= KEEP; $('live').textContent = 'Refreshing';
+      }
+      if (pel.free) {
+        ybV += -KB2 * yb * dt; ybV *= Math.exp(-4 * dt); yb += ybV * dt;   // the empty band twangs: 2-3 clear overshoots
+        vxV += -KB2 * 0.3 * (vx - 400) * dt; vxV *= Math.exp(-4 * dt); vx += vxV * dt;
+        pel.vy += G * dt; pel.x += pel.vx * dt; pel.y += pel.vy * dt; pel.rot += dt * 22;
+        const hit = Math.hypot(pel.x - TX, pel.y - TY) < 40;
+        if ((hit || pt > 1.2) && phase === 'fire') {  // it hits the counter (or flies off: the request still lands)
+          phase = 'land'; pt = 0; if (hit) { bumpV += 7; ring = 0; } arrive();
+        }
+      }
+    } else if (phase === 'land') {
+      ybV += -KB2 * yb * dt; ybV *= Math.exp(-4 * dt); yb += ybV * dt;      // the twang rings out
+      vxV += -KB2 * 0.3 * (vx - 400) * dt; vxV *= Math.exp(-4 * dt); vx += vxV * dt;
+      if (pel.free) { pel.vy += G * dt; pel.y += pel.vy * dt; pel.rot += dt * 22; }
+      if (pt > 0.8) { phase = 'idle'; pel.s = 0; pel.free = false; }
+    } else if (phase === 'back') {
+      ybV += -2 * K * 6 * yb * dt; ybV *= Math.exp(-26 * dt); yb += ybV * dt;
+      pel.s = phase === 'back' ? Math.max(0, pel.s - dt / 0.18) : pel.s;
+      if (pel.free) { pel.vy += G * dt; pel.y += pel.vy * dt; pel.rot += dt * 22; }
+      if (phase === 'back' && pt > 0.5) { phase = 'idle'; pel.s = 0; }
+      if (phase === 'land' && pt > 0.5) { phase = 'idle'; pel.s = 0; pel.free = false; }
+    }
+    if (phase === 'idle') { yb -= yb * Math.min(1, dt * 20); ybV = 0; }   // whatever is left of the twang dies out
+    if (phase !== 'pull') {                          // the list springs home on its own, a touch softer
+      lstV += (-lst * 420 - lstV * 30) * dt; lst += lstV * dt;
+      if (!pel.free) pel.s = phase === 'fire' ? pel.s : pel.s;
+    }
+    if (pel.free && phase === 'fire') pel.s = Math.max(pel.s, 1);
+    if (pel.free) { pel.trail.push([pel.x, pel.y]); if (pel.trail.length > 40) pel.trail.shift(); }
+    for (const r of rows) { r.hv += ((1 - r.h) * 520 - r.hv * 34) * dt; r.h += r.hv * dt; r.fresh = Math.max(0, r.fresh - dt / 1.6); }
+    if (rows.length > 9) rows.length = 9;
+    bumpV += (-bump * 900 - bumpV * 16) * dt; bump += bumpV * dt; ring += dt;
+    flash = Math.max(0, flash - dt / 0.9);
+    if (reduce.matches) { lst = 0; yb = Math.max(0, yb); }
+  }
+
+  // ---------- render ----------
+  const ease = u => (u = Math.min(1, Math.max(0, u)), u * u * (3 - 2 * u));
+  function avatar(x, y, m) {
+    ctx.fillStyle = m[3]; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(40,32,20,.10)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = 'rgba(29,27,24,.78)'; ctx.font = '500 22px "Geist Mono"'; ctx.textAlign = 'center';
+    ctx.fillText(m[0].split(' ').map(w => w[0]).join(''), x, y + 8); ctx.textAlign = 'left';
+  }
+  function list() {
+    ctx.save(); ctx.beginPath(); ctx.rect(0, BY + 3, W, H - BY); ctx.clip();
+    let y = LT + lst;
+    for (const r of rows) {
+      const h = ROW * Math.max(0, r.h);
+      if (h < 0.5) { y += h; continue; }
+      ctx.save(); ctx.beginPath(); ctx.rect(0, y, W, h + 0.5); ctx.clip();
+      const dy = -(1 - Math.min(1, r.h)) * 14;         // a new row: the space opens first, then the message settles into it
+      if (r.fresh > 0) { ctx.fillStyle = `rgba(217,80,43,${(0.07 * ease(r.fresh)).toFixed(3)})`; ctx.fillRect(24, y + 4, W - 48, h - 8); }
+      ctx.globalAlpha = ease((r.h - 0.62) / 0.38);
+      avatar(86, y + dy + ROW / 2, r.m);
+      ctx.fillStyle = '#1D1B18'; ctx.font = '500 28px "General Sans"'; ctx.letterSpacing = '-0.3px';
+      ctx.fillText(r.m[0], 140, y + dy + 46); ctx.letterSpacing = '0px';
+      ctx.fillStyle = '#57524A'; ctx.font = '400 25px "General Sans"'; ctx.fillText(r.m[1], 140, y + dy + 80);
+      ctx.fillStyle = r.m[2] === 'now' ? '#D9502B' : '#9A948A'; ctx.font = '400 21px "Geist Mono"'; ctx.textAlign = 'right';
+      ctx.fillText(r.m[2], W - 56, y + dy + 44); ctx.textAlign = 'left';
+      if (r.unread) { ctx.fillStyle = '#D9502B'; ctx.beginPath(); ctx.arc(W - 64, y + dy + 72, 6, 0, 7); ctx.fill(); }
+      ctx.restore();
+      y += h;
+      ctx.strokeStyle = 'rgba(40,32,20,.09)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(140, y - 0.5); ctx.lineTo(W - 56, y - 0.5); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function peg(x) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(40,25,10,.25)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
+    const g = ctx.createRadialGradient(x - 3, BY - 4, 1, x, BY, 11);
+    g.addColorStop(0, '#F3E8D2'); g.addColorStop(0.55, '#BFA77C'); g.addColorStop(1, '#7E6845');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, BY, 10, 0, 7); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = 'rgba(60,45,25,.55)'; ctx.beginPath(); ctx.arc(x, BY, 3, 0, 7); ctx.fill();
+  }
+  function band() {
+    // rubber: dark, a little sheen, thinner the more it is stretched
+    const vy = BY + yb, r = (R + 4) * (pel.free ? 0 : pel.s);
+    const cy = vy - r;                                // the pouch centre (pellet centre while it is loaded)
+    const L = [vx - r, cy], Rr = [vx + r, cy];
+    const len = Math.hypot(L[0] - AX, L[1] - BY) + Math.hypot(BX - Rr[0], Rr[1] - BY);
+    const lw = 4.2 * Math.sqrt((BX - AX) / Math.max(BX - AX, len));
+    const path = () => {
+      ctx.beginPath(); ctx.moveTo(AX, BY); ctx.lineTo(L[0], L[1]);
+      if (r > 0.5) ctx.arc(vx, cy, r, Math.PI, 0, true); else ctx.lineTo(vx, vy);
+      ctx.lineTo(BX, BY);
+    };
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(40,25,10,.16)'; ctx.lineWidth = lw + 3; ctx.translate(0, 4); path(); ctx.stroke(); ctx.translate(0, -4);
+    ctx.strokeStyle = '#2E2925'; ctx.lineWidth = lw; path(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,240,225,.22)'; ctx.lineWidth = Math.max(0.6, lw * 0.28); ctx.translate(0, -lw * 0.22); path(); ctx.stroke();
+    ctx.restore();
+    // the leather pouch under the pellet
+    if (r > 2) {
+      ctx.save(); ctx.strokeStyle = '#6B4A30'; ctx.lineWidth = 7 * pel.s; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(vx, cy, r, Math.PI * 0.18, Math.PI * 0.82); ctx.stroke(); ctx.restore();
+    }
+    peg(AX); peg(BX);
+    return [vx, cy];
+  }
+  function pellet(x, y, s, rot) {
+    if (s < 0.02) return;
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    ctx.shadowColor = 'rgba(120,40,10,.30)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 5;
+    const g = ctx.createRadialGradient(-9, -11, 3, 0, 0, R);
+    g.addColorStop(0, '#F59A6C'); g.addColorStop(0.6, '#DE5A30'); g.addColorStop(1, '#B83C1C');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fill();
+    ctx.restore();
+    // refresh glyph: a thick open ring (a quarter missing) with a big solid arrowhead on its end
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.rotate(rot);
+    const rr = 15, a0 = -Math.PI * 0.12, a1 = Math.PI * 1.42;
+    ctx.strokeStyle = '#FFF4EA'; ctx.lineWidth = 5.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(0, 0, rr, a0, a1); ctx.stroke();
+    const ex = Math.cos(a1) * rr, ey = Math.sin(a1) * rr, tx = -Math.sin(a1), ty = Math.cos(a1);   // end point, tangent
+    const nx = Math.cos(a1), ny = Math.sin(a1);
+    ctx.fillStyle = '#FFF4EA'; ctx.beginPath();
+    ctx.moveTo(ex + tx * 9, ey + ty * 9);
+    ctx.lineTo(ex - nx * 8.5 - tx * 3, ey - ny * 8.5 - ty * 3);
+    ctx.lineTo(ex + nx * 8.5 - tx * 3, ey + ny * 8.5 - ty * 3);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  function render() {
+    ctx.setTransform(S, 0, 0, S, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.save(); ctx.beginPath(); ctx.roundRect(0, 0, W, H, 36); ctx.clip();
+    if (ring < 0.5) {                                // where it hit: a ring and a few sparks off the counter
+      const u = ring / 0.5, e = 1 - (1 - u) ** 3;
+      ctx.strokeStyle = `rgba(217,80,43,${(0.5 * (1 - u)).toFixed(3)})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(TX, TY, 30 + 70 * e, 0, 7); ctx.stroke();
+      ctx.fillStyle = `rgba(217,80,43,${(0.8 * (1 - u)).toFixed(3)})`;
+      for (let k = 0; k < 7; k++) { const a = k / 7 * 6.283 + 0.4; ctx.beginPath(); ctx.arc(TX + Math.cos(a) * (36 + 60 * e), TY + Math.sin(a) * (36 + 60 * e), 3.2 * (1 - u), 0, 7); ctx.fill(); }
+    }
+    list();
+    const [px, py] = band();
+    if (pel.free) {
+      // motion streak: where it was a moment ago, fading
+      const tr = pel.trail, n = tr.length;
+      if (n > 1) {
+        const a = tr[Math.max(0, n - 4)], b = tr[n - 1];
+        const g = ctx.createLinearGradient(a[0], a[1], b[0], b[1]);
+        g.addColorStop(0, 'rgba(222,90,48,0)'); g.addColorStop(1, 'rgba(222,90,48,.45)');
+        ctx.strokeStyle = g; ctx.lineWidth = R * 1.6; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+      }
+      pellet(pel.x, pel.y, 1, pel.rot);
+    } else {
+      pellet(px, py, pel.s, yb / 60);
+    }
+    ctx.restore();
+    $('num').textContent = unread;
+    $('read').classList.toggle('live', flash > 0.01);
+    $('read').style.transform = `scale(${(1 + 0.09 * bump).toFixed(4)})`;
+    $('sub').textContent = phase === 'pull' ? (yb > ARM ? 'let go to refresh' : 'pull down to refresh')
+      : (phase === 'fire' ? 'fetching…' : (phase === 'land' || flash > 0 ? 'updated just now' : 'pull down to refresh'));
+  }
+
+  Reel({
+    step, render,
+    geom: () => {
+      const r = card.getBoundingClientRect(), k = r.width / W;
+      return { left: r.left, top: r.top, k, by: BY, lt: LT };
+    },
+  });
+  // capture: while the code card hides the inbox, it goes back to how it started, so the loop is seamless
+  if (window.__overlay) { const ov = window.__overlay; window.__overlay = o => { if (o.card < 0.001) reset(); ov(o); }; }
+  document.fonts.ready.then(render);
+})();
+</script>
+</body>
+</html>

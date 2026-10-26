@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ink Stamp Like</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>/* inlined from ../_shared/reel.css */
+/* Shared look for "Interaction #N" pages: paper tokens + the Reel overlay layer.
+   The overlay layer only shows with ?capture (html.reel). Fonts: General Sans + Geist Mono. */
+:root {
+  --paper: #ECE8E0;
+  --card: #FAF8F4;
+  --ink: #1D1B18;
+  --ink-2: #57524A;
+  --muted: #9A948A;
+  --hair: rgba(40, 32, 20, .10);
+  --hair-strong: rgba(40, 32, 20, .16);
+  --accent: #D9502B;
+  --code-bg: #1E1C19;
+  --sans: "General Sans", ui-sans-serif, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(1200px 900px at 50% 38%, rgba(255,255,255,.55), transparent 70%),
+    radial-gradient(900px 700px at 50% 110%, rgba(120,100,70,.10), transparent 70%);
+}
+.stage { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+
+.card {
+  position: relative;
+  background: linear-gradient(180deg, #FCFBF8 0%, var(--card) 100%);
+  border-radius: 36px;
+  border: 1px solid var(--hair);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 1px 1px rgba(40,30,15,.04),
+    0 6px 12px -4px rgba(40,30,15,.06),
+    0 30px 60px -20px rgba(40,30,15,.16),
+    0 70px 120px -40px rgba(40,30,15,.18);
+}
+
+/* ---------- reel overlays (capture mode only) ---------- */
+.hook, .handle, .chip, .end, .codecard, #cursor, .big, .tint { display: none; pointer-events: none; }
+.reel body { user-select: none; -webkit-user-select: none; }
+.reel .stage { width: 1080px; height: 1920px; display: block; }
+.reel .card { position: absolute; left: var(--card-left, 80px); top: var(--card-top, 640px); scale: var(--card-scale, 1.1); transform-origin: 0 0; }
+.reel .hook, .reel .handle, .reel .chip, .reel .end, .reel .codecard, .reel #cursor, .reel .big, .reel .tint { display: block; }
+
+.tint { position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(900px 1300px at 50% 46%, transparent 50%, rgba(150,95,50,.10) 100%), rgba(230,170,110,.035); }
+.handle {
+  position: absolute; left: 0; right: 0; top: 300px; text-align: center;
+  font-family: var(--mono); font-size: 30px; color: var(--muted); letter-spacing: .02em;
+}
+.handle b { font-weight: 500; color: var(--accent); }
+.hook {
+  position: absolute; left: 80px; right: 80px; top: 356px; text-align: center;
+  font-size: 96px; font-weight: 600; letter-spacing: -.035em; line-height: 1.02; color: var(--ink);
+  text-wrap: balance;
+}
+.hook em { font-style: normal; color: var(--accent); }
+.chip { position: absolute; left: 0; right: 0; top: var(--chip-top, 1400px); text-align: center; }
+.chip span {
+  display: inline-flex; align-items: center; gap: 14px;
+  font-family: var(--mono); font-size: 28px; color: var(--ink-2);
+  padding: 14px 26px; border-radius: 999px; border: 1px solid var(--hair-strong);
+  background: rgba(250,248,244,.7);
+}
+.chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+.chip b { font-weight: 400; }
+.big { position: absolute; left: 0; right: 0; top: var(--big-top, 1440px); text-align: center; opacity: 0;
+  font-family: var(--mono); font-weight: 300; font-size: 132px; letter-spacing: -.05em; color: var(--accent); line-height: 1; }
+.big small { font-size: 30px; letter-spacing: .02em; color: var(--ink-2); font-weight: 400; display: block; margin-top: 10px; }
+.end {
+  position: absolute; left: 120px; right: 120px; top: var(--end-top, 1160px); text-align: center; opacity: 0;
+  font-size: 42px; font-weight: 500; letter-spacing: -.02em; line-height: 1.25; color: var(--ink);
+}
+.end b { font-weight: 600; color: var(--accent); }
+.end span { color: var(--muted); }
+.codecard {
+  position: absolute; left: 70px; top: var(--code-top, 640px); width: 890px; opacity: 0;
+  background: var(--code-bg); color: #E9E4DA; border-radius: 36px;
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 40px 90px -30px rgba(30,20,10,.45), 0 10px 24px -8px rgba(30,20,10,.25);
+  padding: 44px 46px 50px;
+}
+.codecard .file { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 25px; color: #8C857A; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 30px; }
+.codecard pre { font-family: var(--mono); font-size: 30px; line-height: 1.7; white-space: pre; margin: 0 -18px; }
+.codecard .ln { display: block; padding: 0 18px; border-radius: 10px; transition: none; }
+.codecard .ln.on { background: rgba(255,255,255,.07); box-shadow: inset 4px 0 0 var(--accent); }
+.c { color: #A39C90; } .k { color: #E8A27F; } .n { color: #F2C66D; } .o { color: #9C958A; }
+.hl.on { color: #fff; background: rgba(217,80,43,.30); border-radius: 6px; padding: 0 4px; margin: 0 -4px; }
+
+#cursor { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 50; pointer-events: none; }
+#cursor .tip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  background: rgba(29,27,24,.16); border: 2.5px solid rgba(29,27,24,.62);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.75), 0 8px 18px rgba(30,20,10,.22); }
+#cursor.down .tip { transform: scale(.88); background: rgba(29,27,24,.26); border-color: rgba(29,27,24,.8); }
+#cursor .rip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%;
+  border: 3px solid var(--accent); opacity: 0; }
+</style>
+<style>
+  :root { --card-top: 650px; --card-left: 68px; --card-scale: 1.18; --chip-top: 1470px; --big-top: 1460px; --code-top: 640px; --end-top: 1180px; }
+  .card { width: 800px; height: 640px; background: none; }
+  canvas#cv { position: absolute; left: 0; top: -200px; width: 800px; height: 840px; touch-action: none; }
+  button.like { position: absolute; left: 500px; top: 360px; width: 200px; height: 200px; border-radius: 50%; opacity: 0; border: 0; padding: 0; background: none; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent; }
+  button.like:focus-visible { opacity: 1; outline: 3px solid var(--accent); outline-offset: 4px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="tint" id="tint"></div>
+  <div class="handle"><b>Interaction #10</b> · @zellap.app</div>
+  <h1 class="hook">Hold to ink it. Let go to <em>like.</em></h1>
+
+  <div class="card" id="card">
+    <canvas id="cv" width="1600" height="1680"></canvas>
+    <button class="like" id="like" aria-pressed="false" aria-label="Like (hold to ink the stamp, release to stamp)"></button>
+    <span class="sr" role="status" aria-live="polite" id="live"></span>
+  </div>
+
+  <div class="codecard" id="code">
+    <div class="file"><span>ink.js</span><span>bleeds along the fibres</span></div>
+<pre><span class="ln"><span class="k">if</span> (held) ink <span class="o">=</span> <span class="k">Math</span>.min(<span class="n">1</span>, ink <span class="o">+</span> dt <span class="o">/</span> <span class="n">0.6</span>);</span><span class="ln">pig[i] <span class="o">=</span> <span class="hl">ink <span class="o">*</span> heart[i] <span class="o">*</span> rubber[i]</span>;</span><span class="ln"><span class="k">for</span> (<span class="k">const</span> n <span class="k">of</span> neighbours(i)) {</span><span class="ln">  <span class="k">const</span> c <span class="o">=</span> wet <span class="o">*</span> <span class="hl"><span class="k">min</span>(fibre[i], fibre[n])</span>;</span><span class="ln">  pig[i] <span class="o">+=</span> c <span class="o">*</span> (pig[n] <span class="o">-</span> pig[i]) <span class="o">*</span> dt; }</span><span class="ln">wet <span class="o">*=</span> <span class="k">Math</span>.exp(<span class="o">-</span>dt <span class="o">/</span> <span class="n">0.6</span>);   <span class="c">// it dries</span></span></pre>
+  </div>
+
+  <div class="chip" id="chip"><span><i></i><b id="chipText">1× real time</b></span></div>
+  <div class="big" id="big">0.5×<small>slow motion</small></div>
+  <p class="end" id="end">Comment <b>CODE</b> for the source.<br><span>Follow for more.</span></p>
+  <div id="cursor"><div class="tip"></div></div>
+</div>
+
+<script>/* inlined from ../_shared/reel.js */
+// Shared runtime for "Interaction #N" pages.
+// Normal use: a fixed-step rAF loop drives the component (stable at any refresh rate).
+// ?capture: the recorder drives time frame by frame via __tick(dt), and the overlay via __overlay(o).
+window.Reel = function ({ step, render, DT = 1 / 1440, geom = () => ({}) }) {
+  const CAPTURE = new URLSearchParams(location.search).has('capture');
+  if (CAPTURE) document.documentElement.classList.add('reel');
+  const $ = id => document.getElementById(id);
+  const advance = seconds => {           // whole fixed steps only, so the sim never depends on frame timing
+    const n = Math.round(seconds / DT);
+    for (let i = 0; i < n; i++) step(DT);
+  };
+  render();
+  if (!CAPTURE) {
+    let last = performance.now(), acc = 0;
+    const frame = now => {
+      acc += Math.min(0.05, (now - last) / 1000); last = now;
+      while (acc >= DT) { step(DT); acc -= DT; }
+      render(); requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    return CAPTURE;
+  }
+  const cur = $('cursor');
+  cur.style.transform = 'translate(-200px,-200px)';
+  // a press ring that grows out of the fingertip, on simulated time (so it slows down in slow motion too)
+  const rip = document.createElement('i'); rip.className = 'rip'; cur.appendChild(rip);
+  let ripT = 9;
+  addEventListener('pointerdown', () => { cur.classList.add('down'); ripT = 0; }, true);
+  addEventListener('pointerup', () => cur.classList.remove('down'), true);
+  const drawRip = () => {
+    const u = Math.min(1, ripT / 0.45), e = 1 - (1 - u) ** 3;
+    rip.style.transform = `scale(${(0.9 + 0.9 * e).toFixed(4)})`;
+    rip.style.opacity = (u < 1 ? 0.55 * (1 - u) : 0).toFixed(3);
+  };
+  drawRip();
+  window.__tick = sec => { advance(sec); ripT += sec; drawRip(); render(); };
+  window.__geom = geom;
+  window.__overlay = o => {
+    // sequential, never two text layers at once: card out, then code in (and back)
+    const card = $('card'), code = $('code');
+    card.style.opacity = o.card;
+    card.style.transform = `translateY(${(1 - o.card) * -18}px)`;
+    code.style.opacity = o.code;
+    code.style.transform = `translateY(${(1 - o.code) * 22}px)`;
+    $('chip').style.opacity = o.chipA ?? o.card * (1 - o.big);
+    $('end').style.opacity = o.code;
+    $('big').style.opacity = o.big; $('big').style.transform = `scale(${0.94 + 0.06 * o.big})`;
+    $('tint').style.opacity = o.tint;
+    document.querySelectorAll('.hl').forEach(el => el.classList.toggle('on', !!o.hl));
+    document.querySelectorAll('#code .ln').forEach((el, i) => el.classList.toggle('on', i === o.line));
+    cur.style.opacity = o.cursor ?? o.card;
+    $('chipText').textContent = o.chip;
+    if (o.cx !== undefined) cur.style.transform = `translate(${o.cx}px, ${o.cy}px)`;
+  };
+  return CAPTURE;
+};
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const card = $('card'), cv = $('cv'), ctx = cv.getContext('2d');
+  const W = 800, H = 640, TOPPAD = 200, S = 2;
+  const TX = 600, TY = 458;                          // stamp target (card units)
+  const GX = 104, GY = 96, GW = 200, GH = 184;       // ink grid: one cell per card unit, around the target
+  const LOAD_T = 0.6, SUB = 1 / 1000, DRY = 0.6, D = 58;
+  const POSTS = [
+    { meta: 'Pinned · Thu 22.11', quote: ['Make it work,', 'then make it', 'feel good.'], by: 'studio wall, Bergen', likes: 1203 },
+    { meta: 'Pinned · Fri 23.11', quote: ['Delete the', 'feature nobody', 'asked for.'], by: 'sticky note, desk 4', likes: 868 },
+  ];
+
+  let seed = 1;
+  const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+
+  // ---------- paper: fibres you can see are the fibres the ink runs along ----------
+  const fibreC = mk(W, H), fc = fibreC.getContext('2d');
+  const grain = mk(W * S, H * S), gc = grain.getContext('2d');
+  seed = 3;
+  fc.fillStyle = '#000'; fc.fillRect(0, 0, W, H); fc.lineCap = gc.lineCap = 'round';
+  gc.scale(S, S);
+  for (let i = 0; i < 3200; i++) {
+    const x = rnd() * W, y = rnd() * H, a = rnd() * Math.PI, l = 8 + rnd() * 30, o = 0.35 + rnd() * 0.65, lw = 0.6 + rnd() * 0.9;
+    const bx = (rnd() - 0.5) * 6, by = (rnd() - 0.5) * 6, light = rnd() < 0.55;
+    for (const [c, st] of [[fc, `rgba(255,255,255,${o.toFixed(2)})`], [gc, light ? `rgba(255,255,255,${(0.55 * o).toFixed(2)})` : `rgba(140,115,80,${(0.07 * o).toFixed(3)})`]]) {
+      c.strokeStyle = st; c.lineWidth = lw;
+      c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + Math.cos(a) * l / 2 + bx, y + Math.sin(a) * l / 2 + by, x + Math.cos(a) * l, y + Math.sin(a) * l); c.stroke();
+    }
+  }
+  for (let i = 0; i < 1100; i++) {                  // the fine fibres under the surface: only the ink finds these
+    const x = TX - GX + rnd() * GW, y = TY - GY + rnd() * GH, a = rnd() * Math.PI, l = 10 + rnd() * 26;
+    fc.strokeStyle = `rgba(255,255,255,${(0.5 + rnd() * 0.5).toFixed(2)})`; fc.lineWidth = 0.8;
+    fc.beginPath(); fc.moveTo(x, y); fc.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); fc.stroke();
+  }
+  const fd = fc.getImageData(TX - GX, TY - GY, GW, GH).data;
+  const N = GW * GH, fibre = new Float32Array(N);
+  for (let i = 0; i < N; i++) fibre[i] = 0.004 + 0.996 * (fd[i * 4] / 255) ** 2;   // ink barely moves except along a fibre
+  seed = 9;
+  for (let i = 0; i < 1600; i++) { gc.fillStyle = rnd() < 0.5 ? 'rgba(110,90,60,.07)' : 'rgba(255,255,255,.5)'; gc.fillRect(rnd() * W, rnd() * H, 0.8, 0.8); }
+
+  // ---------- the stamp's rubber: a heart with a slightly uneven surface ----------
+  const rubber = new Float32Array(N);
+  seed = 21;
+  const vn = new Float32Array(34 * 34).map(() => rnd());
+  const noise = (x, y) => { const i = Math.floor(x), j = Math.floor(y), u = x - i, v = y - j, s = q => q * q * (3 - 2 * q);
+    const a = vn[(j % 34) * 34 + i % 34], b = vn[(j % 34) * 34 + (i + 1) % 34], c = vn[((j + 1) % 34) * 34 + i % 34], d = vn[((j + 1) % 34) * 34 + (i + 1) % 34];
+    return a + (b - a) * s(u) + (c - a) * s(v) + (a - b - c + d) * s(u) * s(v); };
+  const hm = mk(GW, GH), hc = hm.getContext('2d');      // the heart, rasterised from the same curve as the emblem
+  hc.translate(GX, GY - 4); hc.scale(0.44, 0.44); heart(hc); hc.fillStyle = '#fff'; hc.fill();
+  const hd = hc.getImageData(0, 0, GW, GH).data;
+  const hb = mk(GW, GH), hbc = hb.getContext('2d');     // blurred copy: where it differs from the sharp one is the rim, where ink pools
+  hbc.filter = 'blur(3px)'; hbc.drawImage(hm, 0, 0);
+  const hbd = hbc.getImageData(0, 0, GW, GH).data;
+  const rim = new Float32Array(N);
+  for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) {
+    const c = j * GW + i, edge = hd[c * 4 + 3] / 255;
+    rim[c] = Math.max(0, Math.min(1, (edge - hbd[c * 4 + 3] / 255) * 3.5));
+    const tex = 0.62 + 0.38 * noise(i / 5, j / 5) + 0.5 * (noise(i / 1.6 + 9, j / 1.6 + 4) - 0.5);
+    rubber[c] = edge * Math.max(0, Math.min(1, tex));
+  }
+
+  // ---------- state ----------
+  const fresh = () => ({ pig: new Float32Array(N), wet: 0, liked: false, img: mk(GW, GH) });
+  let post = 0, cur = fresh(), old = null, swapU = 0;
+  let held = false, ink = 0, phase = 'idle', t = 0, sy = 0, sv = 0, sq = 0, sqV = 0, acc = 0, shown = POSTS[0].likes, bump = 0;
+  const T_FALL = 0.15, T_HOLD = 0.07, T_LIFT = 0.22, T_SWAP = 0.32, SWAP_T = 0.4;
+
+  const like = $('like');
+  const press = () => {
+    if (phase === 'swap') { held = true; return; }            // pressed while the next post slides in: start once it lands
+    if (phase === 'idle' && !cur.liked) { held = true; phase = 'load'; }
+  };
+  const release = () => { if (!held) return; held = false; if (phase === 'load') { phase = 'fall'; t = 0; } };
+  like.addEventListener('pointerdown', e => { e.preventDefault(); like.setPointerCapture(e.pointerId); press(); });
+  like.addEventListener('pointerup', release);
+  like.addEventListener('pointercancel', release);
+  like.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); press(); } });
+  like.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') release(); });
+
+  function impact() {
+    const k = 0.35 + 0.65 * ink;                            // more ink, darker print (and it runs further)
+    for (let i = 0; i < N; i++) {
+      const r = rubber[i];
+      if (r <= 0) continue;
+      const patchy = Math.max(0, Math.min(1, (r - 0.22 - (1 - ink) * 0.5) / 0.4));   // the rubber's grain: paper shows through in places
+      cur.pig[i] = k * patchy * (0.25 + 0.75 * r * r) * (1 + 0.7 * rim[i]);          // the rubber's grain shows in the print
+    }
+    cur.wet = 0.4 + 0.6 * ink; cur.liked = true;
+    sqV += reduce.matches ? 0 : 3.2;
+    like.setAttribute('aria-pressed', 'true');
+    $('live').textContent = 'Liked';
+  }
+  const tmp = new Float32Array(N);
+  function bleed(dt) {                                      // pigment runs along the fibres while the paper is wet
+    const p = cur.pig, w = cur.wet * D * dt;
+    for (let j = 1; j < GH - 1; j++) for (let i = 1; i < GW - 1; i++) {
+      const c = j * GW + i, fi = fibre[c];
+      let f = 0;
+      for (const n of [c - 1, c + 1, c - GW, c + GW]) f += Math.min(fi, fibre[n]) * (p[n] - p[c]);
+      tmp[c] = p[c] + w * f;
+    }
+    for (let j = 1; j < GH - 1; j++) p.set(tmp.subarray(j * GW + 1, j * GW + GW - 1), j * GW + 1);
+    cur.wet *= Math.exp(-dt / DRY);
+  }
+
+  function step(dt) {
+    if (phase === 'load') { ink = Math.min(1, ink + dt / LOAD_T); }
+    if (phase === 'fall') { t += dt; if (t >= T_FALL) { phase = 'press'; t = 0; impact(); } }
+    else if (phase === 'press') { t += dt; if (t >= T_HOLD) { phase = 'lift'; t = 0; ink = 0; } }
+    else if (phase === 'lift') {
+      t += dt;
+      if (t >= T_LIFT) bump = Math.min(1, bump + dt / 0.18);
+      if (t >= T_LIFT + T_SWAP && !held) { old = cur; cur = fresh(); post++; phase = 'swap'; t = 0; swapU = 0; }
+    } else if (phase === 'swap') { swapU = Math.min(1, swapU + dt / SWAP_T); if (swapU >= 1) { phase = held ? 'load' : 'idle'; old = null; bump = 0; like.setAttribute('aria-pressed', 'false'); } }
+    // squash of the rubber on impact
+    sqV += -sq * 1800 * dt; sqV *= 0.985; sq += sqV * dt;
+    // bleeding: fixed substeps
+    if (cur.wet > 0.002) { acc += dt; while (acc >= SUB) { acc -= SUB; bleed(SUB); } } else acc = 0;
+  }
+
+  // ---------- render ----------
+  const ease = u => (u = Math.min(1, Math.max(0, u)), u * u * (3 - 2 * u));
+  function inkImg(st) {                                     // pigment -> printer's red, darker where it pools
+    const c = st.img.getContext('2d'), im = c.createImageData(GW, GH), d = im.data;
+    for (let i = 0; i < N; i++) {
+      const p = st.pig[i], a = Math.min(1, Math.max(0, (p - 0.012) / 0.75)) ** 0.7;
+      d[i * 4] = 196 - 60 * Math.min(1, p); d[i * 4 + 1] = 44 - 14 * Math.min(1, p); d[i * 4 + 2] = 32 - 8 * Math.min(1, p);
+      d[i * 4 + 3] = Math.round(255 * Math.min(0.96, a));
+    }
+    c.putImageData(im, 0, 0);
+    return st.img;
+  }
+  function drawPost(c, k, st, dy) {
+    const P = POSTS[k % 2];
+    c.save(); c.translate(0, dy);
+    c.fillStyle = '#9A948A'; c.font = '400 23px "Geist Mono"'; c.fillText(P.meta, 56, 76);
+    c.fillStyle = '#1D1B18'; c.font = '600 58px "General Sans"'; c.letterSpacing = '-2.2px';
+    P.quote.forEach((l, i) => c.fillText(l, 52, 170 + i * 64));
+    c.letterSpacing = '0px';
+    c.fillStyle = '#9A948A'; c.font = '400 22px "Geist Mono"'; c.fillText('· ' + P.by, 56, 392);
+    c.strokeStyle = 'rgba(40,32,20,.10)'; c.lineWidth = 1; c.beginPath(); c.moveTo(56, 548); c.lineTo(W - 56, 548); c.stroke();
+    // like counter
+    const liked = st.liked, n = P.likes + (liked ? 1 : 0), b = st === cur ? bump : 1;
+    c.fillStyle = liked ? '#D9502B' : '#57524A'; c.font = '500 26px "Geist Mono"';
+    c.fillText(`${n.toLocaleString('en-US')} likes`, 56, 596 - (liked ? 6 * Math.sin(Math.min(1, b) * Math.PI) : 0));
+    c.fillStyle = '#9A948A'; c.font = '400 22px "Geist Mono"'; c.textAlign = 'right';
+    c.fillText(st.liked ? 'stamped ✓' : (st === cur && (held || phase === 'fall') ? 'let go to stamp' : 'hold to ink'), W - 56, 596); c.textAlign = 'left';
+    // target ring
+    if (!st.liked) {
+      c.strokeStyle = 'rgba(40,32,20,.20)'; c.lineWidth = 2; c.setLineDash([3, 9]); c.lineCap = 'round';
+      c.beginPath(); c.arc(TX, TY, 84, 0, 7); c.stroke(); c.setLineDash([]);
+    }
+    // ink
+    if (st.liked) c.drawImage(inkImg(st), TX - GX, TY - GY, GW, GH);
+    c.restore();
+  }
+  function stamp(c) {
+    // the stamp from above and a little in front: hovers -> rises and tilts back while it soaks up ink -> drops onto the spot -> lifts
+    let lift = 1, alpha = 1;
+    if (phase === 'load') lift = 1 + 0.32 * ease(ink / 0.5);
+    else if (phase === 'fall') { const u = t / T_FALL; lift = 1.32 * (1 - u * u * u); }
+    else if (phase === 'press') lift = 0;
+    else if (phase === 'lift') lift = ease(t / T_LIFT);
+    else if (phase === 'swap') {            // it gets out of the way while the next post slides in
+      lift = 1 + 0.4 * ease(swapU / 0.35) * (1 - ease((swapU - 0.6) / 0.4));
+      alpha = 1 - ease(swapU / 0.3) + ease((swapU - 0.7) / 0.3);
+    }
+    const wet = phase === 'load' || phase === 'fall' ? ink : (phase === 'press' ? 1 : (phase === 'lift' ? 0.6 * (1 - t / T_LIFT) : 0));
+    const tilt = phase === 'load' ? -0.07 * ease(ink / 0.5) + Math.sin(ink * 34) * 0.012 * ink : (phase === 'fall' ? -0.07 * (1 - t / T_FALL) : 0);
+    const sc = (1 + 0.2 * lift) * (1 + 0.04 * sq), px = TX + 10 * lift, py = TY - 172 * lift;
+    c.save(); c.globalAlpha = Math.max(0, Math.min(1, alpha));
+    // shadow: its footprint on the paper, soft and offset while it's up, tight at contact
+    c.save();
+    c.filter = `blur(${(3 + 12 * lift).toFixed(1)}px)`;
+    c.fillStyle = `rgba(50,30,10,${(0.2 * (1 - Math.min(1, lift)) ** 2 + 0.035).toFixed(3)})`;
+    c.beginPath(); c.roundRect(TX - 98 + 26 * lift, TY - 84 + 40 * lift, 196, 176, 22); c.fill();
+    c.restore();
+    c.translate(px, py); c.rotate(tilt); c.scale(sc, sc * (1 - 0.05 * sq));
+    // rubber under the block: a band that soaks up ink (pale -> wet, glossy red)
+    const rc = [Math.round(224 - 34 * wet), Math.round(168 - 132 * wet), Math.round(158 - 126 * wet)];
+    c.fillStyle = `rgb(${rc})`; c.beginPath(); c.roundRect(-96, 50, 192, 40, [0, 0, 16, 16]); c.fill();
+    if (wet > 0.05) { c.fillStyle = `rgba(255,230,220,${(0.6 * wet).toFixed(3)})`; c.beginPath(); c.roundRect(-84, 78, 120, 4, 2); c.fill(); }
+    // block: front face, then top face
+    let g = c.createLinearGradient(-100, 0, 100, 0);
+    g.addColorStop(0, '#4A2E1B'); g.addColorStop(0.35, '#6E4529'); g.addColorStop(1, '#3A2414');
+    c.fillStyle = g; c.beginPath(); c.roundRect(-100, 20, 200, 60, [0, 0, 18, 18]); c.fill();
+    g = c.createLinearGradient(-100, -90, 100, 40);
+    g.addColorStop(0, '#A36E45'); g.addColorStop(0.5, '#86572F'); g.addColorStop(1, '#5E3A20');
+    c.fillStyle = g; c.beginPath(); c.roundRect(-100, -92, 200, 132, 20); c.fill();
+    c.strokeStyle = 'rgba(255,230,200,.22)'; c.lineWidth = 2; c.beginPath(); c.roundRect(-98, -90, 196, 128, 19); c.stroke();
+    c.strokeStyle = 'rgba(60,30,10,.18)'; c.lineWidth = 1.2;                    // wood grain
+    for (let k = 0; k < 7; k++) { c.beginPath(); c.moveTo(-90, -74 + k * 17); c.bezierCurveTo(-30, -80 + k * 17, 30, -66 + k * 17, 90, -72 + k * 17); c.stroke(); }
+    // emblem burnt into the top
+    c.fillStyle = 'rgba(40,18,6,.45)'; c.save(); c.translate(-58, -50); c.scale(0.1, 0.09); heart(c); c.fill(); c.restore();
+    // handle: neck and knob, coming up towards you
+    c.fillStyle = 'rgba(30,15,5,.35)'; c.beginPath(); c.ellipse(8, -16, 40, 26, 0, 0, 7); c.fill();
+    g = c.createLinearGradient(-26, 0, 26, 0);
+    g.addColorStop(0, '#4A2E1B'); g.addColorStop(0.45, '#A87346'); g.addColorStop(1, '#3E2616');
+    c.fillStyle = g; c.beginPath(); c.moveTo(-24, -22); c.lineTo(-18, -62); c.lineTo(18, -62); c.lineTo(24, -22); c.ellipse(0, -22, 24, 12, 0, 0, Math.PI); c.closePath(); c.fill();
+    g = c.createRadialGradient(-16, -98, 4, 0, -80, 50);
+    g.addColorStop(0, '#D49A68'); g.addColorStop(0.55, '#8E5B33'); g.addColorStop(1, '#4A2E1B');
+    c.fillStyle = g; c.beginPath(); c.arc(0, -80, 44, 0, 7); c.fill();
+    c.fillStyle = 'rgba(255,240,220,.35)'; c.beginPath(); c.ellipse(-15, -96, 14, 9, -0.6, 0, 7); c.fill();
+    c.restore();
+    // ink meter: a ring that fills while you hold
+    if (phase === 'load' && ink > 0) {
+      c.save(); c.strokeStyle = '#D9502B'; c.lineWidth = 5; c.lineCap = 'round';
+      c.beginPath(); c.arc(TX, TY, 84, -Math.PI / 2, -Math.PI / 2 + ink * Math.PI * 2); c.stroke(); c.restore();
+    }
+  }
+  function heart(c) {
+    c.beginPath();
+    for (let a = 0; a <= Math.PI * 2 + 0.01; a += 0.05) {
+      const x = 16 * Math.sin(a) ** 3, y = -(13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a));
+      a ? c.lineTo(x * 10, y * 10) : c.moveTo(x * 10, y * 10);
+    }
+    c.closePath();
+  }
+  function render() {
+    ctx.setTransform(S, 0, 0, S, 0, TOPPAD * S);
+    ctx.clearRect(0, -TOPPAD, W, H + TOPPAD);
+    // the paper sheet (card), clipped
+    ctx.save(); ctx.beginPath(); ctx.roundRect(0, 0, W, H, 36); ctx.clip();
+    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#FCFBF8'); g.addColorStop(1, '#F6F2EA');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(grain, 0, 0, W, H);
+    const e = phase === 'swap' ? ease(swapU) : 1;
+    if (old) drawPost(ctx, post - 1, old, -H * e);
+    drawPost(ctx, post, cur, phase === 'swap' ? H * (1 - e) : 0);
+    ctx.restore();
+    stamp(ctx);
+  }
+
+  Reel({
+    step, render,
+    geom: () => {
+      const r = card.getBoundingClientRect(), k = r.width / 800;
+      return { left: r.left, top: r.top, k, tx: TX, ty: TY };
+    },
+  });
+  document.fonts.ready.then(render);
+})();
+</script>
+</body>
+</html>

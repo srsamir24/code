@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remember Me</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<style>/* inlined from ../_kit/reel.css */
+/* Shared shell for the Cursed UI pages: palette, backdrop, hook/outro, reel canvas, cursor. */
+:root{
+  --bg:#f3f2ee; --ink:#121214; --ink-2:#5f5f66; --ink-3:#8d8c92;
+  --line:rgba(18,18,20,.085); --line-2:#e6e3dc;
+  --gold-1:#ffd772; --gold-2:#f2a43a; --gold-ink:#a8681a;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Satoshi",ui-sans-serif,sans-serif; -webkit-font-smoothing:antialiased;
+  overflow:hidden; -webkit-user-select:none; user-select:none;
+}
+.backdrop{position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(60% 45% at 50% 46%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bg),var(--bg));
+}
+.backdrop::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(18,18,20,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(18,18,20,.045) 1px,transparent 1px);
+  background-size:28px 28px; background-position:center;
+  -webkit-mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+          mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+}
+.stage{position:relative;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
+
+.tag{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 9px;border-radius:99px;
+  background:#fff;border:1px solid var(--line);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);
+  box-shadow:0 4px 10px -6px rgba(40,34,20,.18)}
+.tag i,.outro i{display:block;width:7px;height:7px;border-radius:50%;background:linear-gradient(var(--gold-1),var(--gold-2))}
+.hook{font-weight:900;font-size:27px;line-height:1.12;letter-spacing:-.025em;text-align:center;max-width:430px;text-wrap:balance}
+.handle{display:block;margin-top:10px;font-weight:500;font-size:12.5px;letter-spacing:.01em;color:var(--ink-3)}
+.outro{font-weight:900;font-size:30px;letter-spacing:-.025em;color:var(--ink);opacity:0;text-align:center}
+.outro span{display:inline-flex;align-items:center;gap:10px}
+.outro i{width:14px;height:14px}
+.outro b{display:inline-block;font-weight:900;background:var(--ink);color:#fff;border-radius:10px;padding:1px 10px 3px;margin:0 1px;letter-spacing:.01em}
+.outro small{display:block;margin-top:14px;font-weight:700;font-size:19px;letter-spacing:-.01em;color:#34343a}
+.outro small em{font-style:normal;font-weight:500;color:var(--ink-2)}
+
+.card{position:relative;width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:30px;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 40px 70px -32px rgba(40,34,20,.22),0 10px 24px -12px rgba(0,0,0,.08);
+}
+.app{display:flex;align-items:center;gap:12px}
+.icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.x{margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-3)}
+
+/* reel mode: fixed 540x960 phone canvas (recorded at 2x = 1080x1920) */
+body.reel .stage{display:block;width:540px;height:960px;margin:0 auto;padding:0}
+body.reel .tag{position:absolute;top:154px;left:50%;transform:translateX(-50%)}
+body.reel .hook{position:absolute;top:198px;left:50%;transform:translateX(-50%);width:450px;font-size:30px}
+body.reel .card{position:absolute;top:318px;left:60px}
+body.reel .outro{position:absolute;top:192px;left:0;right:0;font-size:25px}
+body:not(.reel) .outro{display:none}
+body.reel, body.reel *{cursor:none !important}
+#cursor{position:fixed;left:0;top:0;width:0;height:0;z-index:99;pointer-events:none;display:none}
+body.reel #cursor{display:block}
+#cursor svg{position:absolute;left:0;top:0;overflow:visible;filter:drop-shadow(0 3px 5px rgba(0,0,0,.25))}
+#ring{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;border:2px solid rgba(18,18,20,.5);opacity:0}
+</style>
+<style>/* inlined from component.css */
+/* Cursed UI #10: "Remember me" that forgets you the moment you look away. Scoped to .cu-rm (+ .cu-rm-banner) */
+.cu-rm,.cu-rm-banner{--ink:#121214;--ink-2:#5f5f66;--ink-3:#8d8c92;--line:rgba(18,18,20,.085);--line-2:#e6e3dc;--gold-1:#ffd772;--gold-2:#f2a43a;--red:#c23a31;
+  font-family:"Satoshi",ui-sans-serif,sans-serif;color:var(--ink)}
+.cu-rm{position:relative;padding:24px 28px 24px}
+.cu-rm .app{display:flex;align-items:center;gap:12px}
+.cu-rm .icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.cu-rm .app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.cu-rm .app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.cu-rm .who{display:flex;align-items:center;gap:14px;margin-top:20px}
+.cu-rm .ava{width:50px;height:50px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:900;font-size:21px;color:#7a4c10;
+  background:linear-gradient(160deg,#ffe3a3,#f6b552);box-shadow:inset 0 0 0 1px rgba(168,104,26,.18)}
+.cu-rm .ava.gone{background:#efede8;color:var(--ink-3);box-shadow:inset 0 0 0 1px var(--line-2)}
+.cu-rm h2{font-weight:700;font-size:25px;letter-spacing:-.025em;line-height:1.12}
+.cu-rm h2 span{display:inline-block;transform-origin:0 70%}
+.cu-rm .fld{display:block;position:relative;margin-top:12px;height:54px;border:1.5px solid var(--line-2);border-radius:15px;background:#fff;padding:7px 14px 0}
+.cu-rm .fld small{display:block;font-size:12px;font-weight:700;color:var(--ink-3);letter-spacing:.02em}
+.cu-rm .fld .v{display:block;margin-top:1px;font-size:17px;font-weight:500;white-space:nowrap;height:22px;letter-spacing:-.005em}
+.cu-rm .fld .v.ph{color:#b3b0a9}
+.cu-rm .fld input{position:absolute;inset:0;width:100%;border:0;outline:0;background:transparent;color:transparent;caret-color:transparent;opacity:0;cursor:text;font-size:16px}
+.cu-rm .fld.code .v{font-variant-numeric:tabular-nums;letter-spacing:.06em}
+.cu-rm .row{display:flex;align-items:center;gap:11px;margin-top:16px;height:30px}
+.cu-rm .cb{position:relative;width:28px;height:28px;border-radius:8px;border:1.5px solid #cfcac0;background:#fff;display:grid;place-items:center;cursor:pointer;flex:none;padding:0}
+.cu-rm .cb .bg{position:absolute;inset:-1.5px;border-radius:8px;background:linear-gradient(160deg,var(--gold-1),var(--gold-2));opacity:0}
+.cu-rm .cb svg{position:relative}
+.cu-rm .lbl{font-size:17px;font-weight:700;letter-spacing:-.01em;cursor:pointer;white-space:nowrap}
+.cu-rm .eye{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--ink-3);white-space:nowrap}
+.cu-rm .eye svg{overflow:visible}
+.cu-rm .help{margin-top:6px;height:20px;font-size:14.5px;font-weight:700;color:var(--gold-ink,#a8681a);white-space:nowrap}
+.cu-rm .help.bad{color:var(--red)}
+.cu-rm .go{position:relative;margin-top:12px;width:100%;height:54px;border:0;border-radius:15px;background:var(--ink);color:#fff;font:700 16.5px "Satoshi",sans-serif;letter-spacing:-.01em;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 8px 18px -10px rgba(0,0,0,.6)}
+.cu-rm .go .spin{width:16px;height:16px;border-radius:50%;border:2.2px solid rgba(255,255,255,.25);border-top-color:#fff;display:none}
+.cu-rm .go.bad{background:var(--red)}
+
+.cu-rm-banner{position:fixed;left:50%;top:16px;width:min(420px,calc(100% - 24px));margin-left:calc(min(420px,calc(100% - 24px)) / -2);z-index:20;display:flex;align-items:center;gap:12px;
+  padding:12px 12px 12px 14px;border-radius:20px;background:rgba(255,255,255,.96);border:1px solid var(--line);box-shadow:0 22px 40px -18px rgba(40,34,20,.4),0 6px 14px -8px rgba(0,0,0,.12);
+  opacity:0;pointer-events:none}
+.cu-rm-banner .bi{width:38px;height:38px;border-radius:10px;flex:none;display:grid;place-items:center}
+.cu-rm-banner .bt{flex:1;min-width:0}
+.cu-rm-banner .bt small{display:block;font-size:12px;font-weight:700;color:var(--ink-3);letter-spacing:.02em}
+.cu-rm-banner .bt b{display:block;font-size:15.5px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;margin-top:1px}
+.cu-rm-banner .bt b em{font-style:normal;font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.cu-rm-banner button{flex:none;height:38px;padding:0 14px;border:0;border-radius:11px;background:var(--ink);color:#fff;font:700 14.5px "Satoshi",sans-serif;cursor:pointer;white-space:nowrap;position:relative;overflow:hidden;min-width:96px}
+.cu-rm-banner button span{position:relative}
+.cu-rm-banner button .rip{position:absolute;left:50%;top:50%;width:60px;height:60px;border-radius:50%;background:#fff;opacity:0;transform:translate(-50%,-50%) scale(.2);pointer-events:none}
+.cu-rm-banner button.done{background:#23894a}
+</style>
+<style>
+  /* whole stack 30px lower so the notification sits clear of the IG top bar (y 230-360 at 2x) */
+  body.reel .cu-rm-banner{top:115px}
+  body.reel .tag{top:184px}
+  body.reel .hook{top:228px}
+  body.reel .outro{top:222px}
+  body.reel .card{top:348px}
+</style>
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="stage">
+  <div class="tag"><i></i>Cursed UI #10</div>
+  <header class="hook">"Remember me" has trust issues.<span class="handle">@zellap.app</span></header>
+
+  <main class="card" id="card"></main>
+
+  <footer class="outro" id="outro"><span><i></i>Comment <b>CODE</b> for the source</span><small>Follow for more cursed UI <em>&middot; @zellap.app</em></small></footer>
+</div>
+
+<script>/* inlined from ../_kit/reel.js */
+/* Shared runtime for the Cursed UI pages.
+   - a simulation clock (K.now, ms) advanced by K.tick(ms): rAF in the browser, stepped by the recorder (?manual)
+   - tweens, easing, the hook <-> outro swap (window.__outro), and the reel cursor driven by real pointer events
+   - opts.embedded: a private clock for a component mounted elsewhere (the game): no reel cursor, no globals, own rAF loop,
+     K.stop() ends it. Pointer position is still tracked (K.px/K.py) */
+window.ReelKit = function (opts) {
+  if (opts.embedded) return ReelKit.embedded(opts);
+  const qs = new URLSearchParams(location.search);
+  const REEL = qs.has('reel'), MANUAL = qs.has('manual');
+  if (REEL) document.body.classList.add('reel');
+
+  const K = { REEL, MANUAL, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  /* critically-ish damped spring step: z = damping ratio */
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+
+  /* ---------- cursor ---------- */
+  document.body.insertAdjacentHTML('beforeend', `<div id="cursor">
+    <div id="ring"></div>
+    <svg id="c-arrow" width="26" height="34" viewBox="0 0 26 34"><path d="M2 2 L2 26 L8.2 20.4 L12.4 30.4 L16.6 28.6 L12.5 18.9 L20.8 18.6 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg id="c-hand" width="30" height="34" viewBox="0 0 30 34" style="display:none;left:-9px;top:-2px"><path d="M10 15V5.2a2.6 2.6 0 0 1 5.2 0V13 M15.2 12.6a2.5 2.5 0 0 1 5 0v1.8 M20.2 13.6a2.5 2.5 0 0 1 5 0v6.2c0 6.6-4 11.2-10 11.2-4.6 0-6.7-2.2-9.4-6.5L3 19.6a2.5 2.5 0 0 1 4.2-2.7L10 20.8V15" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg id="c-grab" width="30" height="30" viewBox="0 0 30 30" style="display:none;left:-15px;top:-13px"><path d="M8.2 11.4a2.4 2.4 0 0 1 4.8 0v-1a2.4 2.4 0 0 1 4.8 0v1a2.4 2.4 0 0 1 4.8 0v1.4a2.4 2.4 0 0 1 4.6.9v4.8c0 5.6-3.8 9.4-9.4 9.4-4.2 0-6.4-1.8-8.6-5.2l-2.4-3.8a2.3 2.3 0 0 1 3.4-3z M13 11.4v4 M17.8 11.4v4 M22.6 12.8v3" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  </div>`);
+  const $ = id => document.getElementById(id);
+  const cur = $('cursor'), ring = $('ring'), shapes = { arrow: $('c-arrow'), hand: $('c-hand'), grab: $('c-grab') };
+  let curScale = 1;
+  function moveCursor() {
+    if (!REEL) return;
+    const el = document.elementFromPoint(K.px, K.py);
+    const kind = (opts.cursorKind && opts.cursorKind(el)) || 'arrow';
+    for (const k in shapes) shapes[k].style.display = k === kind ? '' : 'none';
+    cur.style.transform = `translate(${K.px}px,${K.py}px) scale(${curScale})`;
+  }
+  K.moveCursor = moveCursor;
+  window.addEventListener('pointermove', e => { K.px = e.clientX; K.py = e.clientY; moveCursor(); });
+  window.addEventListener('pointerleave', () => { K.px = K.py = -999; });
+  window.addEventListener('pointerdown', () => {
+    K.down = true;
+    if (!REEL) return;
+    K.tween(90, p => { curScale = 1 - .14 * p; moveCursor(); });
+    K.tween(300, p => { curScale = .86 + .14 * p; moveCursor(); }, K.ease.back, 120);
+    K.tween(480, p => { ring.style.opacity = (1 - p) * .9; ring.style.transform = `scale(${.4 + p * 1.1})`; });
+  });
+  window.addEventListener('pointerup', () => { K.down = false; moveCursor(); });
+
+  /* ---------- hook <-> outro ---------- */
+  let outroOn = false;
+  window.__outro = on => {
+    if (on === outroOn) return; outroOn = on;
+    const hook = document.querySelector('.hook'), outro = document.querySelector('.outro');
+    K.tween(440, p => { const q = on ? p : 1 - p;
+      hook.style.opacity = K.clamp(1 - q / .45, 0, 1);   // strictly sequential: never two lines at once
+      const o = K.clamp((q - .55) / .45, 0, 1);
+      outro.style.opacity = o; outro.style.transform = `translateY(${(1 - o) * 10}px)`; }, K.ease.lin);
+  };
+
+  /* ---------- clock ---------- */
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  window.__tick = tick;
+  K.start = () => {
+    if (!MANUAL) {
+      let last = performance.now();
+      requestAnimationFrame(function loop(t) { tick(Math.min(50, t - last)); last = t; requestAnimationFrame(loop); });
+    } else tick(16);
+  };
+  return K;
+};
+
+ReelKit.embedded = function (opts) {
+  const K = { REEL: false, MANUAL: false, embedded: true, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+  K.moveCursor = () => {};
+  const mv = e => { K.px = e.clientX; K.py = e.clientY; };
+  const dn = () => { K.down = true; }, up = () => { K.down = false; };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerdown', dn); window.addEventListener('pointerup', up);
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  K.tick = tick;
+  let raf = 0, alive = false;
+  K.start = () => {
+    if (alive) return; alive = true;
+    let last = performance.now();
+    raf = requestAnimationFrame(function loop(t) { if (!alive) return; tick(Math.min(50, t - last)); last = t; raf = requestAnimationFrame(loop); });
+  };
+  K.stop = () => {
+    alive = false; cancelAnimationFrame(raf);
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerdown', dn); window.removeEventListener('pointerup', up);
+  };
+  return K;
+};
+</script>
+<script>/* inlined from component.js */
+/* Cursed UI #10: a "Remember me" checkbox that forgets you the moment you look away.
+
+   Self-contained level. Needs ../_kit/reel.js (ReelKit clock) and component.css.
+     const api = CursedUI.rememberMe.init(el, { onWin, bannerHost })   // el: an empty container, e.g. a .card
+     el.addEventListener('cursed:win', e => ...)                      // also 'cursed:lose'
+     api.reset(); api.destroy();
+   Looking away = the mouse leaves the card, a tap/click outside it, the window losing focus, or the tab going hidden.
+   Every look-away while "Remember me" is on (or while signing in) wipes what it remembered, a bit more each time.
+   The sign-in code arrives as a notification outside the card (bannerHost, default document.body). Copy it and you
+   have looked away. Read it and type it instead.
+   Win: sign in with "Remember me" ticked, the email filled and the right code, and don't look away while it signs in.
+   Pass { K } to drive it from an outside clock (the reel page does); otherwise it runs its own rAF loop. */
+(function () {
+  const CU = window.CursedUI = window.CursedUI || {};
+  const EMAIL = 'sam@zellap.app', NAME = 'Sam', CODE = '482 913';
+  const CHECK = 'M8 14.5l4.2 4.2L20.5 9.5';
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+  CU.rememberMe = {
+    id: 'remember-me', n: 10,
+    title: 'Remember me, until you look away',
+    goal: 'Sign in with "Remember me" ticked. Don\'t look away.',
+    init(root, opts = {}) {
+      root.classList.add('cu-rm');
+      root.innerHTML = `
+        <div class="app"><div class="icon" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="5.2" fill="#fff"/><ellipse cx="13" cy="13" rx="11" ry="4.6" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.4" transform="rotate(-24 13 13)"/><circle cx="22.6" cy="8.6" r="2" fill="#f2a43a"/></svg></div>
+          <div><b>Orbit</b><span>Sign in</span></div></div>
+        <div class="who"><div class="ava" data-ava>S</div><h2>Welcome back, <span data-name>Sam.</span></h2></div>
+        <label class="fld"><small>Email</small><span class="v" data-email></span></label>
+        <label class="fld code"><small>Sign-in code</small><span class="v ph" data-codev>6 digits from Messages</span><input data-code inputmode="numeric" autocomplete="one-time-code" aria-label="Sign-in code"></label>
+        <div class="row">
+          <button class="cb" data-cb role="checkbox" aria-checked="false" aria-label="Remember me"><span class="bg" data-cbbg></span>
+            <svg width="28" height="28" viewBox="0 0 28 28"><path data-tick d="${CHECK}" fill="none" stroke="#121214" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="20" stroke-dashoffset="20"/></svg></button>
+          <span class="lbl" data-lbl>Remember me</span>
+          <span class="eye" data-eye><svg width="38" height="25" viewBox="-15 -10 30 20"><defs><clipPath id="cu-rm-clip"><ellipse data-lid cx="0" cy="0" rx="13" ry="8"/></clipPath></defs>
+            <ellipse data-sclera cx="0" cy="0" rx="13" ry="8" fill="#fff" stroke="#121214" stroke-width="1.6"/><g clip-path="url(#cu-rm-clip)"><circle data-pupil cx="0" cy="0" r="4.6" fill="#121214"/><circle data-glint cx="1.6" cy="-1.6" r="1.3" fill="#fff"/></g></svg><span data-eyet></span></span>
+        </div>
+        <div class="help" data-help></div>
+        <button class="go" data-go><span class="spin" data-spin></span><span data-got>Sign in</span></button>`;
+      const q = s => root.querySelector(`[data-${s}]`);
+      const E = { ava: q('ava'), name: q('name'), email: q('email'), codev: q('codev'), code: q('code'), cb: q('cb'), cbbg: q('cbbg'), tick: q('tick'),
+        lbl: q('lbl'), eye: q('eye'), lid: q('lid'), sclera: q('sclera'), pupil: q('pupil'), glint: q('glint'), eyet: q('eyet'), help: q('help'), go: q('go'), spin: q('spin'), got: q('got') };
+      const uid = 'cu-rm-clip-' + Math.random().toString(36).slice(2, 7);       // unique clip id per instance
+      root.querySelector('clipPath').id = uid; root.querySelector('g[clip-path]').setAttribute('clip-path', `url(#${uid})`);
+
+      const banner = document.createElement('div');
+      banner.className = 'cu-rm-banner';
+      (opts.bannerHost || document.body).appendChild(banner);
+
+      const own = !opts.K;
+      const K = opts.K || ReelKit({ embedded: true, update: dt => api.update(dt), render: () => api.render() });
+      const timers = [];
+      const later = (ms, fn) => { const t = { at: K.now + ms, fn }; timers.push(t); return t; };
+
+      let checked, everChecked, name, code, copied, level, phase, banner1, bannerOn, bannerKind, done;
+      const tick = { x: 0, v: 0 }, eyeO = { x: 0, v: 0 }, lidO = { x: 1, v: 0 }, ban = { x: 0, v: 0 }, pup = { x: 0, y: 0 };
+
+      function swap(el, html, cls, s = .14) {
+        if (el.innerHTML === html) return;
+        el.innerHTML = html; if (cls !== undefined) el.className = cls;
+        K.tween(420, p => el.style.transform = `scale(${1 + s * (1 - p)})`, K.ease.out);
+      }
+      const help = (t, bad) => swap(E.help, t, 'help' + (bad ? ' bad' : ''), .06);
+
+      function showBanner(kind) {
+        bannerKind = kind; bannerOn = true;
+        banner.innerHTML = kind === 1
+          ? `<span class="bi" style="background:linear-gradient(160deg,#5fd37a,#2fb35d)"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 3C5.6 3 2 5.9 2 9.5c0 2 1.1 3.8 2.9 5L4.3 17l3.1-1.6c.8.2 1.7.3 2.6.3 4.4 0 8-2.9 8-6.5S14.4 3 10 3z" fill="#fff"/></svg></span>
+             <span class="bt"><small>MESSAGES &middot; NOW</small><b>Your Orbit code is <em>${CODE}</em></b></span><button data-b><span>Copy</span></button>`
+          : `<span class="bi" style="background:linear-gradient(160deg,#2a2a33,#101014)"><svg width="20" height="20" viewBox="0 0 26 26"><circle cx="13" cy="13" r="5.2" fill="#fff"/><circle cx="22.6" cy="8.6" r="2" fill="#f2a43a"/></svg></span>
+             <span class="bt"><small>ORBIT &middot; NOW</small><b>New sign-in. Was this you?</b></span><button data-b><span>Yes, me</span></button>`;
+        const bb = banner.querySelector('[data-b]');
+        bb.insertAdjacentHTML('afterbegin', '<span class="rip"></span>');
+        bb.addEventListener('pointerdown', () => {                      // the press lands: dip + ripple
+          const rip = bb.querySelector('.rip');
+          K.tween(90, p => bb.style.transform = `scale(${(1 - .06 * p).toFixed(4)})`, K.ease.out);
+          K.tween(300, p => bb.style.transform = `scale(${(.94 + .06 * p).toFixed(4)})`, K.ease.back, 110);
+          K.tween(460, p => { rip.style.opacity = (.42 * (1 - p)).toFixed(3); rip.style.transform = `translate(-50%,-50%) scale(${(.2 + 2.6 * p).toFixed(3)})`; }, K.ease.out);
+        });
+        bb.addEventListener('click', () => {
+          if (bannerKind === 1) copied = CODE;
+          bb.lastChild.textContent = bannerKind === 1 ? 'Copied' : 'Confirmed'; bb.classList.add('done');
+          later(520, hideBanner);
+        });
+      }
+      function hideBanner() { bannerOn = false; }
+
+      function render() {
+        measure();
+        const t = K.clamp(tick.x, 0, 1.2);
+        E.tick.setAttribute('stroke-dashoffset', (20 * (1 - K.clamp(t, 0, 1))).toFixed(2));
+        E.cbbg.style.opacity = K.clamp(t, 0, 1).toFixed(3);
+        E.cb.style.transform = `scale(${(1 + .1 * Math.sin(Math.PI * K.clamp(t, 0, 1)) * (checked ? 1 : 0)).toFixed(4)})`;
+        const n = Math.round(mail.x);
+        const ev = n > 0 ? esc(EMAIL.slice(0, n)) : '<span style="color:#b3b0a9">you@company.com</span>';
+        if (E.email.innerHTML !== ev) E.email.innerHTML = ev;
+        const cv = code ? code : '6 digits from Messages';
+        if (E.codev.textContent !== cv) { E.codev.textContent = cv; E.codev.className = 'v' + (code ? '' : ' ph'); }
+        const eo = K.clamp(eyeO.x, 0, 1.2);
+        E.eye.style.opacity = K.clamp(eo, 0, 1).toFixed(3);
+        E.eye.style.transform = `scale(${(.6 + .4 * eo).toFixed(4)})`;
+        const ry = (8 * K.clamp(lidO.x, .06, 1.1)).toFixed(2);
+        E.lid.setAttribute('ry', ry); E.sclera.setAttribute('ry', ry);
+        E.pupil.setAttribute('cx', pup.x.toFixed(2)); E.pupil.setAttribute('cy', pup.y.toFixed(2));
+        E.glint.setAttribute('cx', (pup.x + 1.6).toFixed(2)); E.glint.setAttribute('cy', (pup.y - 1.6).toFixed(2));
+        const b = ban.x;
+        banner.style.opacity = K.clamp(b * 1.5, 0, 1).toFixed(3);
+        banner.style.transform = `translateY(${(-70 * (1 - b)).toFixed(2)}px) scale(${(.96 + .04 * K.clamp(b, 0, 1.03)).toFixed(4)})`;
+        banner.style.pointerEvents = bannerOn ? 'auto' : 'none';
+      }
+      const mail = { x: EMAIL.length };
+      function update(dt) {
+        for (let i = timers.length - 1; i >= 0; i--) if (K.now >= timers[i].at) timers.splice(i, 1)[0].fn();
+        K.spring(tick, checked ? 1 : 0, 420, .6, dt);
+        K.spring(eyeO, checked || level > 0 ? 1 : 0, 380, .62, dt);
+        K.spring(ban, bannerOn ? 1 : 0, 300, .74, dt);
+        lidO.x += ((outside || K.now < blinkUntil ? .06 : 1) - lidO.x) * Math.min(1, dt * 22);   // shut while you are off the card
+        const r = E.eye.getBoundingClientRect ? eyeBox : null;
+        if (r) {
+          const dx = K.px - r[0], dy = K.py - r[1], d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 60);
+          const tx = dx / d * 5.6 * m, ty = dy / d * 3.4 * m;
+          pup.x += (tx - pup.x) * Math.min(1, dt * 14); pup.y += (ty - pup.y) * Math.min(1, dt * 14);
+        }
+        if (!banner1 && everChecked) { banner1 = true; later(450, () => showBanner(1)); }
+      }
+      let eyeBox = null, outside = false, blinkUntil = -1, grace = null, pending = false;
+      function eyeText() {                                                 // "Watching" only while you are on the card
+        E.eyet.textContent = name !== NAME ? 'Who?' : (checked && !outside ? 'Watching' : '');
+      }
+      function measure() { const r = E.eye.querySelector('svg').getBoundingClientRect(); eyeBox = [r.left + r.width / 2, r.top + r.height / 2]; }
+
+      function setCheck(on) {
+        checked = on; E.cb.setAttribute('aria-checked', on);
+        if (on) everChecked = true;
+      }
+      function typeMail(from, to, ms) { K.tween(ms, p => mail.x = K.lerp(from, to, p), K.ease.lin); }
+
+      function onCheck() {
+        if (phase === 'signing' || done) return;
+        if (!checked) {
+          setCheck(true);
+          if (name !== NAME || mail.x < EMAIL.length - .5) {                   // remember again
+            name = NAME; swap(E.name, 'Sam.', undefined, .2); E.ava.textContent = 'S'; E.ava.className = 'ava'; typeMail(mail.x, EMAIL.length, 360);
+            help('Fine. Remembering you again.');
+          } else help("We'll remember you, Sam.");
+          eyeText();
+        } else { setCheck(false); help(''); eyeText(); }
+      }
+      function lookAway(delay = 140) {
+        if (done || pending) return;
+        const signing = phase === 'signing';
+        if (!checked && !signing) return;
+        pending = true; if (grace) { grace.fn = () => {}; grace = null; }
+        level++;
+        blinkUntil = K.now + delay + 30;
+        later(delay, () => {
+          pending = false;
+          setCheck(false);
+          typeMail(mail.x, 0, 420);
+          name = null; eyeText();
+          if (signing) { phase = 'lost'; E.spin.style.display = 'none'; E.got.textContent = 'Sign in'; }        // it stops trying the moment it forgets
+          later(260, () => { swap(E.name, level > 1 || signing ? '…who?' : 'stranger.', undefined, .2); E.ava.textContent = '?'; E.ava.className = 'ava gone'; });
+          help('Remember… who?', true);
+          if (level > 1 || signing) {
+            later(380, () => { code = ''; swap(E.lbl, 'Remember ___', undefined, .1); });
+            if (signing) later(520, () => { phase = 'fail'; E.got.textContent = 'Who are you?'; goColour(1); fire('cursed:lose');
+              if (!K.REEL) later(2200, () => reset(true)); });
+          }
+        });
+      }
+      let goC = 0;
+      function goColour(to, ms = 200) {                                    // black <-> red, tweened (no snap)
+        const from = goC;
+        K.tween(ms, p => { goC = K.lerp(from, to, p); E.go.style.background = goC <= 0.001 ? '' : mixC('#121214', '#c23a31', goC); }, K.ease.inOut);
+      }
+      const mixC = (a, b, t) => { const f = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)); const A = f(a), B = f(b);
+        return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`; };
+      function signIn() {
+        if (phase === 'fail') { reset(true); return; }                     // "Who are you?" -> try again
+        if (phase !== 'idle' || done) return;
+        phase = 'signing'; E.spin.style.display = 'block'; E.got.textContent = 'Signing in…';
+        later(420, () => { if (phase === 'signing') showBanner(2); });
+        later(1700, () => {
+          if (phase !== 'signing') return;
+          if (checked && mail.x >= EMAIL.length - .5 && code === CODE) {
+            phase = 'done'; done = true; hideBanner(); E.spin.style.display = 'none'; E.got.textContent = 'Signed in'; help('See you next time, Sam.');
+            fire('cursed:win');
+          } else {
+            phase = 'idle'; E.spin.style.display = 'none'; E.got.textContent = 'Sign in'; hideBanner();
+            help(!checked ? 'Tick "Remember me" first.' : code !== CODE ? 'That code is wrong.' : 'Who are you?', true);
+          }
+        });
+      }
+      function fire(n) {
+        root.dispatchEvent(new CustomEvent(n, { bubbles: true, detail: { id: 'remember-me' } }));
+        if (n === 'cursed:win' && opts.onWin) opts.onWin();
+        if (n === 'cursed:lose' && opts.onLose) opts.onLose();
+      }
+      function fmt(v) { const d = v.replace(/\D/g, '').slice(0, 6); return d.length > 3 ? d.slice(0, 3) + ' ' + d.slice(3) : d; }
+
+      const offs = [];
+      const on = (el, ev, fn, o) => { el.addEventListener(ev, fn, o); offs.push(() => el.removeEventListener(ev, fn, o)); };
+      on(E.cb, 'click', onCheck);
+      on(E.lbl, 'click', onCheck);
+      on(E.go, 'click', signIn);
+      on(E.code, 'focus', () => { if (!code && copied) { code = copied; E.code.value = copied; K.tween(500, p => E.codev.style.background = `rgba(255,215,114,${(.6 * (1 - p)).toFixed(3)})`); } });
+      on(E.code, 'input', () => { code = fmt(E.code.value); });
+      on(root, 'pointerleave', e => {                                      // the eye shuts at once; it forgets if you stay away
+        if (e.pointerType === 'touch') return;
+        outside = true; eyeText();
+        grace = later(700, () => { grace = null; if (outside) lookAway(); });
+      });
+      on(root, 'pointerenter', () => { outside = false; if (grace) { grace.fn = () => {}; grace = null; } eyeText(); });
+      on(window, 'pointerdown', e => { if (!root.contains(e.target)) lookAway(220); });   // clicking anything else: forgets right after the press
+      on(window, 'blur', lookAway);
+      on(document, 'visibilitychange', () => { if (document.hidden) lookAway(); });
+      on(window, 'resize', measure);
+
+      function reset(soft) {
+        timers.length = 0;
+        setCheck(false); everChecked = false; name = NAME; code = ''; copied = ''; level = 0; phase = 'idle'; banner1 = false; done = false;
+        E.code.value = ''; E.ava.textContent = 'S'; E.ava.className = 'ava';
+        E.spin.style.display = 'none'; E.got.textContent = 'Sign in'; E.go.classList.remove('bad');
+        pending = false; grace = null; blinkUntil = -1; eyeText();
+        hideBanner();
+        if (soft) {                                                           // animated back to the start (the reel loop)
+          swap(E.name, 'Sam.', undefined, .2); swap(E.lbl, 'Remember me', undefined, .1); help('');
+          typeMail(mail.x, EMAIL.length, 420); if (goC > 0) goColour(0, 240);
+        } else {
+          E.name.innerHTML = 'Sam.'; E.lbl.innerHTML = 'Remember me'; E.help.innerHTML = ''; E.help.className = 'help';
+          mail.x = EMAIL.length; goC = 0; E.go.style.background = ''; tick.x = tick.v = 0; eyeO.x = eyeO.v = 0; ban.x = ban.v = 0; lidO.x = 1;
+        }
+      }
+
+      const api = {
+        update, render, reset, showBanner, measure,
+        el: { root, cb: E.cb, code: E.code, go: E.go, banner },
+        bannerButton: () => banner.querySelector('[data-b]'),
+        destroy() { offs.forEach(f => f()); if (own) K.stop(); banner.remove(); root.innerHTML = ''; root.classList.remove('cu-rm'); }
+      };
+      reset(false);
+      measure();
+      if (own) K.start();
+      return api;
+    }
+  };
+})();
+</script>
+<script>
+(() => {
+  let api;
+  const K = ReelKit({
+    cursorKind: el => el && el.closest('button,.lbl,.fld') ? 'hand' : 'arrow',
+    update: dt => api.update(dt), render: () => api.render()
+  });
+  api = CursedUI.rememberMe.init(document.getElementById('card'), { K });
+  const c = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  window.__pt = k => k === "banner" ? (api.bannerButton() ? c(api.bannerButton()) : [436, 147]) : c(api.el[k]);
+  window.__reset = () => api.reset(true);
+  K.start();
+})();
+</script>
+</body>
+</html>

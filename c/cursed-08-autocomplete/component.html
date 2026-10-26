@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoFinish</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<style>/* inlined from ../_kit/reel.css */
+/* Shared shell for the Cursed UI pages: palette, backdrop, hook/outro, reel canvas, cursor. */
+:root{
+  --bg:#f3f2ee; --ink:#121214; --ink-2:#5f5f66; --ink-3:#8d8c92;
+  --line:rgba(18,18,20,.085); --line-2:#e6e3dc;
+  --gold-1:#ffd772; --gold-2:#f2a43a; --gold-ink:#a8681a;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Satoshi",ui-sans-serif,sans-serif; -webkit-font-smoothing:antialiased;
+  overflow:hidden; -webkit-user-select:none; user-select:none;
+}
+.backdrop{position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(60% 45% at 50% 46%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bg),var(--bg));
+}
+.backdrop::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(18,18,20,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(18,18,20,.045) 1px,transparent 1px);
+  background-size:28px 28px; background-position:center;
+  -webkit-mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+          mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+}
+.stage{position:relative;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
+
+.tag{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 9px;border-radius:99px;
+  background:#fff;border:1px solid var(--line);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);
+  box-shadow:0 4px 10px -6px rgba(40,34,20,.18)}
+.tag i,.outro i{display:block;width:7px;height:7px;border-radius:50%;background:linear-gradient(var(--gold-1),var(--gold-2))}
+.hook{font-weight:900;font-size:27px;line-height:1.12;letter-spacing:-.025em;text-align:center;max-width:430px;text-wrap:balance}
+.handle{display:block;margin-top:10px;font-weight:500;font-size:12.5px;letter-spacing:.01em;color:var(--ink-3)}
+.outro{font-weight:900;font-size:30px;letter-spacing:-.025em;color:var(--ink);opacity:0;text-align:center}
+.outro span{display:inline-flex;align-items:center;gap:10px}
+.outro i{width:14px;height:14px}
+.outro b{display:inline-block;font-weight:900;background:var(--ink);color:#fff;border-radius:10px;padding:1px 10px 3px;margin:0 1px;letter-spacing:.01em}
+.outro small{display:block;margin-top:14px;font-weight:700;font-size:19px;letter-spacing:-.01em;color:#34343a}
+.outro small em{font-style:normal;font-weight:500;color:var(--ink-2)}
+
+.card{position:relative;width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:30px;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 40px 70px -32px rgba(40,34,20,.22),0 10px 24px -12px rgba(0,0,0,.08);
+}
+.app{display:flex;align-items:center;gap:12px}
+.icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.x{margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-3)}
+
+/* reel mode: fixed 540x960 phone canvas (recorded at 2x = 1080x1920) */
+body.reel .stage{display:block;width:540px;height:960px;margin:0 auto;padding:0}
+body.reel .tag{position:absolute;top:154px;left:50%;transform:translateX(-50%)}
+body.reel .hook{position:absolute;top:198px;left:50%;transform:translateX(-50%);width:450px;font-size:30px}
+body.reel .card{position:absolute;top:318px;left:60px}
+body.reel .outro{position:absolute;top:192px;left:0;right:0;font-size:25px}
+body:not(.reel) .outro{display:none}
+body.reel, body.reel *{cursor:none !important}
+#cursor{position:fixed;left:0;top:0;width:0;height:0;z-index:99;pointer-events:none;display:none}
+body.reel #cursor{display:block}
+#cursor svg{position:absolute;left:0;top:0;overflow:visible;filter:drop-shadow(0 3px 5px rgba(0,0,0,.25))}
+#ring{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;border:2px solid rgba(18,18,20,.5);opacity:0}
+</style>
+<style>/* inlined from component.css */
+/* Cursed UI #8: AutoFinish that finishes your sentence, confidently wrong. Scoped to .cu-ac */
+.cu-ac{--ink:#121214;--ink-2:#5f5f66;--ink-3:#8d8c92;--line:rgba(18,18,20,.085);--line-2:#e6e3dc;--gold-1:#ffd772;--gold-2:#f2a43a;
+  position:relative;padding:24px 26px 22px;font-family:"Satoshi",ui-sans-serif,sans-serif;color:var(--ink)}
+.cu-ac .app{display:flex;align-items:center;gap:12px}
+.cu-ac .ava{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:700;font-size:15px;color:#fff;
+  background:linear-gradient(160deg,#5c8f7a,#2f5e4c);box-shadow:0 0 0 1px rgba(0,0,0,.06),0 6px 14px -6px rgba(0,0,0,.3)}
+.cu-ac .app b{display:block;font-weight:700;font-size:16px;letter-spacing:-.01em}
+.cu-ac .app span{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.cu-ac .app span i{width:7px;height:7px;border-radius:50%;background:#2fb35d}
+
+.cu-ac .chat{position:relative;height:206px;margin-top:8px;border-top:1px solid var(--line);display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;padding-bottom:46px;
+  -webkit-mask-image:linear-gradient(transparent,#000 26px);mask-image:linear-gradient(transparent,#000 26px)}
+.cu-ac .msg{flex:none;overflow:visible}
+.cu-ac .bub{width:fit-content;max-width:82%;margin-top:8px;padding:10px 15px 11px;border-radius:19px;font-size:17px;line-height:1.3;font-weight:500;letter-spacing:-.005em;transform-origin:0 100%}
+.cu-ac .them .bub{background:#f1efea;border-bottom-left-radius:6px}
+.cu-ac .me .bub{margin-left:auto;background:var(--ink);color:#fff;border-bottom-right-radius:6px;transform-origin:100% 100%}
+.cu-ac .me .bub mark{background:none;color:var(--gold-1);font-weight:700}
+.cu-ac .who{font-size:12px;font-weight:700;color:var(--ink-3);margin:10px 0 -4px 4px;letter-spacing:.01em}
+.cu-ac .dots{display:inline-flex;gap:4px;padding:3px 0}
+.cu-ac .dots i{width:7px;height:7px;border-radius:50%;background:#a9a6a0}
+.cu-ac .sys{text-align:center;font-size:14px;font-weight:700;color:#c23a31;margin-top:10px}
+
+.cu-ac .compose{position:relative;display:flex;align-items:flex-end;gap:10px}
+.cu-ac .field{position:relative;flex:1;min-height:52px;border:1.5px solid var(--line-2);border-radius:16px;background:#fff;transition:none}
+.cu-ac .field.focus{border-color:#cfcac0;box-shadow:0 0 0 4px rgba(18,18,20,.04)}
+.cu-ac .mirror,.cu-ac textarea{display:block;width:100%;padding:13px 14px 12px;font:500 18px/1.35 "Satoshi",ui-sans-serif,sans-serif;letter-spacing:-.005em;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word}
+.cu-ac .mirror{min-height:49px;color:var(--ink);pointer-events:none}
+.cu-ac .mirror .ph{color:var(--ink-3)}
+.cu-ac .mirror .ghost{color:#a08a62;margin-left:5px;border-radius:5px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.cu-ac .mirror .sel{background:#b9d3fb;border-radius:3px}
+.cu-ac .mirror .took{border-radius:5px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.cu-ac .caret{display:inline-block;width:2px;height:20px;margin:0 -1px;vertical-align:-4px;background:var(--ink);border-radius:1px}
+.cu-ac textarea{position:absolute;inset:0;height:100%;resize:none;border:0;outline:0;background:transparent;color:transparent;caret-color:transparent;opacity:0;cursor:text}
+.cu-ac .send{flex:none;width:52px;height:52px;border-radius:16px;border:0;background:var(--ink);color:#fff;display:grid;place-items:center;cursor:pointer;
+  box-shadow:0 8px 18px -10px rgba(0,0,0,.6)}
+.cu-ac .chip{position:absolute;left:4px;bottom:calc(100% + 9px);display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 6px 0 10px;border-radius:99px;
+  background:#fff;border:1px solid var(--line);box-shadow:0 8px 18px -10px rgba(40,34,20,.35);font-size:14px;font-weight:700;color:var(--ink-2);white-space:nowrap;
+  opacity:0;transform-origin:0 100%;pointer-events:none}
+.cu-ac .chip b{font-weight:900;color:var(--gold-ink,#a8681a)}
+.cu-ac .chip .spark{width:14px;height:14px}
+.cu-ac .chip button{width:20px;height:20px;border-radius:50%;border:0;background:#f1efea;color:var(--ink-3);display:grid;place-items:center;cursor:pointer;padding:0}
+.cu-ac .compose{position:relative}
+.cu-ac .kcap{position:absolute;left:0;bottom:calc(100% + 10px);height:30px;min-width:30px;padding:0 9px;border-radius:8px;display:grid;place-items:center;
+  background:#fff;border:1px solid #d9d5cc;box-shadow:0 3px 0 #d9d5cc,0 8px 16px -8px rgba(40,34,20,.35);font-size:13px;font-weight:700;color:var(--ink);
+  letter-spacing:.01em;white-space:nowrap;opacity:0;pointer-events:none;z-index:3}
+</style>
+<style>
+/* reel framing: card 1.1x so it fills the phone canvas down to y~1530 (2x px) */
+body.reel .card{transform:scale(1.1);transform-origin:50% 0}
+body.reel .cu-ac .chat{height:250px}
+</style>
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="stage">
+  <div class="tag"><i></i>Cursed UI #8</div>
+  <header class="hook">Autocomplete, but confidently wrong.<span class="handle">@zellap.app</span></header>
+
+  <main class="card" id="card"></main>
+
+  <footer class="outro" id="outro"><span><i></i>Comment <b>CODE</b> for the source</span><small>Follow for more cursed UI <em>&middot; @zellap.app</em></small></footer>
+</div>
+
+<script>/* inlined from ../_kit/reel.js */
+/* Shared runtime for the Cursed UI pages.
+   - a simulation clock (K.now, ms) advanced by K.tick(ms): rAF in the browser, stepped by the recorder (?manual)
+   - tweens, easing, the hook <-> outro swap (window.__outro), and the reel cursor driven by real pointer events
+   - opts.embedded: a private clock for a component mounted elsewhere (the game): no reel cursor, no globals, own rAF loop,
+     K.stop() ends it. Pointer position is still tracked (K.px/K.py) */
+window.ReelKit = function (opts) {
+  if (opts.embedded) return ReelKit.embedded(opts);
+  const qs = new URLSearchParams(location.search);
+  const REEL = qs.has('reel'), MANUAL = qs.has('manual');
+  if (REEL) document.body.classList.add('reel');
+
+  const K = { REEL, MANUAL, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  /* critically-ish damped spring step: z = damping ratio */
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+
+  /* ---------- cursor ---------- */
+  document.body.insertAdjacentHTML('beforeend', `<div id="cursor">
+    <div id="ring"></div>
+    <svg id="c-arrow" width="26" height="34" viewBox="0 0 26 34"><path d="M2 2 L2 26 L8.2 20.4 L12.4 30.4 L16.6 28.6 L12.5 18.9 L20.8 18.6 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg id="c-hand" width="30" height="34" viewBox="0 0 30 34" style="display:none;left:-9px;top:-2px"><path d="M10 15V5.2a2.6 2.6 0 0 1 5.2 0V13 M15.2 12.6a2.5 2.5 0 0 1 5 0v1.8 M20.2 13.6a2.5 2.5 0 0 1 5 0v6.2c0 6.6-4 11.2-10 11.2-4.6 0-6.7-2.2-9.4-6.5L3 19.6a2.5 2.5 0 0 1 4.2-2.7L10 20.8V15" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg id="c-grab" width="30" height="30" viewBox="0 0 30 30" style="display:none;left:-15px;top:-13px"><path d="M8.2 11.4a2.4 2.4 0 0 1 4.8 0v-1a2.4 2.4 0 0 1 4.8 0v1a2.4 2.4 0 0 1 4.8 0v1.4a2.4 2.4 0 0 1 4.6.9v4.8c0 5.6-3.8 9.4-9.4 9.4-4.2 0-6.4-1.8-8.6-5.2l-2.4-3.8a2.3 2.3 0 0 1 3.4-3z M13 11.4v4 M17.8 11.4v4 M22.6 12.8v3" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  </div>`);
+  const $ = id => document.getElementById(id);
+  const cur = $('cursor'), ring = $('ring'), shapes = { arrow: $('c-arrow'), hand: $('c-hand'), grab: $('c-grab') };
+  let curScale = 1;
+  function moveCursor() {
+    if (!REEL) return;
+    const el = document.elementFromPoint(K.px, K.py);
+    const kind = (opts.cursorKind && opts.cursorKind(el)) || 'arrow';
+    for (const k in shapes) shapes[k].style.display = k === kind ? '' : 'none';
+    cur.style.transform = `translate(${K.px}px,${K.py}px) scale(${curScale})`;
+  }
+  K.moveCursor = moveCursor;
+  window.addEventListener('pointermove', e => { K.px = e.clientX; K.py = e.clientY; moveCursor(); });
+  window.addEventListener('pointerleave', () => { K.px = K.py = -999; });
+  window.addEventListener('pointerdown', () => {
+    K.down = true;
+    if (!REEL) return;
+    K.tween(90, p => { curScale = 1 - .14 * p; moveCursor(); });
+    K.tween(300, p => { curScale = .86 + .14 * p; moveCursor(); }, K.ease.back, 120);
+    K.tween(480, p => { ring.style.opacity = (1 - p) * .9; ring.style.transform = `scale(${.4 + p * 1.1})`; });
+  });
+  window.addEventListener('pointerup', () => { K.down = false; moveCursor(); });
+
+  /* ---------- hook <-> outro ---------- */
+  let outroOn = false;
+  window.__outro = on => {
+    if (on === outroOn) return; outroOn = on;
+    const hook = document.querySelector('.hook'), outro = document.querySelector('.outro');
+    K.tween(440, p => { const q = on ? p : 1 - p;
+      hook.style.opacity = K.clamp(1 - q / .45, 0, 1);   // strictly sequential: never two lines at once
+      const o = K.clamp((q - .55) / .45, 0, 1);
+      outro.style.opacity = o; outro.style.transform = `translateY(${(1 - o) * 10}px)`; }, K.ease.lin);
+  };
+
+  /* ---------- clock ---------- */
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  window.__tick = tick;
+  K.start = () => {
+    if (!MANUAL) {
+      let last = performance.now();
+      requestAnimationFrame(function loop(t) { tick(Math.min(50, t - last)); last = t; requestAnimationFrame(loop); });
+    } else tick(16);
+  };
+  return K;
+};
+
+ReelKit.embedded = function (opts) {
+  const K = { REEL: false, MANUAL: false, embedded: true, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+  K.moveCursor = () => {};
+  const mv = e => { K.px = e.clientX; K.py = e.clientY; };
+  const dn = () => { K.down = true; }, up = () => { K.down = false; };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerdown', dn); window.addEventListener('pointerup', up);
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  K.tick = tick;
+  let raf = 0, alive = false;
+  K.start = () => {
+    if (alive) return; alive = true;
+    let last = performance.now();
+    raf = requestAnimationFrame(function loop(t) { if (!alive) return; tick(Math.min(50, t - last)); last = t; raf = requestAnimationFrame(loop); });
+  };
+  K.stop = () => {
+    alive = false; cancelAnimationFrame(raf);
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerdown', dn); window.removeEventListener('pointerup', up);
+  };
+  return K;
+};
+</script>
+<script>/* inlined from component.js */
+/* Cursed UI #8: AutoFinish that finishes your sentence, confidently wrong.
+
+   Self-contained level. Needs ../_kit/reel.js (ReelKit clock) and component.css.
+     const api = CursedUI.autocomplete.init(el, { onWin, onLose })   // el: an empty container, e.g. a .card
+     el.addEventListener('cursed:win', e => ...)                     // also 'cursed:lose' (bubbles)
+     api.reset(); api.destroy();
+   Rules: typing a space while a suggestion is showing accepts it (a Space keycap flashes by the caret).
+   Backspace right after reverts it with a visible select + delete sweep.
+   Send also accepts whatever suggestion is showing (it pulses gold first, then goes out). Tap x on the chip (or Esc) to dismiss one.
+   Win: send exactly "Running 5 min late, sorry!" (case and final punctuation ignored).
+   Pass { K } to drive it from an outside clock (the reel page does); otherwise it runs its own rAF loop. */
+(function () {
+  const CU = window.CursedUI = window.CursedUI || {};
+  const TRIGGERS = [                                 // word typed  ->  what AutoFinish is 98% sure you meant
+    ['running', " away. Don't look for me."],
+    ['min', 'utes from quitting.'],
+    ['sorry', ' I quit.'],
+    ['hi', ' Sarah, I want a raise.'],
+    ['meeting', ' could have been an email.'],
+    ['traffic', ' I caused.'],
+    ['coming', ' to steal your stapler.']];
+  const GOAL = 'running 5 min late, sorry';
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const norm = s => s.toLowerCase().replace(/\s+/g, ' ').trim().replace(/[.!?\s]+$/, '');
+
+  CU.autocomplete = {
+    id: 'autocomplete', n: 8,
+    title: 'Autocomplete, but confidently wrong',
+    goal: 'Tell Sarah: "Running 5 min late, sorry!"',
+    init(root, opts = {}) {
+      root.classList.add('cu-ac');
+      root.innerHTML = `
+        <div class="app"><div class="ava">SK</div><div><b>Sarah Kim</b><span><i></i>Manager &middot; online</span></div></div>
+        <div class="chat" data-chat></div>
+        <div class="compose">
+          <div class="kcap" data-kcap></div>
+          <div class="chip" data-chip><svg class="spark" viewBox="0 0 14 14"><path d="M7 0.8l1.5 4.2 4.2 1.5-4.2 1.5L7 12.2 5.5 8 1.3 6.5 5.5 5z" fill="#f2a43a"/></svg><span data-chiptext></span><button data-dismiss aria-label="Dismiss suggestion"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M1 1l6 6M7 1L1 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button></div>
+          <div class="field" data-field><div class="mirror" data-mirror></div><textarea data-ta rows="1" spellcheck="false" autocomplete="off" aria-label="Message Sarah"></textarea></div>
+          <button class="send" data-send aria-label="Send"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 15V3.5M3.8 8.4L9 3.2l5.2 5.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>`;
+      const q = s => root.querySelector(`[data-${s}]`);
+      const kcap = q('kcap'), chat = q('chat'), chip = q('chip'), chipText = q('chiptext'), field = q('field'), mirror = q('mirror'), ta = q('ta'), send = q('send');
+
+      const own = !opts.K;
+      const K = opts.K || ReelKit({ embedded: true, update: (dt) => api.update(dt), render: () => api.render() });
+      const timers = [];
+      const later = (ms, fn) => timers.push({ at: K.now + ms, fn });
+
+      let value = '', ghost = null, suppress = false, accepted = null, took = null, focused = false, lastInput = 0, busy = false, done = false;
+      const chipS = { x: 0, v: 0 };
+      let lastFade = 0;
+      let chipMode = '', tookGlow = 0, key = null, sweep = null, pulse = null;
+      const showKey = label => { key = { t0: K.now }; kcap.textContent = label; };
+
+      function addMsg(html, cls, delay = 0) {
+        const m = document.createElement('div');
+        m.className = 'msg ' + cls; m.innerHTML = html; m.style.height = '0px';
+        chat.appendChild(m);
+        const h = m.scrollHeight, b = m.querySelector('.bub');
+        K.tween(300, p => { m.style.height = (h * p).toFixed(2) + 'px'; }, K.ease.out, delay);
+        const pop = el => { el.style.transform = 'scale(.6)'; el.style.opacity = 0;          // grows in place once there is room
+          K.tween(380, p => { el.style.transform = `scale(${.6 + .4 * p})`; el.style.opacity = K.clamp(p * 2.2, 0, 1); }, K.ease.back, delay + 120); };
+        if (b) pop(b); else { m.style.opacity = 0; K.tween(300, p => { m.style.opacity = p; }, K.ease.out, delay + 120); }
+        return m;
+      }
+      function initialChat() {
+        chat.innerHTML = '';
+        chat.insertAdjacentHTML('beforeend', ['Morning!', 'Standup started.', 'Everyone is here.', 'Where are you?'].map(t => `<div class="msg them first"><div class="bub">${t}</div></div>`).join(''));
+      }
+
+      function setVal(v) { value = v; ta.value = v; ta.selectionStart = ta.selectionEnd = v.length; }
+      function computeGhost() {
+        ghost = null;
+        if (suppress || !value) return;
+        const low = value.toLowerCase();
+        for (const [w, c] of TRIGGERS) {
+          if (!low.endsWith(w)) continue;
+          const before = low[low.length - w.length - 1];
+          if (before === undefined || /[^a-z0-9']/.test(before)) { ghost = c; return; }
+        }
+      }
+      function setChip(mode) {
+        if (mode === chipMode) return; chipMode = mode;
+        if (mode === 'ghost') chipText.innerHTML = 'AutoFinish &middot; <b>98% sure</b>';
+        if (mode === 'took') chipText.innerHTML = 'Finished that for you';
+        if (mode) K.tween(260, p => chipText.style.transform = `scale(${1 + .08 * (1 - p)})`);
+      }
+
+      function onInput() {
+        const v = ta.value, prev = value;
+        lastInput = K.now;
+        if (sweep) { ta.value = value; return; }                       // mid-sweep: ignore keys for ~0.2 s
+        if (accepted && v === accepted.after.slice(0, -1)) {          // backspace right after: select it, then delete it
+          setVal(accepted.after); showKey('\u232B');
+          sweep = { t0: K.now, a: took ? took[0] : accepted.before.length - 1, before: accepted.before };
+          accepted = null; ghost = null; setChip(''); return;
+        }
+        accepted = null;
+        if (ghost && v === prev + ' ') {                               // space = "yes, I meant that"
+          const after = prev + ghost + ' ';
+          took = [prev.length, prev.length + ghost.length]; tookGlow = 1;
+          K.tween(1600, p => tookGlow = 1 - .55 * p, K.ease.out, 250);
+          accepted = { before: prev + ' ', after };
+          setVal(after); ghost = null; suppress = true; setChip('took'); showKey('Space');
+          later(1200, () => { if (chipMode === 'took' && !ghost) setChip(''); });
+          return;
+        }
+        if (took && (v.length < took[1] || v.slice(took[0], took[1]) !== prev.slice(took[0], took[1]))) took = null;
+        value = v;
+        if (v.length > prev.length) suppress = false;
+        computeGhost();
+        setChip(ghost ? 'ghost' : (chipMode === 'took' ? 'took' : ''));
+      }
+      function dismiss() { if (!ghost) return; ghost = null; suppress = true; setChip(''); }
+      function doSend() {
+        if (busy || done || sweep) return;
+        if (ghost && !pulse) {                                         // the suggestion lights up, then goes out with it
+          pulse = { t0: K.now }; busy = true;
+          later(300, () => { busy = false; doSend(); pulse = null; });
+          return;
+        }
+        const typed = value, extra = ghost || '';
+        const text = typed + extra;
+        if (!text.trim()) return;
+        busy = true;
+        let html = '';
+        const tk = took;
+        if (tk) html = esc(typed.slice(0, tk[0])) + '<mark>' + esc(typed.slice(tk[0], tk[1])) + '</mark>' + esc(typed.slice(tk[1]));
+        else html = esc(typed);
+        if (extra) html += '<mark>' + esc(extra) + '</mark>';
+        addMsg(`<div class="bub">${html.trim()}</div>`, 'me');
+        setVal(''); ghost = null; took = null; accepted = null; suppress = false; setChip('');
+        const win = norm(text) === GOAL;
+        const low = text.toLowerCase();
+        const reply = win ? 'No worries, see you in 5 👍' : /quit/.test(low) ? 'Accepted. 👋' : /away|look for me/.test(low) ? 'Okay?? Are you safe?' :
+          /raise/.test(low) ? 'Bold. No.' : 'What?';
+        later(500, () => { typingMsg = addMsg(`<div class="bub"><span class="dots"><i></i><i></i><i></i></span></div>`, 'them typing'); });
+        later(1250, () => {
+          if (typingMsg) {                                               // the dots bubble becomes the reply (no jump)
+            const m = typingMsg, bb = m.querySelector('.bub'), h0 = m.offsetHeight;
+            typingMsg = null; m.classList.remove('typing'); bb.innerHTML = esc(reply);
+            m.style.height = 'auto'; const h1 = m.scrollHeight; m.style.height = h0 + 'px';
+            K.tween(240, p => { m.style.height = K.lerp(h0, h1, p).toFixed(2) + 'px'; });
+            bb.style.transform = 'scale(.92)'; K.tween(320, p => { bb.style.transform = `scale(${.92 + .08 * p})`; }, K.ease.back);
+          } else addMsg(`<div class="bub">${esc(reply)}</div>`, 'them');
+          if (win) { done = true; fire('cursed:win'); }
+          else {
+            if (/quit/.test(low)) later(900, () => addMsg(`<div class="sys">Sarah removed you from #team</div>`, 'sysm'));
+            fire('cursed:lose');
+            if (!K.REEL) later(2600, () => clearChat());
+          }
+        });
+      }
+      let typingMsg = null;
+      function fire(name) {
+        root.dispatchEvent(new CustomEvent(name, { bubbles: true, detail: { id: 'autocomplete' } }));
+        if (name === 'cursed:win' && opts.onWin) opts.onWin();
+        if (name === 'cursed:lose' && opts.onLose) opts.onLose();
+      }
+      function crossfadeChat(ms = 100) {                               // reel reset: snapshot fades out over a fresh chat
+        const snap = chat.cloneNode(true);
+        snap.removeAttribute('data-chat');
+        Object.assign(snap.style, { position: 'absolute', left: chat.offsetLeft + 'px', top: chat.offsetTop + 'px', width: chat.offsetWidth + 'px', margin: 0, pointerEvents: 'none' });
+        root.appendChild(snap);
+        timers.length = 0; typingMsg = null; initialChat(); busy = false;
+        K.tween(ms, p => { snap.style.opacity = 1 - p; }, K.ease.lin);
+        later(ms + 10, () => snap.remove());
+      }
+      function clearChat(ms = 520) {                                    // fold everything after Sarah's first message away
+        const extra = [...chat.children].filter(m => !m.classList.contains('first'));
+        extra.forEach(m => { const h = m.offsetHeight;
+          K.tween(ms, p => { m.style.opacity = 1 - Math.min(1, p * 1.6); m.style.height = (h * (1 - p)).toFixed(2) + 'px'; }, K.ease.inOut); });
+        later(ms + 20, () => { extra.forEach(m => m.remove()); busy = false; });
+      }
+
+      const on = (el, ev, fn, o) => { el.addEventListener(ev, fn, o); offs.push(() => el.removeEventListener(ev, fn, o)); };
+      const offs = [];
+      on(ta, 'input', onInput);
+      on(ta, 'focus', () => { focused = true; lastInput = K.now; field.classList.add('focus'); });
+      on(ta, 'blur', () => { focused = false; field.classList.remove('focus'); });
+      on(ta, 'keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
+        if (e.key === 'Escape') dismiss();
+      });
+      on(send, 'pointerdown', e => e.preventDefault());               // keep focus in the field
+      on(send, 'mousedown', e => e.preventDefault());
+      on(send, 'click', () => { doSend(); ta.focus(); });
+      on(q('dismiss'), 'pointerdown', e => e.preventDefault());
+      on(q('dismiss'), 'click', dismiss);
+
+      function render() {
+        const sel = Math.min(ta.selectionEnd == null ? value.length : ta.selectionEnd, value.length);
+        if (sweep && K.now - sweep.t0 >= 230) {                         // sweep done: delete it
+          setVal(sweep.before); sweep = null; took = null; suppress = true; lastInput = K.now;
+        }
+        const blink = focused && !sweep && ((K.now - lastInput) % 1060) < 560;
+        const caret = blink ? '<span class="caret"></span>' : (focused ? '<span class="caret" style="opacity:0"></span>' : '');
+        const seg = (a, b) => {
+          if (a >= b) return '';
+          if (!took || b <= took[0] || a >= took[1]) return esc(value.slice(a, b));
+          const s = Math.max(a, took[0]), e = Math.min(b, took[1]);
+          return esc(value.slice(a, s)) + `<span class="took" style="background:rgba(255,215,114,${(.75 * tookGlow).toFixed(3)})">${esc(value.slice(s, e))}</span>` + esc(value.slice(e, b));
+        };
+        let html = seg(0, sel) + caret + seg(sel, value.length);
+        if (sweep) {                                                     // selection grows right to left over ~6 frames
+          const u = K.ease.out(K.clamp((K.now - sweep.t0) / 190, 0, 1));
+          const s0 = Math.round(K.lerp(value.length, sweep.a, u));
+          html = seg(0, s0) + `<span class="sel">${esc(value.slice(s0))}</span>`;
+        }
+        if (ghost && sel === value.length) {
+          let st = '';
+          if (pulse) { const u = K.clamp((K.now - pulse.t0) / 300, 0, 1), a = Math.sin(Math.PI * Math.min(1, u * 1.25));
+            st = ` style="color:#121214;background:rgba(255,215,114,${(.95 * a + .25 * u).toFixed(3)})"`; }
+          html += `<span class="ghost"${st}>${esc(ghost)}</span>`;
+        }
+        if (!value && !ghost) html = caret + '<span class="ph">Message Sarah</span>';
+        if (mirror.innerHTML !== html) mirror.innerHTML = html;
+        const c = chipS.x;
+        chip.style.opacity = K.clamp(c * 1.4, 0, 1).toFixed(3);
+        chip.style.transform = `translateY(${(8 * (1 - c)).toFixed(2)}px) scale(${(.9 + .1 * c).toFixed(4)})`;
+        chip.style.pointerEvents = chipMode ? 'auto' : 'none';
+        const first = chat.firstElementChild;                           // top fade grows as messages push past the top edge
+        const over = first ? K.clamp(-first.offsetTop, 0, 200) : 0;
+        const fadePx = Math.round(K.clamp(26 + over * 1.4, 26, 64));
+        if (fadePx !== lastFade) { lastFade = fadePx; chat.style.webkitMaskImage = chat.style.maskImage = `linear-gradient(transparent,#000 ${fadePx}px)`; }
+        if (typingMsg) typingMsg.querySelectorAll('.dots i').forEach((d, i) => {   // typing dots bob
+          d.style.transform = `translateY(${(-3 * Math.max(0, Math.sin(K.now / 130 - i * .9))).toFixed(2)}px)`; });
+        if (key) {                                                       // keycap by the caret: pops in pressed, springs up, fades
+          const e = K.now - key.t0;
+          if (e > 720) { key = null; kcap.style.opacity = 0; }
+          else {
+            const cr = mirror.querySelector('.sel') || mirror.querySelector('.caret');
+            const cb = root.querySelector('.compose').getBoundingClientRect(), fr = field.getBoundingClientRect();
+            const r = cr ? cr.getBoundingClientRect() : fr;
+            const w = kcap.offsetWidth;
+            const sc = cb.width / (root.querySelector('.compose').offsetWidth || 1);              // card may be scaled in the reel
+            const ax = cr && cr.classList.contains('sel') ? r.right : r.left;                          // Backspace: end of the text
+            if (key.x == null) key.x = K.clamp((ax - cb.left) / sc - w / 2, 2, (fr.right - cb.left) / sc - w - 2);   // pinned where it was pressed
+            kcap.style.left = key.x.toFixed(1) + 'px';
+            const down = e < 140 ? 1 : Math.max(0, 1 - (e - 140) / 120);
+            kcap.style.opacity = K.clamp(Math.min(e / 40, (720 - e) / 200), 0, 1).toFixed(3);
+            kcap.style.transform = `translateY(${(3 * down).toFixed(2)}px) scale(${(1 - .06 * down).toFixed(4)})`;
+            kcap.style.boxShadow = `0 ${(3 - 3 * down).toFixed(2)}px 0 #d9d5cc,0 8px 16px -8px rgba(40,34,20,.35)`;
+          }
+        }
+      }
+      function update(dt) {
+        for (let i = timers.length - 1; i >= 0; i--) if (K.now >= timers[i].at) timers.splice(i, 1)[0].fn();
+        K.spring(chipS, chipMode ? 1 : 0, 520, .72, dt);
+      }
+      function reset() {
+        timers.length = 0; initialChat(); setVal(''); ghost = null; took = null; accepted = null; suppress = false; busy = false; done = false;
+        chipMode = ''; chipS.x = chipS.v = 0; typingMsg = null; key = null; sweep = null; pulse = null; kcap.style.opacity = 0;
+      }
+
+      const api = {
+        update, render, reset, clearChat, crossfadeChat,
+        send: doSend,
+        el: { root, field, send, chip, dismiss: q('dismiss'), ta },
+        destroy() { offs.forEach(f => f()); if (own) K.stop(); root.innerHTML = ''; root.classList.remove('cu-ac'); }
+      };
+      reset();
+      if (own) K.start();
+      return api;
+    }
+  };
+})();
+</script>
+<script>
+(() => {
+  let api;
+  const K = ReelKit({
+    cursorKind: el => el && el.closest('button') ? 'hand' : 'arrow',
+    update: dt => api.update(dt), render: () => api.render()
+  });
+  api = CursedUI.autocomplete.init(document.getElementById('card'), { K });
+  const c = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  window.__pt = k => c(api.el[k]);
+  window.__clear = () => api.crossfadeChat(100);
+  window.__reset = () => api.reset();
+  K.start();
+})();
+</script>
+</body>
+</html>

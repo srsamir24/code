@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Birth Year Picker</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<style>/* inlined from ../_kit/reel.css */
+/* Shared shell for the Cursed UI pages: palette, backdrop, hook/outro, reel canvas, cursor. */
+:root{
+  --bg:#f3f2ee; --ink:#121214; --ink-2:#5f5f66; --ink-3:#8d8c92;
+  --line:rgba(18,18,20,.085); --line-2:#e6e3dc;
+  --gold-1:#ffd772; --gold-2:#f2a43a; --gold-ink:#a8681a;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Satoshi",ui-sans-serif,sans-serif; -webkit-font-smoothing:antialiased;
+  overflow:hidden; -webkit-user-select:none; user-select:none;
+}
+.backdrop{position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(60% 45% at 50% 46%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bg),var(--bg));
+}
+.backdrop::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(18,18,20,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(18,18,20,.045) 1px,transparent 1px);
+  background-size:28px 28px; background-position:center;
+  -webkit-mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+          mask-image:radial-gradient(55% 42% at 50% 46%,#000 10%,transparent 75%);
+}
+.stage{position:relative;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px}
+
+.tag{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 9px;border-radius:99px;
+  background:#fff;border:1px solid var(--line);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);
+  box-shadow:0 4px 10px -6px rgba(40,34,20,.18)}
+.tag i,.outro i{display:block;width:7px;height:7px;border-radius:50%;background:linear-gradient(var(--gold-1),var(--gold-2))}
+.hook{font-weight:900;font-size:27px;line-height:1.12;letter-spacing:-.025em;text-align:center;max-width:430px;text-wrap:balance}
+.handle{display:block;margin-top:10px;font-weight:500;font-size:12.5px;letter-spacing:.01em;color:var(--ink-3)}
+.outro{font-weight:900;font-size:30px;letter-spacing:-.025em;color:var(--ink);opacity:0;text-align:center}
+.outro span{display:inline-flex;align-items:center;gap:10px}
+.outro i{width:14px;height:14px}
+.outro b{display:inline-block;font-weight:900;background:var(--ink);color:#fff;border-radius:10px;padding:1px 10px 3px;margin:0 1px;letter-spacing:.01em}
+.outro small{display:block;margin-top:14px;font-weight:700;font-size:19px;letter-spacing:-.01em;color:#34343a}
+.outro small em{font-style:normal;font-weight:500;color:var(--ink-2)}
+
+.card{position:relative;width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:30px;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 40px 70px -32px rgba(40,34,20,.22),0 10px 24px -12px rgba(0,0,0,.08);
+}
+.app{display:flex;align-items:center;gap:12px}
+.icon{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(160deg,#2a2a33,#101014);display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.35)}
+.app b{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.app span{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+.x{margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-3)}
+
+/* reel mode: fixed 540x960 phone canvas (recorded at 2x = 1080x1920) */
+body.reel .stage{display:block;width:540px;height:960px;margin:0 auto;padding:0}
+body.reel .tag{position:absolute;top:154px;left:50%;transform:translateX(-50%)}
+body.reel .hook{position:absolute;top:198px;left:50%;transform:translateX(-50%);width:450px;font-size:30px}
+body.reel .card{position:absolute;top:318px;left:60px}
+body.reel .outro{position:absolute;top:192px;left:0;right:0;font-size:25px}
+body:not(.reel) .outro{display:none}
+body.reel, body.reel *{cursor:none !important}
+#cursor{position:fixed;left:0;top:0;width:0;height:0;z-index:99;pointer-events:none;display:none}
+body.reel #cursor{display:block}
+#cursor svg{position:absolute;left:0;top:0;overflow:visible;filter:drop-shadow(0 3px 5px rgba(0,0,0,.25))}
+#ring{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;border:2px solid rgba(18,18,20,.5);opacity:0}
+</style>
+<style>/* inlined from component.css */
+/* Cursed UI #17: a date-of-birth picker whose year starts at 1900 and moves one year per click. Scoped to .cu-by */
+.cu-by{--ink:#121214;--ink-2:#5f5f66;--ink-3:#8d8c92;--line:rgba(18,18,20,.085);--line-2:#e6e3dc;--field:#f7f6f2;
+  --amber:oklch(.74 .15 70);--amber-ink:oklch(.45 .1 60);
+  position:relative;overflow:hidden;padding:24px 26px 24px;font-family:"Satoshi",ui-sans-serif,sans-serif;color:var(--ink)}
+.cu-by .app{display:flex;align-items:center;gap:12px}
+.cu-by .steps{margin-left:auto;display:flex;gap:5px}
+.cu-by .steps i{width:22px;height:5px;border-radius:3px;background:var(--line-2)}
+.cu-by .steps i.on{background:var(--ink)}
+.cu-by h2{margin-top:20px;font-weight:900;font-size:26px;letter-spacing:-.03em;line-height:1.1}
+.cu-by .sub{margin-top:5px;font-size:14px;font-weight:500;color:var(--ink-3)}
+
+.cu-by .row{display:grid;grid-template-columns:.8fr 1.2fr;gap:10px;margin-top:18px}
+.cu-by .lbl{display:block;margin-bottom:6px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.cu-by .sel{display:flex;align-items:center;justify-content:space-between;height:48px;padding:0 14px;border-radius:13px;background:var(--field);
+  box-shadow:0 0 0 1px var(--line-2) inset;font-weight:700;font-size:17px;letter-spacing:-.01em}
+.cu-by .sel svg{color:var(--ink-3)}
+
+/* the year: a stepper, after iOS/Material steppers, with an odometer readout */
+.cu-by .yr{margin-top:14px}
+.cu-by .stepper{position:relative;display:flex;align-items:center;gap:10px;height:84px;padding:0 10px;border-radius:18px;background:var(--field);
+  box-shadow:0 0 0 1px var(--line-2) inset}
+.cu-by .stepper button{width:60px;height:60px;flex:none;border:0;border-radius:15px;background:#fff;color:var(--ink);cursor:pointer;display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(18,18,20,.1),0 2px 0 rgba(18,18,20,.06),0 8px 16px -10px rgba(0,0,0,.35)}
+.cu-by .stepper button.minus{color:#c4c1b9}
+.cu-by .read{position:relative;flex:1;display:flex;justify-content:center;cursor:text}
+.cu-by .digits{display:flex;height:56px;overflow:hidden;font-weight:900;font-size:50px;letter-spacing:-.02em;line-height:56px;font-variant-numeric:tabular-nums;
+  -webkit-mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent)}
+.cu-by .digits span{display:block;width:.6em;text-align:center}
+.cu-by .digits span u{display:block;text-decoration:none;will-change:transform}
+.cu-by .digits span u b{display:block;height:56px;font-weight:900}
+.cu-by .plus1{position:absolute;right:14px;top:6px;font-weight:900;font-size:15px;color:var(--ink-2);opacity:0;pointer-events:none}
+
+.cu-by .tip{position:absolute;left:50%;top:-50px;transform:translateX(-50%);white-space:nowrap;padding:8px 12px;border-radius:11px;background:var(--ink);color:#fff;
+  font-weight:700;font-size:14px;letter-spacing:-.01em;opacity:0;pointer-events:none;box-shadow:0 10px 20px -10px rgba(0,0,0,.5)}
+.cu-by .tip::after{content:"";position:absolute;left:50%;bottom:-5px;width:10px;height:10px;margin-left:-5px;background:var(--ink);transform:rotate(45deg);border-radius:2px}
+
+.cu-by .age{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;font-size:15px;font-weight:500;color:var(--ink-2)}
+.cu-by .age b{font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums}
+.cu-by .age span{font-size:15px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.cu-by .age span b{font-weight:900;color:var(--ink)}
+.cu-by .go{margin-top:16px;width:100%;height:50px;border:0;border-radius:14px;background:#e9e7e1;color:#a9a6a0;font:700 16px "Satoshi",sans-serif;letter-spacing:-.01em;
+  display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* session timeout notice, slides down over the header */
+.cu-by .notice{position:absolute;left:12px;right:12px;top:12px;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:16px;
+  background:oklch(.97 .04 85);box-shadow:0 0 0 1px oklch(.86 .08 80) inset,0 14px 28px -16px rgba(60,40,0,.45);
+  font-size:14.5px;font-weight:700;color:var(--amber-ink);transform:translateY(-130%);z-index:3}
+.cu-by .notice svg{flex:none}
+.cu-by .notice small{display:block;font-size:13px;font-weight:500;color:oklch(.55 .07 65)}
+</style>
+<style>
+/* reel framing: card 1.06x, a little higher */
+body.reel .card{top:290px;transform:scale(1.06);transform-origin:50% 0}
+</style>
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="stage">
+  <div class="tag"><i></i>Cursed UI #17</div>
+  <header class="hook">Birth year starts at 1900.<span class="handle">@zellap.app</span></header>
+
+  <main class="card" id="card"></main>
+
+  <footer class="outro" id="outro"><span><i></i>Comment <b>CODE</b> for the source</span><small>Follow for more cursed UI <em>&middot; @zellap.app</em></small></footer>
+</div>
+
+<script>/* inlined from ../_kit/reel.js */
+/* Shared runtime for the Cursed UI pages.
+   - a simulation clock (K.now, ms) advanced by K.tick(ms): rAF in the browser, stepped by the recorder (?manual)
+   - tweens, easing, the hook <-> outro swap (window.__outro), and the reel cursor driven by real pointer events
+   - opts.embedded: a private clock for a component mounted elsewhere (the game): no reel cursor, no globals, own rAF loop,
+     K.stop() ends it. Pointer position is still tracked (K.px/K.py) */
+window.ReelKit = function (opts) {
+  if (opts.embedded) return ReelKit.embedded(opts);
+  const qs = new URLSearchParams(location.search);
+  const REEL = qs.has('reel'), MANUAL = qs.has('manual');
+  if (REEL) document.body.classList.add('reel');
+
+  const K = { REEL, MANUAL, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  /* critically-ish damped spring step: z = damping ratio */
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+
+  /* ---------- cursor ---------- */
+  document.body.insertAdjacentHTML('beforeend', `<div id="cursor">
+    <div id="ring"></div>
+    <svg id="c-arrow" width="26" height="34" viewBox="0 0 26 34"><path d="M2 2 L2 26 L8.2 20.4 L12.4 30.4 L16.6 28.6 L12.5 18.9 L20.8 18.6 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg id="c-hand" width="30" height="34" viewBox="0 0 30 34" style="display:none;left:-9px;top:-2px"><path d="M10 15V5.2a2.6 2.6 0 0 1 5.2 0V13 M15.2 12.6a2.5 2.5 0 0 1 5 0v1.8 M20.2 13.6a2.5 2.5 0 0 1 5 0v6.2c0 6.6-4 11.2-10 11.2-4.6 0-6.7-2.2-9.4-6.5L3 19.6a2.5 2.5 0 0 1 4.2-2.7L10 20.8V15" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg id="c-grab" width="30" height="30" viewBox="0 0 30 30" style="display:none;left:-15px;top:-13px"><path d="M8.2 11.4a2.4 2.4 0 0 1 4.8 0v-1a2.4 2.4 0 0 1 4.8 0v1a2.4 2.4 0 0 1 4.8 0v1.4a2.4 2.4 0 0 1 4.6.9v4.8c0 5.6-3.8 9.4-9.4 9.4-4.2 0-6.4-1.8-8.6-5.2l-2.4-3.8a2.3 2.3 0 0 1 3.4-3z M13 11.4v4 M17.8 11.4v4 M22.6 12.8v3" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  </div>`);
+  const $ = id => document.getElementById(id);
+  const cur = $('cursor'), ring = $('ring'), shapes = { arrow: $('c-arrow'), hand: $('c-hand'), grab: $('c-grab') };
+  let curScale = 1;
+  function moveCursor() {
+    if (!REEL) return;
+    const el = document.elementFromPoint(K.px, K.py);
+    const kind = (opts.cursorKind && opts.cursorKind(el)) || 'arrow';
+    for (const k in shapes) shapes[k].style.display = k === kind ? '' : 'none';
+    cur.style.transform = `translate(${K.px}px,${K.py}px) scale(${curScale})`;
+  }
+  K.moveCursor = moveCursor;
+  window.addEventListener('pointermove', e => { K.px = e.clientX; K.py = e.clientY; moveCursor(); });
+  window.addEventListener('pointerleave', () => { K.px = K.py = -999; });
+  window.addEventListener('pointerdown', () => {
+    K.down = true;
+    if (!REEL) return;
+    K.tween(90, p => { curScale = 1 - .14 * p; moveCursor(); });
+    K.tween(300, p => { curScale = .86 + .14 * p; moveCursor(); }, K.ease.back, 120);
+    K.tween(480, p => { ring.style.opacity = (1 - p) * .9; ring.style.transform = `scale(${.4 + p * 1.1})`; });
+  });
+  window.addEventListener('pointerup', () => { K.down = false; moveCursor(); });
+
+  /* ---------- hook <-> outro ---------- */
+  let outroOn = false;
+  window.__outro = on => {
+    if (on === outroOn) return; outroOn = on;
+    const hook = document.querySelector('.hook'), outro = document.querySelector('.outro');
+    K.tween(440, p => { const q = on ? p : 1 - p;
+      hook.style.opacity = K.clamp(1 - q / .45, 0, 1);   // strictly sequential: never two lines at once
+      const o = K.clamp((q - .55) / .45, 0, 1);
+      outro.style.opacity = o; outro.style.transform = `translateY(${(1 - o) * 10}px)`; }, K.ease.lin);
+  };
+
+  /* ---------- clock ---------- */
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  window.__tick = tick;
+  K.start = () => {
+    if (!MANUAL) {
+      let last = performance.now();
+      requestAnimationFrame(function loop(t) { tick(Math.min(50, t - last)); last = t; requestAnimationFrame(loop); });
+    } else tick(16);
+  };
+  return K;
+};
+
+ReelKit.embedded = function (opts) {
+  const K = { REEL: false, MANUAL: false, embedded: true, now: 0, px: -999, py: -999, down: false };
+  const tweens = [];
+  K.ease = {
+    lin: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+    back: t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+  K.tween = (dur, fn, e = K.ease.out, delay = 0) => { const tw = { t0: K.now + delay, dur, fn, e }; tweens.push(tw); return tw; };
+  K.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  K.lerp = (a, b, t) => a + (b - a) * t;
+  K.spring = (s, target, k, z, dt) => { s.v += (k * (target - s.x) - 2 * Math.sqrt(k) * z * s.v) * dt; s.x += s.v * dt; };
+  K.moveCursor = () => {};
+  const mv = e => { K.px = e.clientX; K.py = e.clientY; };
+  const dn = () => { K.down = true; }, up = () => { K.down = false; };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerdown', dn); window.addEventListener('pointerup', up);
+  function tick(ms) {
+    const n = Math.max(1, Math.ceil(ms / 4));
+    for (let i = 0; i < n; i++) { K.now += ms / n; opts.update(ms / n / 1000); }
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      if (K.now < tw.t0) continue;
+      const p = tw.dur <= 1 ? 1 : Math.min(1, (K.now - tw.t0) / tw.dur);
+      tw.fn(tw.e(p));
+      if (p >= 1) tweens.splice(i, 1);
+    }
+    opts.render();
+  }
+  K.tick = tick;
+  let raf = 0, alive = false;
+  K.start = () => {
+    if (alive) return; alive = true;
+    let last = performance.now();
+    raf = requestAnimationFrame(function loop(t) { if (!alive) return; tick(Math.min(50, t - last)); last = t; raf = requestAnimationFrame(loop); });
+  };
+  K.stop = () => {
+    alive = false; cancelAnimationFrame(raf);
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerdown', dn); window.removeEventListener('pointerup', up);
+  };
+  return K;
+};
+</script>
+<script>/* inlined from component.js */
+/* Cursed UI #17: a date-of-birth picker. Day and month are normal. The year starts at 1900 and has a stepper:
+   one year per click. Typing is "disabled for your security". Click long enough and the session times out and
+   rolls the year all the way back to 1900.
+
+   Self-contained level. Needs ../_kit/reel.js (ReelKit clock) and component.css.
+     const api = CursedUI.birthYearPicker.init(el, { K })     // el: an empty container, e.g. a .card
+     api.timeout(); api.reset(); api.destroy();
+   Rules: reach your real birth year before the session times out (it never lets you).
+   Pass { K } to drive it from an outside clock (the reel page does); otherwise it runs its own rAF loop. */
+(function () {
+  const CU = window.CursedUI = window.CursedUI || {};
+  const START = 1900, NOW = 2026;
+  const chev = '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  CU.birthYearPicker = {
+    id: 'birth-year-picker', n: 17,
+    title: 'Birth year starts at 1900',
+    goal: 'Enter your year of birth.',
+    init(root, opts = {}) {
+      root.classList.add('cu-by');
+      const strip = '<u>' + [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(d => `<b>${d}</b>`).join('') + '</u>';
+      root.innerHTML = `
+        <div class="notice" data-notice><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10 5.6V10l2.8 1.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div>Session timed out<small>For your security, we reset the year.</small></div></div>
+        <div class="app"><div class="icon" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="5.2" fill="#fff"/><ellipse cx="13" cy="13" rx="11" ry="4.6" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.4" transform="rotate(-24 13 13)"/><circle cx="22.6" cy="8.6" r="2" fill="#f2a43a"/></svg></div>
+          <div><b>Orbit</b><span>Create account &middot; Step 2 of 3</span></div>
+          <div class="steps" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i></div></div>
+        <h2>When were you born?</h2>
+        <div class="sub">We need this to confirm you're over 18.</div>
+        <div class="row">
+          <div><span class="lbl">Day</span><div class="sel">14${chev}</div></div>
+          <div><span class="lbl">Month</span><div class="sel">March${chev}</div></div>
+        </div>
+        <div class="yr"><span class="lbl">Year</span>
+          <div class="stepper">
+            <button class="minus" data-minus aria-label="Previous year"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M4.5 10h11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+            <div class="read" data-read><span class="tip" data-tip>Typing is off. It's more secure.</span>
+              <div class="digits" data-digits><span>${strip}</span><span>${strip}</span><span>${strip}</span><span>${strip}</span></div></div>
+            <button class="plus" data-plus aria-label="Next year"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M4.5 10h11M10 4.5v11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+            <span class="plus1" data-p1>+1</span>
+          </div>
+        </div>
+        <div class="age"><div>That makes you <b data-age></b>.</div><span data-left></span></div>
+        <button class="go" disabled><svg width="14" height="14" viewBox="0 0 14 14"><rect x="2.4" y="6.2" width="9.2" height="6.4" rx="1.6" fill="currentColor"/><path d="M4.4 6.4V4.6a2.6 2.6 0 0 1 5.2 0v1.8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Continue</button>`;
+      const q = s => root.querySelector(`[data-${s}]`);
+      const plus = q('plus'), minus = q('minus'), read = q('read'), tip = q('tip'), notice = q('notice'), ageEl = q('age'), leftEl = q('left'), p1 = q('p1'), app = root.querySelector('.app');
+      const strips = [...q('digits').querySelectorAll('u')];          // thousands, hundreds, tens, ones
+
+      const own = !opts.K;
+      const K = opts.K || ReelKit({ embedded: true, update: dt => api.update(dt), render: () => api.render() });
+      const timers = [];
+      const later = (ms, fn) => timers.push({ at: K.now + ms, fn });
+
+      let year = START, rolling = false, shake = 0, noticeY = 0;
+      const v = { x: START, v: 0 }, tipA = { x: 0, v: 0 }, nA = { x: 0, v: 0 };
+      let tipOn = false, noticeOn = false, rollFrom = 0, rollT0 = 0, rollDur = 0;
+
+      function press(btn) {
+        K.tween(70, p => btn.style.transform = `scale(${(1 - .07 * p).toFixed(4)})`, K.ease.out);
+        K.tween(220, p => btn.style.transform = `scale(${(.93 + .07 * p).toFixed(4)})`, K.ease.back, 80);
+      }
+      function step() {
+        if (rolling) return;
+        press(plus);
+        year = Math.min(NOW, year + 1);
+        K.tween(420, p => { p1.style.opacity = (p < .2 ? p / .2 : 1 - (p - .2) / .8).toFixed(3); p1.style.transform = `translateY(${(-16 * p).toFixed(2)}px)`; }, K.ease.out);
+      }
+      function nope() {                                                // the year is not a text field
+        K.tween(380, p => shake = Math.sin(p * Math.PI * 4) * 7 * (1 - p), K.ease.lin);
+        tipOn = true; later(1250, () => tipOn = false);
+      }
+      function timeout(ms = 1400) {                                    // the session "times out": back to 1900
+        noticeOn = true; rolling = true; rollFrom = v.x; rollT0 = K.now + 260; rollDur = ms;
+        later(260 + ms + 30, () => { year = START; v.x = START; v.v = 0; rolling = false; });
+        later(2300, () => noticeOn = false);
+      }
+
+      const offs = [];
+      const on = (el, ev, fn) => { el.addEventListener(ev, fn); offs.push(() => el.removeEventListener(ev, fn)); };
+      on(plus, 'click', step);
+      on(minus, 'click', () => press(minus));                          // already at the minimum
+      on(read, 'click', nope);
+      on(read, 'pointerleave', () => tipOn = false);                // the tooltip belongs to the field, not to the + button
+
+      function update(dt) {
+        for (let i = timers.length - 1; i >= 0; i--) if (K.now >= timers[i].at) timers.splice(i, 1)[0].fn();
+        if (rolling && K.now >= rollT0) {
+          const u = K.clamp((K.now - rollT0) / rollDur, 0, 1), e = u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+          v.x = K.lerp(rollFrom, START, e); v.v = 0;
+        } else if (!rolling) K.spring(v, year, 900, .9, dt);
+        K.spring(tipA, tipOn ? 1 : 0, 420, .8, dt);
+        K.spring(nA, noticeOn ? 1 : 0, 260, .78, dt);
+      }
+      function render() {
+        /* continuous odometer: each digit rolls only while every digit below it is passing 9 -> 0 */
+        const x = Math.max(START, v.x);
+        [1000, 100, 10, 1].forEach((m, k) => {
+          const below = x % m, base = Math.floor(x / m) % 10;
+          const carry = m === 1 ? x % 1 : Math.max(0, below - (m - 1));
+          const pos = m === 1 ? x % 10 : base + carry;
+          strips[k].style.transform = `translateY(${(-pos * 56).toFixed(2)}px)`;
+        });
+        const shown = Math.round(x);
+        ageEl.textContent = NOW - shown;
+        const left = 2007 - shown;                                    // the first year that is over 18
+        leftEl.innerHTML = left > 0 ? `<b>${left}</b> clicks to go` : '';
+        read.style.transform = `translateX(${shake.toFixed(2)}px)`;
+        const t = K.clamp(tipA.x, 0, 1.1);
+        tip.style.opacity = K.clamp(t, 0, 1).toFixed(3);
+        tip.style.transform = `translateX(-50%) translateY(${((1 - t) * 6).toFixed(2)}px)`;
+        notice.style.transform = `translateY(${(-130 + 130 * nA.x).toFixed(2)}%)`;
+        app.style.opacity = K.clamp(1 - nA.x * 1.6, 0, 1).toFixed(3);    // the notice replaces the header, never sits on top of it
+      }
+      function reset() {
+        timers.length = 0; year = START; rolling = false; shake = 0; tipOn = false; noticeOn = false;
+        v.x = START; v.v = 0; tipA.x = tipA.v = 0; nA.x = nA.v = 0;
+      }
+
+      const api = {
+        update, render, reset, timeout,
+        el: { root, plus, minus, read },
+        destroy() { offs.forEach(f => f()); if (own) K.stop(); root.innerHTML = ''; root.classList.remove('cu-by'); }
+      };
+      reset();
+      if (own) K.start();
+      return api;
+    }
+  };
+})();
+</script>
+<script>
+(() => {
+  let api;
+  const K = ReelKit({
+    cursorKind: el => el && el.closest('button:not([disabled])') ? 'hand' : el && el.closest('[data-read]') ? 'arrow' : 'arrow',
+    update: dt => api.update(dt), render: () => api.render()
+  });
+  api = CursedUI.birthYearPicker.init(document.getElementById('card'), { K });
+  const c = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  window.__pt = k => c(api.el[k]);
+  window.__timeout = ms => api.timeout(ms);
+  K.start();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Motion · Done right #25 · @zellap.app</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700&f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+
+<!-- Demo page only. Not part of the component. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 48px 20px;
+    background: #ECE8E0; color: #1D1B18; line-height: 1.5;
+    font-family: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .demo { width: min(100%, 540px); }
+  .demo-eyebrow { font: 500 .8125rem/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: #645E55; margin: 0 0 12px; }
+  .demo h1 { font: 700 clamp(2rem, 7vw, 2.75rem)/1.05 Satoshi, "General Sans", system-ui, sans-serif; letter-spacing: -.035em; margin: 0; }
+  .demo-lede { color: #4F4A43; margin: 12px 0 28px; }
+  .demo-notes { font: 400 .8125rem/1.7 "Geist Mono", ui-monospace, monospace; color: #645E55; margin-top: 20px; }
+  .demo-notes b { color: #1D1B18; font-weight: 500; }
+  .demo-post { padding: 20px; border: 1px solid rgba(40, 32, 20, .14); border-radius: 20px; background: #FFFFFF; display: grid; gap: 14px; }
+  .demo-post h2 { margin: 0; font-size: 1.125rem; font-weight: 600; }
+  .demo-post p { margin: 0; color: #4F4A43; }
+</style>
+
+<!-- Component: copy this block. -->
+<style id="component">
+  :root {
+    /* One spring for CSS and JS: 8% overshoot, settled by 70%. */
+    --spring: linear(
+      0, 0.076 4%, 0.25 8%, 0.457 12%, 0.654 16%,
+      0.819 20%, 0.941 24%, 1.021 28%, 1.066 32%,
+      1.082 36%, 1.081 40%, 1.061 46%, 1.035 52%,
+      1.008 60%, 0.994 70%, 0.994 80%, 1);
+    --exit: cubic-bezier(.4, 0, 1, 1);
+    --dur-small: 120ms;   /* hover, press */
+    --dur-enter: 400ms;   /* arriving: the spring */
+    --dur-exit: 160ms;    /* leaving: faster, no bounce */
+  }
+
+  .share-btn,
+  .sheet-item {
+    min-height: 48px; padding: 0 18px;
+    border: 1.5px solid #1D1B18; border-radius: 12px;
+    background: #FFFFFF; color: #1D1B18;
+    font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background-color var(--dur-small) linear,
+                transform var(--dur-small) var(--exit);
+  }
+  .share-btn:hover, .sheet-item:hover { background: #F2EFEA; }
+  .share-btn:active, .sheet-item:active { transform: scale(.97); }
+  .share-btn:focus-visible,
+  .sheet-item:focus-visible { outline: 2.5px solid #1D1B18; outline-offset: 3px; }
+
+  /* The sheet: a native popover. Esc and a tap outside close it for free. */
+  .sheet {
+    inset: auto 0 16px; margin: 0 auto;
+    width: min(100% - 32px, 420px); padding: 22px;
+    border: 0; border-radius: 22px;
+    background: #FFFFFF; color: #1D1B18;
+    box-shadow: 0 30px 80px -20px rgba(29, 27, 24, .45);
+    /* leaving: quick, no bounce */
+    opacity: 0;
+    transform: translateY(24px) scale(.96);
+    transition: transform var(--dur-exit) var(--exit),
+                opacity var(--dur-exit) linear,
+                display var(--dur-exit) allow-discrete,
+                overlay var(--dur-exit) allow-discrete;
+  }
+  .sheet:popover-open {
+    opacity: 1;
+    transform: none;
+    transition: transform var(--dur-enter) var(--spring),
+                opacity var(--dur-small) linear,
+                display var(--dur-enter) allow-discrete,
+                overlay var(--dur-enter) allow-discrete;
+  }
+  @starting-style {
+    .sheet:popover-open {
+      opacity: 0;
+      transform: translateY(24px) scale(.96);
+    }
+  }
+  .sheet-title { margin: 0 0 14px; font-size: 1.125rem; font-weight: 600; }
+  .sheet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; translate: -50% 0; z-index: 10;
+    margin: 0; padding: 12px 18px; border-radius: 12px;
+    background: #1D1B18; color: #FFFFFF; font-weight: 500;
+  }
+  .toast:empty { visibility: hidden; }
+
+  /* Reduce, don't remove: no travel, but a short fade still shows the change. */
+  @media (prefers-reduced-motion: reduce) {
+    .sheet,
+    .sheet:popover-open {
+      transform: none;
+      transition-duration: var(--dur-small);
+    }
+    @starting-style {
+      .sheet:popover-open { transform: none; }
+    }
+    .share-btn:active, .sheet-item:active { transform: none; }
+  }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo-eyebrow">Done right #25 · @zellap.app</p>
+  <h1>Motion done right</h1>
+  <p class="demo-lede">One spring token for CSS and JS. Only transform and opacity move. Things arrive with a spring and leave faster. With reduced motion on, nothing travels: it fades. And it follows your setting live, not the clock.</p>
+
+  <article class="demo-post">
+    <h2>Fired in small batches</h2>
+    <p>Twelve mugs a week, glazed by hand.</p>
+    <div>
+      <button class="share-btn" type="button" popovertarget="share">Share</button>
+    </div>
+  </article>
+
+  <div class="sheet" id="share" popover aria-labelledby="share-title">
+    <h2 class="sheet-title" id="share-title">Share this post</h2>
+    <div class="sheet-grid">
+      <button class="sheet-item" type="button" data-copy="toast">Copy link</button>
+      <a class="sheet-item" href="mailto:?subject=Fired%20in%20small%20batches">Email</a>
+      <a class="sheet-item" href="https://bsky.app/intent/compose?text=Fired%20in%20small%20batches">Bluesky</a>
+      <button class="sheet-item" type="button" popovertarget="share" popovertargetaction="hide">Close</button>
+    </div>
+  </div>
+  <p class="toast" id="toast" role="status"></p>
+
+  <p class="demo-notes">Your system setting right now: <b id="pref"></b>.<br>Switch "reduce motion" in your OS and open the sheet again: no reload needed.</p>
+</main>
+
+<!-- Component: copy this block. -->
+<script id="component">
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const token = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+  // Same question as the CSS, asked on every call.
+  const enter = (el) => {
+    const calm = reduce.matches;
+    return el.animate(calm
+      ? [{ opacity: 0 }, { opacity: 1 }]
+      : [{ opacity: 0, transform: 'translateY(16px) scale(.96)' },
+         { opacity: 1, transform: 'none' }], {
+      duration: parseFloat(token(calm ? '--dur-small' : '--dur-enter')),
+      easing: calm ? 'linear' : token('--spring'),
+    });
+  };
+  const leave = (el) => el.animate([{ opacity: 1 }, { opacity: 0 }], {
+    duration: parseFloat(token('--dur-exit')), easing: token('--exit'),
+  });
+
+  const toast = (el, text) => {
+    clearTimeout(el.hideTimer);
+    el.getAnimations().forEach((a) => a.cancel());
+    el.textContent = text;
+    enter(el);
+    el.hideTimer = setTimeout(async () => {
+      await leave(el).finished;
+      el.textContent = '';
+    }, 3000);
+  };
+
+  for (const btn of document.querySelectorAll('[data-copy]')) {
+    btn.addEventListener('click', async () => {
+      const out = document.getElementById(btn.dataset.copy);
+      try {
+        await navigator.clipboard.writeText(location.href);
+        toast(out, 'Link copied');
+      } catch {
+        toast(out, "Couldn't copy. Use the address bar instead.");
+      }
+      btn.closest('[popover]')?.hidePopover();
+    });
+  }
+</script>
+<script>
+  // Demo only: show the live setting.
+  const pref = matchMedia('(prefers-reduced-motion: reduce)');
+  const showPref = () => { document.getElementById('pref').textContent = pref.matches ? 'reduce motion' : 'full motion'; };
+  pref.addEventListener('change', showPref);
+  showPref();
+</script>
+</body>
+</html>
