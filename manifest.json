@@ -1,7 +1,7 @@
 {
   "site": "@zellap.app source code",
   "instagram": "https://www.instagram.com/zellap.app/",
-  "count": 59,
+  "count": 60,
   "components": [
     {
       "id": "cursed-01-honest-rating",
@@ -872,6 +872,21 @@
       "download": "motion.html",
       "source": "nytt/done-right/25-motion/index.html",
       "bytes": 7950
+    },
+    {
+      "id": "go-crazy-01-depth-field",
+      "series": "go-crazy",
+      "seriesName": "Go crazy",
+      "number": 1,
+      "label": "Go crazy #1",
+      "title": "Depth field background",
+      "slug": "depth-field",
+      "description": "This is a website background.",
+      "page": "c/go-crazy-01-depth-field/",
+      "file": "c/go-crazy-01-depth-field/component.html",
+      "download": "depth-field.html",
+      "source": "nytt/go-crazy/01-depth-field/index.html",
+      "bytes": 26894
     },
     {
       "id": "game-cancel",

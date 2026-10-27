@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Depth field background · Go crazy #1</title>
+<meta name="description" content="A full-screen three.js background of 9,000 dots in real depth. Move through it and the dots part like water, then spring home.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>/* inlined from ../_theme/zellap.css */
+/* Zellap brand tokens for every Go crazy piece. Source: live zellap.com CSS (entry.*.css, 2026-10-27):
+   the four tier hues --h1..--h4 (launch 168, growth 300, scale 350, nexus 272), the dark --zl-surface
+   gradient, and the @zellap.app avatar (the purple mark = growth). Same values as zellap.js. No other palette. */
+:root {
+  --zl-bg: oklch(.125 .004 260);          /* #060708  dark --zl-surface end */
+  --zl-surf-1: oklch(.205 .02 200);       /* #0c1a1b */
+  --zl-surf-2: oklch(.16 .014 260);       /* #0a0d13 */
+  --zl-surface: linear-gradient(157deg in oklab, var(--zl-surf-1), var(--zl-surf-2) 46%, var(--zl-bg));
+  --zl-launch: oklch(.66 .16 168);        /* #00b07f  teal, --launch */
+  --zl-launch-hi: oklch(.78 .16 168);     /* #00d7a4  dark --zl-accent-strong */
+  --zl-growth: oklch(.6 .2 300);          /* #955be3  purple, the avatar mark */
+  --zl-growth-pale: oklch(.905 .065 300); /* #e6d7ff  --p2 */
+  --zl-scale: oklch(.58 .2 350);          /* #ca358b  --scale */
+  --zl-nexus: oklch(.54 .19 272);         /* #4c5edb  --nexus */
+  --zl-fg: oklch(99% 0 0);                /* #fcfcfc */
+  --zl-muted: oklch(72% 0 0);             /* #a4a4a4 */
+  --zl-line: oklch(100% 0 0 / .1);
+  --zl-r-control: .75rem;
+  --zl-r-card: 1rem;
+  --zl-sans: "Inter", system-ui, sans-serif;
+  --zl-display: "Space Grotesk", "Inter", sans-serif;
+  --zl-mono: "Geist Mono", ui-monospace, monospace;
+}
+</style>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--zl-bg); color: var(--zl-fg); font-family: var(--zl-sans);
+    -webkit-font-smoothing: antialiased; overflow: hidden;
+  }
+  /* the room behind the dots: Zellap's dark surface, a purple bloom where the headline sits, grain against banding */
+  .room { position: fixed; inset: 0; background:
+      radial-gradient(70% 45% at 50% 42%, oklch(.6 .2 300 / .16), transparent 70%),
+      radial-gradient(60% 40% at 15% 100%, oklch(.66 .16 168 / .08), transparent 70%),
+      var(--zl-surface); }
+  .room::after { content: ""; position: absolute; inset: 0; opacity: .07; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  canvas#field { position: fixed; inset: 0; width: 100%; height: 100%; display: block; mix-blend-mode: screen; }   /* black clear + additive dots, screened onto the room */
+  /* a soft dark lens under the copy, so the text never fights the brightest dots */
+  .lens { position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(46% 30% at 50% 47%, oklch(.125 .004 260 / .62), transparent 72%); }
+
+  .site { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; padding: 0 clamp(16px, 4vw, 56px); pointer-events: none; }
+  .site a, .site button { pointer-events: auto; }
+  nav { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 76px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; font: 600 22px/1 var(--zl-display); letter-spacing: -.02em; color: var(--zl-fg); text-decoration: none; }
+  .brand i { width: 22px; height: 22px; border-radius: 7px; background: var(--zl-launch); box-shadow: inset 0 1px 0 oklch(1 0 0 / .25), 0 6px 18px -6px oklch(.66 .16 168 / .7); }
+  .links { display: flex; gap: 28px; font-size: 15px; color: var(--zl-muted); }
+  .links a { color: inherit; text-decoration: none; }
+  .links a:hover { color: var(--zl-fg); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 46px; padding: 0 20px;
+    font: 500 15px/1 var(--zl-sans); border-radius: var(--zl-r-control); text-decoration: none; white-space: nowrap; }
+  .btn.solid { background: var(--zl-fg); color: oklch(16% 0 0); box-shadow: 0 10px 30px -12px oklch(.6 .2 300 / .55); }
+  .btn.ghost { color: var(--zl-fg); border: 1px solid oklch(1 0 0 / .16); background: oklch(1 0 0 / .03);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .btn svg { width: 16px; height: 16px; }
+  .site a:focus-visible { outline: 2px solid var(--zl-launch-hi); outline-offset: 3px; }
+
+  .hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding-bottom: 6vh; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 10px; font: 400 13px/1 var(--zl-mono); letter-spacing: .04em; color: var(--zl-growth-pale); opacity: .8; margin-bottom: 26px; }
+  .eyebrow b { width: 6px; height: 6px; border-radius: 50%; background: var(--zl-launch-hi); box-shadow: 0 0 12px var(--zl-launch-hi); }
+  h1 { font: 600 clamp(40px, 7vw, 92px)/.98 var(--zl-display); letter-spacing: -.045em; max-width: 13ch; text-wrap: balance;
+    background: linear-gradient(180deg, var(--zl-fg) 30%, oklch(.86 .05 300)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { margin-top: 24px; max-width: 46ch; font-size: clamp(16px, 1.5vw, 19px); line-height: 1.55; color: var(--zl-muted); text-wrap: pretty; }
+  .ctas { margin-top: 36px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  @media (max-width: 760px) { .links { display: none; } }
+
+  /* ---------- Reel layers (only with ?capture) ---------- */
+  .handle, .hook, .codecard, .chip, .big, .end, .tint, #cursor { display: none; pointer-events: none; }
+  .reel body { width: 1080px; height: 1920px; user-select: none; }
+  .reel .handle, .reel .hook, .reel .codecard, .reel .chip, .reel .big, .reel .end, .reel .tint, .reel #cursor { display: block; }
+  .reel .site { position: absolute; left: 0; top: 520px; width: 1080px; height: auto; padding: 0 72px; }
+  .reel nav { min-height: 96px; border-bottom: 1px solid oklch(1 0 0 / .08); }
+  .reel .brand { font-size: 36px; gap: 14px; } .reel .brand i { width: 34px; height: 34px; border-radius: 10px; }
+  .reel .btn { min-height: 70px; padding: 0 30px; font-size: 26px; border-radius: 16px; } .reel .btn svg { width: 26px; height: 26px; }
+  .reel nav .btn { min-height: 64px; font-size: 25px; padding: 0 26px; }
+  .reel .hero { padding: 110px 0 0; }
+  .reel .eyebrow { font-size: 24px; margin-bottom: 36px; } .reel .eyebrow b { width: 10px; height: 10px; }
+  .reel h1 { font-size: 70px; max-width: 13ch; }
+  .reel .eyebrow { display: none; }
+  .reel .sub { font-size: 29px; max-width: 32ch; margin-top: 26px; }
+  .reel .ctas { margin-top: 44px; gap: 18px; }
+  .reel .lens { background: radial-gradient(620px 520px at 50% 930px, oklch(.125 .004 260 / .66), transparent 72%); }
+  .reel .room { background:
+      radial-gradient(800px 700px at 50% 980px, oklch(.6 .2 300 / .17), transparent 70%),
+      radial-gradient(700px 600px at 10% 1900px, oklch(.66 .16 168 / .09), transparent 70%),
+      var(--zl-surface); }
+
+  .handle { position: absolute; left: 0; right: 0; top: 150px; text-align: center; z-index: 4;
+    font: 400 30px/1 var(--zl-mono); color: var(--zl-muted); letter-spacing: .02em; }
+  .handle b { font-weight: 500; color: var(--zl-growth-pale); }
+  .hook { position: absolute; left: 70px; right: 70px; top: 214px; text-align: center; z-index: 4;
+    font: 600 88px/1.02 var(--zl-display); letter-spacing: -.04em; color: var(--zl-fg); text-wrap: balance; }
+  .hook em { font-style: normal; color: var(--zl-launch-hi); }
+  .tint { position: fixed; inset: 0; opacity: 0; z-index: 1;
+    background: radial-gradient(1000px 1400px at 50% 50%, transparent 58%, oklch(.6 .2 300 / .16) 100%); }
+  .chip { position: absolute; left: 0; right: 0; top: 1330px; text-align: center; z-index: 4; }
+  .chip span { display: inline-flex; align-items: center; gap: 14px; font: 400 28px/1 var(--zl-mono); color: var(--zl-fg);
+    padding: 16px 28px; border-radius: 16px; border: 1px solid oklch(1 0 0 / .14); background: oklch(.16 .014 260 / .6);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  .chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--zl-launch-hi); display: inline-block; }
+  .chip b { font-weight: 400; }
+  .big { position: absolute; left: 0; right: 0; top: 1300px; text-align: center; opacity: 0; z-index: 4;
+    font: 300 132px/1 var(--zl-mono); letter-spacing: -.05em; color: var(--zl-launch-hi); }
+  .big small { display: block; margin-top: 10px; font-size: 30px; letter-spacing: .02em; color: var(--zl-muted); font-weight: 400; }
+  .codecard { position: absolute; left: 80px; top: 580px; width: 900px; opacity: 0; z-index: 5;
+    background: oklch(.13 .01 260 / .95); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+    border: 1px solid oklch(1 0 0 / .1); border-radius: 32px; padding: 42px 44px 48px; color: #E8E6F0;
+    box-shadow: inset 0 1px 0 oklch(1 0 0 / .08), 0 40px 100px -30px #000; }
+  .codecard .file { display: flex; justify-content: space-between; font: 400 25px/1 var(--zl-mono); color: var(--zl-muted);
+    padding-bottom: 26px; border-bottom: 1px solid oklch(1 0 0 / .08); margin-bottom: 28px; }
+  .codecard pre { font: 400 34px/1.75 var(--zl-mono); white-space: pre; margin: 0 -16px; }
+  .codecard .ln { display: block; padding: 0 16px; border-radius: 10px; }
+  .codecard .ln.on { background: oklch(1 0 0 / .07); box-shadow: inset 4px 0 0 var(--zl-launch-hi); }
+  .c { color: #8F8C9C; } .k { color: #C7A8FF; } .n { color: #5FE3BE; } .o { color: #8F8C9C; }
+  .hl.on { color: #fff; background: oklch(.6 .2 300 / .38); border-radius: 6px; padding: 0 4px; margin: 0 -4px; }
+  .end { position: absolute; left: 100px; right: 100px; top: 1080px; text-align: center; opacity: 0; z-index: 5;
+    font: 500 44px/1.28 var(--zl-sans); letter-spacing: -.02em; color: var(--zl-fg); }
+  .end b { font-weight: 600; color: var(--zl-launch-hi); }
+  .end span { color: var(--zl-muted); }
+  #cursor { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 9; }
+  #cursor .tip { position: absolute; left: -54px; top: -54px; width: 108px; height: 108px; border-radius: 50%;
+    border: 3px solid var(--zl-launch-hi); background: oklch(.78 .16 168 / .12);
+    box-shadow: 0 0 0 1.5px oklch(0 0 0 / .35), 0 0 48px oklch(.78 .16 168 / .55), inset 0 0 24px oklch(.78 .16 168 / .25); }
+  #cursor .tip::after { content: ""; position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%;
+    background: #fff; box-shadow: 0 0 0 2px oklch(0 0 0 / .3), 0 0 18px #fff; }
+  #cursor .rip { display: none; }
+</style>
+</head>
+<body>
+<div class="room" aria-hidden="true"></div>
+<canvas id="field" aria-hidden="true"></canvas>
+<div class="lens" aria-hidden="true"></div>
+<div class="tint" id="tint"></div>
+
+<div class="handle"><b>Go crazy #1</b> · @zellap.app</div>
+<p class="hook">This is a website <em>background.</em></p>
+
+<div class="site" id="card">
+  <nav aria-label="Main">
+    <a class="brand" href="#"><i aria-hidden="true"></i>Zellap</a>
+    <div class="links"><a href="#">Websites</a><a href="#">Online stores</a><a href="#">Custom software</a><a href="#">Pricing</a></div>
+    <a class="btn ghost" href="#">Talk to us</a>
+  </nav>
+  <main class="hero">
+    <p class="eyebrow"><b aria-hidden="true"></b>Websites · online stores · custom systems</p>
+    <h1>Digital solutions for businesses in every industry.</h1>
+    <p class="sub">Websites, online stores and your own systems, all run from one dashboard.</p>
+    <div class="ctas">
+      <a class="btn solid" href="#">See pricing <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
+      <a class="btn ghost" href="#">Talk to us</a>
+    </div>
+  </main>
+</div>
+
+<div class="codecard" id="code">
+  <div class="file"><span>depth-field.js</span><span>every dot, every step</span></div>
+<pre><span class="ln"><span class="k">const</span> r <span class="o">=</span> <span class="hl">distToRay(dot, ray)</span>;</span><span class="ln"><span class="k">if</span> (r <span class="o">&lt;</span> R) vel <span class="o">+=</span> away <span class="o">*</span> (<span class="n">1</span><span class="o">-</span>r<span class="o">/</span>R)<span class="o">**</span><span class="n">2</span>;</span><span class="ln">vel <span class="o">+=</span> (<span class="hl"><span class="o">-</span>K<span class="o">*</span>off <span class="o">-</span> C<span class="o">*</span>vel</span>) <span class="o">*</span> dt;</span><span class="ln">off <span class="o">+=</span> vel <span class="o">*</span> dt;   <span class="c">// springs home</span></span></pre>
+</div>
+<div class="chip" id="chip"><span><i></i><b id="chipText">1× real time</b></span></div>
+<div class="big" id="big">0.5×<small>slow motion</small></div>
+<p class="end" id="end">Comment <b>CODE</b> for the source.<br><span>Follow for more.</span></p>
+<div id="cursor"><div class="tip"></div></div>
+
+<script>/* inlined from ../_theme/zellap.js */
+// Same tokens as zellap.css, as hex for three.js materials / canvas. Classic script (works from file://
+// and inlines into the code page): read it as window.ZELLAP.
+window.ZELLAP = Object.freeze({
+  bg: '#060708', surf1: '#0c1a1b', surf2: '#0a0d13',
+  launch: '#00b07f', launchHi: '#00d7a4',
+  growth: '#955be3', growthPale: '#e6d7ff',
+  scale: '#ca358b', nexus: '#4c5edb',
+  fg: '#fcfcfc', muted: '#a4a4a4',
+});
+</script>
+<script>/* inlined from ../../micro-interactions/_shared/reel.js */
+// Shared runtime for "Interaction #N" pages.
+// Normal use: a fixed-step rAF loop drives the component (stable at any refresh rate).
+// ?capture: the recorder drives time frame by frame via __tick(dt), and the overlay via __overlay(o).
+window.Reel = function ({ step, render, DT = 1 / 1440, geom = () => ({}) }) {
+  const CAPTURE = new URLSearchParams(location.search).has('capture');
+  if (CAPTURE) document.documentElement.classList.add('reel');
+  const $ = id => document.getElementById(id);
+  const advance = seconds => {           // whole fixed steps only, so the sim never depends on frame timing
+    const n = Math.round(seconds / DT);
+    for (let i = 0; i < n; i++) step(DT);
+  };
+  render();
+  if (!CAPTURE) {
+    let last = performance.now(), acc = 0;
+    const frame = now => {
+      acc += Math.min(0.05, (now - last) / 1000); last = now;
+      while (acc >= DT) { step(DT); acc -= DT; }
+      render(); requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    return CAPTURE;
+  }
+  const cur = $('cursor');
+  cur.style.transform = 'translate(-200px,-200px)';
+  // a press ring that grows out of the fingertip, on simulated time (so it slows down in slow motion too)
+  const rip = document.createElement('i'); rip.className = 'rip'; cur.appendChild(rip);
+  let ripT = 9;
+  addEventListener('pointerdown', () => { cur.classList.add('down'); ripT = 0; }, true);
+  addEventListener('pointerup', () => cur.classList.remove('down'), true);
+  const drawRip = () => {
+    const u = Math.min(1, ripT / 0.45), e = 1 - (1 - u) ** 3;
+    rip.style.transform = `scale(${(0.9 + 0.9 * e).toFixed(4)})`;
+    rip.style.opacity = (u < 1 ? 0.55 * (1 - u) : 0).toFixed(3);
+  };
+  drawRip();
+  window.__tick = sec => { advance(sec); ripT += sec; drawRip(); render(); };
+  window.__geom = geom;
+  window.__overlay = o => {
+    // sequential, never two text layers at once: card out, then code in (and back)
+    const card = $('card'), code = $('code');
+    card.style.opacity = o.card;
+    card.style.transform = `translateY(${(1 - o.card) * -18}px)`;
+    code.style.opacity = o.code;
+    code.style.transform = `translateY(${(1 - o.code) * 22}px)`;
+    $('chip').style.opacity = o.chipA ?? o.card * (1 - o.big);
+    $('end').style.opacity = o.code;
+    $('big').style.opacity = o.big; $('big').style.transform = `scale(${0.94 + 0.06 * o.big})`;
+    $('tint').style.opacity = o.tint;
+    document.querySelectorAll('.hl').forEach(el => el.classList.toggle('on', !!o.hl));
+    document.querySelectorAll('#code .ln').forEach((el, i) => el.classList.toggle('on', i === o.line));
+    cur.style.opacity = o.cursor ?? o.card;
+    $('chipText').textContent = o.chip;
+    if (o.cx !== undefined) cur.style.transform = `translate(${o.cx}px, ${o.cy}px)`;
+  };
+  return CAPTURE;
+};
+</script>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js" } }</script>
+<script type="module">
+import * as THREE from 'three';
+
+const Z = window.ZELLAP;
+const CAPTURE = new URLSearchParams(location.search).has('capture');
+const LAP = +new URLSearchParams(location.search).get('lap') || 48;   // seconds per camera-drift cycle (capture: one Reel lap)
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const canvas = document.getElementById('field');
+
+// ---------- tuning ----------
+const COUNT = 9000;
+const FOV = 50, TAN = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
+const NEAR_D = 6, FAR_D = 110, FOCUS = 30;          // view-depth range of the field and the sharp plane
+const RS = 0.36, UNIT = 30 * TAN;                   // the "hand": a cone around the cursor ray, RS of the half-screen at every depth
+const PUSH = 150, DRAG = 13, K = 14, C = 4.2;         // push, wake drag, spring, damping (underdamped: a little wobble home)
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, preserveDrawingBuffer: CAPTURE });
+renderer.setClearColor(0x000000, 1);
+renderer.setPixelRatio(CAPTURE ? 1 : Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 400);
+camera.position.set(0, 0, 30);
+
+// ---------- the dots: sampled inside the camera's frustum so the screen is evenly covered at every depth ----------
+let seed = 7;
+const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const base = new Float32Array(COUNT * 3), off = new Float32Array(COUNT * 3), vel = new Float32Array(COUNT * 3);
+const pos = new Float32Array(COUNT * 3), energy = new Float32Array(COUNT), size = new Float32Array(COUNT), col = new Float32Array(COUNT * 3);
+const pal = [Z.launchHi, Z.launch, Z.nexus, Z.growth, Z.growth, Z.scale].map(c => new THREE.Color(c));
+const pale = new THREE.Color(Z.growthPale);
+function palette(u, c) {                            // a slow sweep across the brand hues: teal -> indigo -> purple -> magenta
+  const x = Math.min(0.9999, Math.max(0, u)) * (pal.length - 1), i = Math.floor(x);
+  return c.copy(pal[i]).lerp(pal[i + 1], x - i);
+}
+function seedField(aspect) {
+  seed = 7;
+  const c = new THREE.Color();
+  for (let i = 0; i < COUNT; i++) {
+    const d = NEAR_D + (FAR_D - NEAR_D) * Math.pow(rnd(), 0.62);    // more dots far away, a few close to the lens
+    const u = (rnd() * 2 - 1) * 1.25, v = (rnd() * 2 - 1) * 1.25;
+    base[i * 3] = u * d * TAN * aspect; base[i * 3 + 1] = v * d * TAN; base[i * 3 + 2] = 30 - d;
+    const band = 0.5 + 0.38 * Math.sin(u * 1.4 + v * 0.9 + 0.6) + (rnd() - 0.5) * 0.35;
+    palette(band, c).lerp(pale, rnd() < 0.42 ? 0.55 + rnd() * 0.4 : rnd() * 0.25);   // about half the dots are pale lilac
+    col.set([c.r, c.g, c.b], i * 3);
+    size[i] = 0.55 + Math.pow(rnd(), 3) * 1.9;
+  }
+  off.fill(0); vel.fill(0);
+}
+
+const geo = new THREE.BufferGeometry();
+const aPos = new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage);
+const aEnergy = new THREE.BufferAttribute(energy, 1).setUsage(THREE.DynamicDrawUsage);
+geo.setAttribute('position', aPos);
+geo.setAttribute('aEnergy', aEnergy);
+geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+geo.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+const mat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  uniforms: { uScale: { value: 1 }, uWake: { value: new THREE.Color(Z.launchHi) } },
+  vertexShader: /* glsl */`
+    attribute float aSize; attribute float aEnergy; attribute vec3 aColor;
+    uniform float uScale; uniform vec3 uWake;
+    varying vec3 vColor; varying float vAlpha; varying float vSoft;
+    void main() {
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      float d = -mv.z;
+      float blur = clamp(abs(d - ${FOCUS.toFixed(1)}) / 55.0, 0.0, 1.0);      // depth of field: soft away from the focus plane
+      float fog = pow(clamp(1.0 - (d - 12.0) / ${(FAR_D - 6).toFixed(1)}, 0.0, 1.0), 1.5) * smoothstep(${NEAR_D.toFixed(1)}, 13.0, d);
+      float e = clamp(aEnergy, 0.0, 1.0);
+      vColor = mix(aColor, uWake, e * 0.85);
+      vAlpha = fog * (0.85 + 1.6 * e) / (1.0 + blur * 1.6);
+      vSoft = 0.3 + blur * 0.6;
+      gl_PointSize = uScale * aSize * (1.0 + blur * 1.2 + e * 0.9) * 95.0 / d;
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: /* glsl */`
+    varying vec3 vColor; varying float vAlpha; varying float vSoft;
+    void main() {
+      float r = length(gl_PointCoord - 0.5) * 2.0;
+      float a = 1.0 - smoothstep(1.0 - vSoft, 1.0, r);
+      if (a <= 0.0) discard;
+      gl_FragColor = vec4(vColor * vAlpha * a, 1.0);   // additive onto black
+    }`,
+});
+scene.add(new THREE.Points(geo, mat));
+
+// ---------- pointer: target from real pointer events, smoothed "hand" + slower parallax ----------
+const ptr = { x: 0, y: 0, in: false };
+const hand = { x: 0, y: 0, vx: 0, vy: 0, on: 0 }, par = { x: 0, y: 0 };
+const toNdc = e => { const r = canvas.getBoundingClientRect(); ptr.x = (e.clientX - r.left) / r.width * 2 - 1; ptr.y = -((e.clientY - r.top) / r.height * 2 - 1); };
+addEventListener('pointermove', e => { toNdc(e); if (!ptr.in) { hand.x = ptr.x; hand.y = ptr.y; } ptr.in = true; }, { passive: true });
+addEventListener('pointerdown', e => { toNdc(e); ptr.in = true; }, { passive: true });
+document.documentElement.addEventListener('pointerleave', () => { ptr.in = false; });
+
+// ---------- simulation (fixed steps, so it plays the same at any frame rate) ----------
+let simT = 0;
+const camPos = new THREE.Vector3(), dir = new THREE.Vector3(), right = new THREE.Vector3(), up = new THREE.Vector3(), rot = new THREE.Matrix3();
+function placeCamera() {
+  const ph = (simT / LAP) * Math.PI * 2, still = reduce ? 0 : 1;
+  camera.position.set(still * (Math.sin(ph) * 2.4 + par.x * 2.6), still * (Math.sin(ph * 2) * 0.9 + par.y * 1.8), 30 + still * Math.cos(ph) * 1.6);
+  camera.lookAt(still * Math.sin(ph) * 0.8, 0, -30);
+  camera.updateMatrixWorld();
+}
+let frozen = false;                                 // capture warm-up: settle the physics without moving the clock
+function step(dt) {
+  if (!frozen) simT += dt;
+  const kh = 1 - Math.exp(-dt * 26), kp = 1 - Math.exp(-dt * 2.2);
+  const px = hand.x, py = hand.y;
+  hand.x += (ptr.x - hand.x) * kh; hand.y += (ptr.y - hand.y) * kh;
+  hand.vx = (hand.x - px) / dt; hand.vy = (hand.y - py) / dt;
+  hand.on += ((ptr.in && !reduce ? 1 : 0) - hand.on) * (1 - Math.exp(-dt * 8));
+  par.x += (ptr.x * (ptr.in ? 1 : 0) - par.x) * kp; par.y += (ptr.y * (ptr.in ? 1 : 0) - par.y) * kp;
+  placeCamera();
+  camPos.copy(camera.position);
+  right.setFromMatrixColumn(camera.matrixWorld, 0); up.setFromMatrixColumn(camera.matrixWorld, 1);
+  dir.set(hand.x * TAN * camera.aspect, hand.y * TAN, -1).applyMatrix3(rot.setFromMatrix4(camera.matrixWorld)).normalize();
+  const on = hand.on;
+  for (let i = 0, j = 0; i < COUNT; i++, j += 3) {
+    let ox = off[j], oy = off[j + 1], oz = off[j + 2], vx = vel[j], vy = vel[j + 1], vz = vel[j + 2];
+    if (on > 0.001) {
+      const wx = base[j] + ox - camPos.x, wy = base[j + 1] + oy - camPos.y, wz = base[j + 2] + oz - camPos.z;
+      const t = wx * dir.x + wy * dir.y + wz * dir.z;
+      const cx = wx - dir.x * t, cy = wy - dir.y * t, cz = wz - dir.z * t, r2 = cx * cx + cy * cy + cz * cz;
+      const R = RS * t * TAN, sc = t * TAN / UNIT;                          // far dots get pushed further in world units, same on screen
+      if (t > 0 && r2 < R * R) {
+        const r = Math.sqrt(r2) + 1e-4, f = (1 - r / R) ** 2 * on;
+        const push = PUSH * sc * f / r, drag = DRAG * f * t * TAN;          // the wake: the hand's screen speed at this depth
+        const sx = hand.vx * camera.aspect, sy = hand.vy;
+        vx += (cx * push + (right.x * sx + up.x * sy) * drag) * dt;
+        vy += (cy * push + (right.y * sx + up.y * sy) * drag) * dt;
+        vz += (cz * push + (right.z * sx + up.z * sy) * drag) * dt;
+      }
+    }
+    vx += (-K * ox - C * vx) * dt; vy += (-K * oy - C * vy) * dt; vz += (-K * oz - C * vz) * dt;
+    off[j] = ox + vx * dt; off[j + 1] = oy + vy * dt; off[j + 2] = oz + vz * dt;
+    vel[j] = vx; vel[j + 1] = vy; vel[j + 2] = vz;
+  }
+}
+function render() {
+  for (let i = 0, j = 0; i < COUNT; i++, j += 3) {
+    pos[j] = base[j] + off[j]; pos[j + 1] = base[j + 1] + off[j + 1]; pos[j + 2] = base[j + 2] + off[j + 2];
+    energy[i] = Math.min(1, Math.hypot(off[j], off[j + 1], off[j + 2]) * 0.8 * UNIT / ((30 - base[j + 2]) * TAN));
+  }
+  aPos.needsUpdate = aEnergy.needsUpdate = true;
+  renderer.render(scene, camera);
+}
+function resize() {
+  const w = CAPTURE ? 1080 : innerWidth, h = CAPTURE ? 1920 : innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  mat.uniforms.uScale.value = h / 1000 * renderer.getPixelRatio();
+  seedField(camera.aspect); placeCamera();
+}
+resize();
+if (!CAPTURE) addEventListener('resize', () => { resize(); render(); });
+
+window.Reel({ step, render, DT: 1 / 240 });
+window.__geom = () => ({ w: 1080, h: 1920 });
+if (CAPTURE) {                                      // Reel only: dim the hero a touch, and the hook + dots behind the code card
+  const baseOverlay = window.__overlay, site = document.getElementById('card'), hook = document.querySelector('.hook');
+  window.__overlay = o => { baseOverlay(o); site.style.opacity = (0.9 * o.card).toFixed(3); hook.style.opacity = (1 - 0.6 * o.code).toFixed(3); canvas.style.opacity = (1 - 0.4 * o.code).toFixed(3); };
+}
+window.__warm = sec => { frozen = true; for (let i = 0; i < sec * 240; i++) step(1 / 240); frozen = false; render(); };
+window.__ready = true;
+</script>
+</body>
+</html>
