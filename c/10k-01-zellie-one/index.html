@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The $10k website · all 5 prompts · @zellap.app</title>
+<meta name="description" content="The exact prompts behind the Zellie One 3D product site, plus the live site and the full code.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #0a0a0b; --card: #131316; --line: rgb(255 255 255 / .1); --ink: #f5f5f4; --dim: #a1a1a6; --accent: #00c48e; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  em, i, b { font-style: normal; }
+  body { background: var(--bg); color: var(--ink); font: 400 16px/1.6 "Inter Tight", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 48px 20px 80px; }
+  .top { display: flex; justify-content: space-between; align-items: center; font-weight: 600; color: var(--dim); font-size: 14px; }
+  .top a { color: var(--ink); text-decoration: none; }
+  h1 { font: 800 clamp(36px, 7vw, 60px)/1.02 "Inter Tight", sans-serif; letter-spacing: -.035em; word-spacing: .04em; margin: 40px 0 14px; }
+  .lede { color: var(--dim); font-size: 18px; max-width: 52ch; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 28px 0 8px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 18px; border-radius: 12px; font-weight: 700; text-decoration: none; }
+  .btn.primary { background: var(--ink); color: #0a0a0b; }
+  .btn.ghost { border: 1px solid var(--line); color: var(--ink); }
+  .note { color: var(--dim); font-size: 14px; margin-top: 10px; }
+  .p { margin-top: 26px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px; }
+  .p header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .p h2 { font: 700 20px/1.2 "Inter Tight", sans-serif; letter-spacing: -.01em; }
+  .p h2 span { color: var(--dim); font-weight: 600; margin-right: 8px; }
+  .p blockquote { font-size: 17px; line-height: 1.6; color: var(--ink); border-left: 2px solid var(--accent); padding-left: 14px; }
+  .copy { font: 700 13px "Inter Tight", sans-serif; background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+  .copy.done { border-color: var(--accent); color: var(--accent); }
+  .tip { margin-top: 40px; color: var(--dim); font-size: 15px; }
+  .tip b { color: var(--ink); }
+  footer { margin-top: 48px; color: var(--dim); font-size: 14px; }
+  footer a { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a href="../../">zellap.app · code</a><span>@zellap.app</span></div>
+  <h1>The $10,000 website. All 5 prompts.</h1>
+  <p class="lede">These are the prompts behind Zellie One: a 3D product site that turns as you scroll, re-skins itself with one colour, and ends on a magnetic button. Run them in order, each one builds on the file from the last.</p>
+  <div class="actions">
+    <a class="btn primary" href="../../sites/zellie-one/">Open the live site</a>
+    <a class="btn ghost" href="https://github.com/srsamir24/code/tree/main/sites/zellie-one">View the full code</a>
+  </div>
+  <p class="note">You need a 3D model as <b>model.glb</b>. We made ours with a text-to-3D generator, then shrank it with gltf-transform.</p>
+
+  <section class="p"><header><h2><span>01</span>3D hero</h2><button class="copy">Copy</button></header>
+    <blockquote>Build a dark single-page product site in one HTML file with three.js 0.170 from a CDN. Load model.glb (over-ear headphones), centre and scale it to fit any screen. Put a giant outlined headline "ZELLIE ONE" behind the canvas, letters rising one by one on load. The model drops in, floats, and tilts toward the cursor. One font only: Inter Tight.</blockquote></section>
+
+  <section class="p"><header><h2><span>02</span>Scroll turntable with callouts</h2><button class="copy">Copy</button></header>
+    <blockquote>Add a 420vh section with a sticky 100vh stage. As you scroll through it, the model turns a full 360° with eased keyframes. Pin 4 callouts to points on the model: project each 3D point to the screen every frame and draw a dashed line from it to its label.</blockquote></section>
+
+  <section class="p"><header><h2><span>03</span>Live colour swap</h2><button class="copy">Copy</button></header>
+    <blockquote>Add a finishes section with 4 swatches in teal, purple, magenta and indigo. Scrolling walks through them, clicking jumps to one. One colour must drive everything: the model's material via a shader uniform, the rim light, the background glow and the accent text. Blend smoothly, never snap.</blockquote></section>
+
+  <section class="p"><header><h2><span>04</span>Feature cards with live visuals</h2><button class="copy">Copy</button></header>
+    <blockquote>Add a features section: a bento grid of 5 cards, each with its own live visual (a noise wave that flattens when a toggle switches on, a battery ring that fills, sound dots orbiting a head, EQ bars, a charge bar). Cards reveal as they enter. Under the cursor each card gets a spotlight that follows along its border and tilts a few degrees. One font only.</blockquote></section>
+
+  <section class="p"><header><h2><span>05</span>Magnetic button</h2><button class="copy">Copy</button></header>
+    <blockquote>End with the model landing in the centre, a big headline and a round "Pre-order" button that pulls toward the cursor when it gets within 260px, with the label moving a bit further than the button. Add a slow marquee footer.</blockquote></section>
+
+  <p class="tip"><b>Honest take:</b> this is a beautiful site, and for most businesses it's overkill. Your bakery doesn't need a 3D turntable. Use the parts, not the whole thing.</p>
+  <footer>More every day on Instagram: <a href="https://www.instagram.com/zellap.app/">@zellap.app</a></footer>
+</div>
+<script>
+document.querySelectorAll(".copy").forEach((b) => b.addEventListener("click", async () => {
+  const t = b.closest(".p").querySelector("blockquote").innerText.trim();
+  try { await navigator.clipboard.writeText(t); } catch (e) {}
+  b.textContent = "Copied"; b.classList.add("done"); setTimeout(() => { b.textContent = "Copy"; b.classList.remove("done"); }, 1600);
+}));
+</script>
+</body>
+</html>

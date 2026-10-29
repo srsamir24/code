@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zellie One · Silence, machined</title>
+<meta name="description" content="Concept product site: a 3D headphone that turns, opens up and changes finish as you scroll. Built by AI, dissected part by part on @zellap.app.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  /* PART 0 · tokens. The finish colour (--tint) is the one variable every section reads. */
+  :root { --tint: oklch(.66 .16 168); --ink: oklch(.97 0 0); --dim: oklch(.7 0 0); --bg: oklch(.13 .006 260);
+    --sans: "Inter Tight", system-ui, sans-serif; }   /* one font for the whole site (owner) */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); }
+  body { color: var(--ink); font: 400 16px/1.5 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  em, i, b { font-style: normal; }
+
+  /* the room: a coloured glow that follows the finish, plus moving grain */
+  .room { position: fixed; inset: 0; z-index: -2;
+    background: radial-gradient(55% 42% at var(--gx, 50%) var(--gy, 55%), color-mix(in oklch, var(--tint) 34%, transparent), transparent 72%),
+                radial-gradient(120% 80% at 50% 120%, oklch(.2 .02 260), transparent 60%), var(--bg); }
+  .grain { position: fixed; inset: -50%; z-index: 50; pointer-events: none; opacity: .09; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  /* the 3D layer sits between the giant type (behind) and the UI (in front) */
+  canvas#gl { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; display: block; }
+
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between;
+    padding: 22px clamp(18px, 4vw, 48px); transition: none; }
+  nav.solid { background: oklch(.13 .006 260 / .72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid oklch(1 0 0 / .06); }
+  .logo { font: 700 20px/1 var(--sans); letter-spacing: -.03em; }
+  .logo sup { font: 500 10px var(--sans); margin-left: 3px; opacity: .7; }
+  .navl { display: flex; gap: 30px; font: 500 13px var(--sans); text-transform: uppercase; letter-spacing: .06em; }
+  .navl a:last-child { border-bottom: 1px solid; }
+
+  /* PART 1 · hero: giant type behind the product */
+  .hero { height: 100vh; position: relative; }
+  .giant { position: fixed; inset: 0; z-index: 0; display: grid; place-items: center; pointer-events: none; }
+  .giant h1 { font: 700 clamp(80px, 15.5vw, 420px)/.8 var(--sans); letter-spacing: -.07em; display: flex; flex-wrap: wrap; justify-content: center;
+    color: transparent; -webkit-text-stroke: 2.5px color-mix(in oklch, var(--ink) 42%, transparent); }
+  .giant h1 .w { display: flex; white-space: nowrap; font-weight: inherit; margin: 0 .09em; }
+  .giant h1 span { display: inline-block; will-change: transform; }
+  .giant h1 .solid { color: color-mix(in oklch, var(--ink) 92%, transparent); -webkit-text-stroke: 0; }
+  .hero-ui { position: absolute; inset: auto 0 0 0; z-index: 5; display: flex; justify-content: space-between; align-items: end; gap: 24px;
+    padding: 0 clamp(18px, 4vw, 48px) clamp(26px, 5vh, 52px); }
+  .hero-ui p { max-width: 30ch; color: var(--dim); font-size: 15px; }
+  .hero-ui p b { color: var(--ink); font: 700 26px/1.1 var(--sans); letter-spacing: -.02em; display: block; margin-bottom: 8px; }
+  .scrollcue { font: 500 12px var(--sans); text-transform: uppercase; letter-spacing: .1em; display: flex; align-items: center; gap: 10px; }
+  .scrollcue i { width: 1px; height: 46px; background: linear-gradient(var(--ink), transparent); display: block; }
+
+  /* sticky stages: tall section, a 100vh stage that stays put while you scroll through it */
+  .stage-wrap { position: relative; z-index: 5; }
+  .stage { position: sticky; top: 0; height: 100vh; overflow: hidden; }
+  .eyebrow { font: 500 12px var(--sans); text-transform: uppercase; letter-spacing: .12em; color: var(--tint); }
+  h2 { font: 700 clamp(40px, 6.4vw, 100px)/.95 var(--sans); letter-spacing: -.045em; }
+  h2 em { font-style: normal; color: var(--tint); }
+
+  /* PART 2 · the turn: 3D callouts with leader lines */
+  #turn { height: 420vh; }
+  #turn .head { position: absolute; top: 14vh; left: clamp(18px, 4vw, 48px); max-width: 12ch; }
+  svg#leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  svg#leaders line { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 4; }
+  svg#leaders circle { fill: var(--tint); }
+  .callout { position: absolute; width: min(250px, 40vw); opacity: 0; }
+  .callout .n { font: 500 11px var(--sans); color: var(--tint); letter-spacing: .1em; }
+  .callout h3 { font: 500 20px/1.15 var(--sans); letter-spacing: -.01em; margin: 6px 0 4px; }
+  .callout p { font-size: 13.5px; color: var(--dim); line-height: 1.45; }
+
+  /* PART 3 · finishes: the whole page re-colours */
+  #finish { height: 300vh; }
+  #finish .head { position: absolute; left: clamp(18px, 4vw, 48px); bottom: 12vh; }
+  #finish .name { font: 600 clamp(24px, 3vw, 40px) var(--sans); letter-spacing: -.02em; margin-top: 10px; min-height: 1.2em; }
+  .swatches { position: absolute; right: clamp(18px, 4vw, 48px); bottom: 12vh; display: flex; gap: 12px; }
+  .swatches button { width: 46px; height: 46px; border-radius: 50%; border: 1px solid oklch(1 0 0 / .25); background: var(--c);
+    cursor: pointer; position: relative; transition: transform .3s; }
+  .swatches button::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 1.5px solid var(--ink); opacity: 0; transform: scale(.8); transition: .3s; }
+  .swatches button.on::after { opacity: 1; transform: none; }
+
+  /* PART 4 · feature cards: a bento of small live components. Cursor spotlight + tilt on every card. */
+  #features { position: relative; z-index: 5; padding: 18vh clamp(18px, 4vw, 48px) 14vh; }
+  #features .fhead { margin-bottom: 6vh; max-width: 14ch; }
+  .bento { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 300px; gap: 16px; }
+  .fc { position: relative; overflow: hidden; border-radius: 22px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between;
+    background: linear-gradient(165deg, oklch(.22 .01 260 / .9), oklch(.16 .008 260 / .9)); border: 1px solid oklch(1 0 0 / .09);
+    box-shadow: inset 0 1px 0 oklch(1 0 0 / .07), 0 30px 60px -30px #000; will-change: transform, opacity; }
+  .fc::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: var(--lit, 0);
+    background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 50%), oklch(1 0 0 / .2), transparent 60%); }
+  .fc::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none; opacity: var(--lit, 0);
+    background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), oklch(1 0 0 / .95), transparent 70%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+  .fc.wide { grid-column: span 2; }
+  .fc-top { display: flex; justify-content: space-between; align-items: center; }
+  .fc-tag { font: 500 12px var(--sans); text-transform: uppercase; letter-spacing: .12em; color: var(--dim); }
+  .fc-foot { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .fc-foot b { font: 500 58px/.9 var(--sans); letter-spacing: -.05em; }
+  .fc-foot b small { font-size: .4em; margin-left: 4px; color: var(--dim); letter-spacing: -.01em; }
+  .fc-foot span { color: var(--dim); font-size: 14px; }
+  .tog { width: 52px; height: 30px; border-radius: 30px; background: oklch(1 0 0 / .14); position: relative; display: block; }
+  .tog i { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); }
+  .wave { width: 100%; height: 110px; display: block; overflow: visible; }
+  .wave path { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+  .wave path.w2 { stroke: oklch(1 0 0 / .28); stroke-width: 1.5; }
+  .ringwrap { position: relative; width: 140px; height: 140px; margin: 0 auto; }
+  .ring { width: 140px; height: 140px; display: block; transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke-width: 9; }
+  .ring .rbg { stroke: oklch(1 0 0 / .09); }
+  .ring .rfg { stroke: var(--ink); stroke-linecap: round; stroke-dasharray: 314.16; }
+  .ringwrap b { position: absolute; inset: 0; display: grid; place-items: center; font: 500 42px var(--sans); letter-spacing: -.05em; }
+  .orb { position: relative; height: 130px; }
+  .orb .head { position: absolute; left: 50%; top: 50%; width: 44px; height: 54px; margin: -27px 0 0 -22px; border-radius: 46% 46% 40% 40%; background: oklch(1 0 0 / .85); z-index: 1; }
+  .orb .ring2 { position: absolute; left: 50%; top: 50%; width: 220px; height: 70px; margin: -35px 0 0 -110px; border: 1px dashed oklch(1 0 0 / .2); border-radius: 50%; }
+  .orb .dot { position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 24px oklch(1 0 0 / .6); }
+  .eq { display: flex; align-items: end; gap: 4px; height: 110px; }
+  .eq i { flex: 1; height: 100%; border-radius: 3px; background: linear-gradient(var(--ink), oklch(1 0 0 / .2)); transform-origin: bottom; }
+  .chgrow { display: flex; align-items: baseline; justify-content: space-between; font: 500 52px/.9 var(--sans); letter-spacing: -.05em; }
+  .chgrow small { font-size: .42em; color: var(--dim); }
+  .chg { height: 14px; border-radius: 14px; background: oklch(1 0 0 / .09); overflow: hidden; margin-top: 16px; }
+  .chg i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, oklch(1 0 0 / .45), var(--ink)); transform-origin: left; }
+
+  /* PART 5 · the close: product lands, magnetic button */
+  #buy { height: 100vh; position: relative; z-index: 5; display: grid; place-items: end center; padding-bottom: 12vh; text-align: center; }
+  #buy h2 { margin-bottom: 26px; }
+  .price { font: 500 13px var(--sans); color: var(--dim); letter-spacing: .08em; margin-bottom: 24px; }
+  .mag { display: inline-grid; place-items: center; width: 168px; height: 168px; border-radius: 50%; background: var(--ink); color: var(--bg);
+    font: 600 15px var(--sans); will-change: transform; }
+  .mag span { will-change: transform; }
+  footer { position: relative; z-index: 5; overflow: hidden; border-top: 1px solid oklch(1 0 0 / .1); padding: 26px 0; }
+  .marq { display: flex; gap: 48px; white-space: nowrap; font: 700 clamp(40px, 6vw, 84px)/1 var(--sans); letter-spacing: -.04em; will-change: transform; }
+  .marq em { font-style: normal; color: var(--tint); }
+  .fine { padding: 18px clamp(18px, 4vw, 48px) 0; font: 400 12px var(--sans); color: var(--dim); }
+
+  @media (max-width: 760px) {
+    .navl a:not(:last-child) { display: none; }
+    .giant { place-items: start center; padding-top: 12vh; }
+    .giant h1 { font-size: 34vw; }
+    .hero-ui { flex-direction: column; align-items: start; padding-bottom: 17vh; }
+    #turn .head { top: 11vh; }
+    .callout { width: auto; max-width: 46vw; padding: 10px 12px; border-radius: 12px; background: oklch(.13 .006 260 / .78); backdrop-filter: blur(8px); border: 1px solid oklch(1 0 0 / .1); }
+    .callout h3 { font-size: 17px; margin-bottom: 0; }
+    .callout p { display: none; }
+    #finish .head { bottom: 31vh; }
+    .swatches { left: clamp(18px, 4vw, 48px); right: auto; bottom: 21vh; }
+    #buy { padding-bottom: 22vh; }
+    .bento { grid-template-columns: 1fr; grid-auto-rows: 236px; gap: 12px; }
+    .fc.wide { grid-column: auto; }
+    .fc-foot b { font-size: 46px; }
+  }
+</style>
+</head>
+<body>
+<div class="room"></div>
+<div class="giant" aria-hidden="true"><h1 id="giant"></h1></div>
+<canvas id="gl"></canvas>
+<div class="grain" id="grain"></div>
+
+<nav><a class="logo" href="#">zellie<sup>ONE</sup></a>
+  <div class="navl"><a href="#turn">Design</a><a href="#finish">Finishes</a><a href="#features">Inside</a><a href="#buy">Pre-order</a></div></nav>
+
+<header class="hero">
+  <div class="hero-ui">
+    <p><b>Silence, machined.</b>Over-ear headphones carved from one block of aluminium. Forty hours. No noise.</p>
+    <div class="scrollcue"><i></i>Scroll</div>
+  </div>
+</header>
+
+<section class="stage-wrap" id="turn"><div class="stage">
+  <div class="head"><div class="eyebrow">01 · Design</div><h2>Every <em>edge</em> earned.</h2></div>
+  <svg id="leaders"></svg>
+  <div class="callout" data-i="0"><div class="n">A · HEADBAND</div><h3>One piece of aluminium</h3><p>Milled for 14 hours, then bead-blasted to a soft matte.</p></div>
+  <div class="callout" data-i="1"><div class="n">B · CUSHIONS</div><h3>Memory foam, slow rebound</h3><p>Seals around glasses. You stop noticing it in a minute.</p></div>
+  <div class="callout" data-i="2"><div class="n">C · YOKE</div><h3>Hinge with no play</h3><p>Rotates 90° flat, clicks home with a damped stop.</p></div>
+  <div class="callout" data-i="3"><div class="n">D · DRIVER</div><h3>40 mm beryllium</h3><p>Fast, stiff, honest. Flat to 40 kHz.</p></div>
+</div></section>
+
+<section class="stage-wrap" id="finish"><div class="stage">
+  <div class="head"><div class="eyebrow">02 · Finishes</div><h2>Pick your <em>quiet</em>.</h2><div class="name" id="fname">Lagoon</div></div>
+  <div class="swatches" id="swatches"></div>
+</div></section>
+
+<section id="features">
+  <div class="fhead"><div class="eyebrow">03 · Inside</div><h2>Built to <em>disappear</em>.</h2></div>
+  <div class="bento">
+    <article class="fc wide" data-k="anc"><div class="fc-top"><span class="fc-tag">Noise cancelling</span><span class="tog"><i></i></span></div>
+      <svg class="wave" viewBox="0 0 600 120" preserveAspectRatio="none"><path class="w2"/><path class="w1"/></svg>
+      <div class="fc-foot"><b data-num="42" data-pre="−">0<small>dB</small></b><span>Eight mics. Planes, trains and open offices go flat.</span></div></article>
+    <article class="fc" data-k="bat"><span class="fc-tag">Battery</span>
+      <div class="ringwrap"><svg class="ring" viewBox="0 0 120 120"><circle class="rbg" cx="60" cy="60" r="50"/><circle class="rfg" cx="60" cy="60" r="50"/></svg><b>0h</b></div>
+      <div class="fc-foot"><span>Forty hours with noise cancelling on.</span></div></article>
+    <article class="fc" data-k="spa"><span class="fc-tag">Spatial audio</span>
+      <div class="orb"><div class="ring2"></div><div class="head"></div><i class="dot"></i><i class="dot"></i><i class="dot"></i></div>
+      <div class="fc-foot"><span>Sound stays put when you turn your head.</span></div></article>
+    <article class="fc" data-k="eq"><span class="fc-tag">Lossless</span>
+      <div class="eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="fc-foot"><b>24<small>bit</small></b><span>96 kHz over cable or LDAC.</span></div></article>
+    <article class="fc" data-k="chg"><span class="fc-tag">Fast charge</span>
+      <div><div class="chgrow"><span>10<small> min</small></span><span data-num="5" data-dec="1">0<small> h</small></span></div><div class="chg"><i></i></div></div>
+      <div class="fc-foot"><span>Ten minutes on the cable, five hours of music.</span></div></article>
+  </div>
+</section>
+
+<section id="buy">
+  <div><h2>Hear <em>nothing</em> else.</h2><div class="price">ZELLIE ONE · FROM $549 · SHIPS IN MARCH</div>
+  <a class="mag" id="mag" href="#"><span>Pre-order</span></a></div>
+</section>
+<footer><div class="marq" id="marq"></div>
+  <div class="fine">Concept product. Site built with AI for @zellap.app · comment CODE for the source.</div></footer>
+
+<script type="importmap">{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }</script>
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const REC = new URLSearchParams(location.search).has("rec");
+history.scrollRestoration = "manual"; scrollTo(0, 0);              // always open on the hero   // recorder drives time with __tick(dt)
+const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)];
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const ease = (u) => (u = clamp(u), u * u * u * (u * (u * 6 - 15) + 10));          // smootherstep
+const lerp = (a, b, t) => a + (b - a) * t;
+const damp = (a, b, k, dt) => lerp(a, b, 1 - Math.exp(-k * dt));                  // frame-rate independent smoothing
+
+/* ---------- PART 1 · giant split type ---------- */
+const word = "ZELLIE ONE";
+$("#giant").innerHTML = word.split(" ").map((w, wi) => `<b class="w">${[...w].map((c) => `<span class="${wi ? "solid" : ""}">${c}</span>`).join("")}</b>`).join("");
+const letters = $$("#giant span");
+
+/* ---------- renderer, camera, light ---------- */
+const canvas = $("#gl");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: REC });
+renderer.setPixelRatio(+new URLSearchParams(location.search).get("dpr") || Math.min(devicePixelRatio, 2));   // ?dpr=1 inside small mockups
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
+camera.position.set(0, 0, 9);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(3, 4, 5); scene.add(key);
+const rim = new THREE.DirectionalLight(0xffffff, 5); rim.position.set(-4, 1, -4); scene.add(rim);   // rim takes the finish colour
+
+/* ---------- PART 3 · finish tint, injected into every material ---------- */
+const FINISHES = [
+  { name: "Lagoon", css: "oklch(.66 .16 168)", hex: 0x00b07f },
+  { name: "Ultraviolet", css: "oklch(.6 .2 300)", hex: 0x955be3 },
+  { name: "Magenta dusk", css: "oklch(.58 .2 350)", hex: 0xca358b },
+  { name: "Midnight", css: "oklch(.54 .19 272)", hex: 0x4c5edb },
+];
+const uTint = { value: new THREE.Color(FINISHES[0].hex) }, uAmt = { value: 0.62 };
+function tintable(mat) {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uTint = uTint; sh.uniforms.uAmt = uAmt;
+    sh.fragmentShader = "uniform vec3 uTint; uniform float uAmt;\n" + sh.fragmentShader.replace("#include <map_fragment>",
+      `#include <map_fragment>
+       float lum = dot(diffuseColor.rgb, vec3(.299, .587, .114));
+       diffuseColor.rgb = mix(diffuseColor.rgb, uTint * (.04 + lum * lum * 2.2), uAmt);   // keep the darks dark: anodised, not plastic`);
+  };
+  mat.needsUpdate = true;
+}
+
+/* ---------- the product: GLB from Freepik, procedural stand-in until it loads ---------- */
+const pivot = new THREE.Group(); scene.add(pivot);       // scroll moves the pivot
+const tilt = new THREE.Group(); pivot.add(tilt);         // the cursor tilts this
+let product = null, size = 2;
+// callout points in the fitted model space (the model spans -1..1 on its longest axis)
+const ANCHORS = [new THREE.Vector3(0, .96, 0), new THREE.Vector3(.56, -.5, 0), new THREE.Vector3(-.8, .12, 0), new THREE.Vector3(-.82, -.52, 0)];
+
+function fit(obj) {
+  const box = new THREE.Box3().setFromObject(obj), c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
+  obj.position.sub(c); const k = 2 / Math.max(s.x, s.y, s.z); const g = new THREE.Group(); g.add(obj); g.scale.setScalar(k); return g;
+}
+function standIn() {
+  const g = new THREE.Group();
+  const metal = new THREE.MeshStandardMaterial({ color: 0x8a8d92, metalness: .9, roughness: .38 });
+  const foam = new THREE.MeshStandardMaterial({ color: 0x2a2b2e, metalness: 0, roughness: .95 });
+  [metal, foam].forEach(tintable);
+  const band = new THREE.Mesh(new THREE.TorusGeometry(1, .07, 24, 96, Math.PI), metal); band.position.y = .05; g.add(band);
+  for (const sx of [-1, 1]) {
+    const cup = new THREE.Mesh(new THREE.CylinderGeometry(.42, .42, .26, 64), metal); cup.rotation.z = Math.PI / 2; cup.position.set(sx * 1.02, -.5, 0); g.add(cup);
+    const pad = new THREE.Mesh(new THREE.TorusGeometry(.33, .11, 24, 64), foam); pad.rotation.y = Math.PI / 2; pad.position.set(sx * .86, -.5, 0); g.add(pad);
+  }
+  return fit(g);
+}
+function setProduct(obj) { if (product) tilt.remove(product); product = obj; tilt.add(obj); }
+setProduct(standIn());
+let ready = false;
+new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load("model.glb", (gltf) => {
+  gltf.scene.rotation.y = Math.PI / 2;                     // Tripo faces +x; turn the cups to the sides
+  gltf.scene.traverse((o) => { if (o.isMesh) { tintable(o.material); o.material.envMapIntensity = 1.2; } });
+  setProduct(fit(gltf.scene)); ready = true;
+}, undefined, () => { ready = true; });
+
+/* ---------- swatches + marquee ---------- */
+FINISHES.forEach((f, i) => { const b = document.createElement("button"); b.style.setProperty("--c", f.css); b.ariaLabel = f.name; b.onclick = () => (manualFinish = i, manualAt = T); $("#swatches").append(b); });
+$("#marq").innerHTML = Array(6).fill("Silence, <em>machined</em> ·").join(" ");
+let manualFinish = -1, manualAt = -9;
+
+/* ---------- layout: section offsets for the scroll timeline ---------- */
+let W = 1, H = 1, vis = { w: 1, h: 1 }, sec = {};
+function layout() {
+  W = innerWidth; H = innerHeight;
+  renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix();
+  const hh = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)); vis = { w: hh * camera.aspect, h: hh };
+  for (const id of ["turn", "finish", "features", "buy"]) { const el = document.getElementById(id); sec[id] = { top: el.offsetTop, len: Math.max(1, el.offsetHeight - H) }; }
+}
+addEventListener("resize", layout); layout();
+const prog = (id, y) => clamp((y - sec[id].top) / Math.max(1, sec[id].len));
+
+/* ---------- PART 2 · scroll keyframes for the product (x,y in screen fractions, rotations in turns) ---------- */
+const portrait = () => W < H;
+function keys() {
+  const p = portrait(), S = Math.min(1.25, vis.w * (p ? .42 : .3));            // scale that fits any screen
+  return [
+    [0,                                       { x: 0, y: p ? .02 : -.04, s: S * (p ? .8 : 1), ry: -.08, rx: .06, rz: 0 }],
+    [sec.turn.top,                            { x: 0, y: 0, s: S * 1.1, ry: .0, rx: .02, rz: 0 }],
+    [sec.turn.top + sec.turn.len,             { x: 0, y: p ? -.02 : 0, s: S * 1.1, ry: 1.0, rx: .04, rz: 0 }],
+    [sec.finish.top,                          { x: p ? 0 : .14, y: p ? .06 : .02, s: S * (p ? 1.0 : 1.18), ry: 1.08, rx: .1, rz: -.02 }],
+    [sec.finish.top + sec.finish.len,         { x: p ? 0 : .14, y: p ? .06 : .02, s: S * (p ? 1.0 : 1.18), ry: 1.58, rx: .1, rz: -.02 }],
+    [sec.features.top,                        { x: p ? 0 : .2, y: .95, s: S * .6, ry: 1.9, rx: .2, rz: .04 }],   // flies out: the cards own this part
+    [sec.features.top + sec.features.len,     { x: p ? 0 : .2, y: .95, s: S * .6, ry: 2.4, rx: .2, rz: .04 }],
+    [sec.buy.top,                             { x: 0, y: p ? .16 : .14, s: S * .95, ry: 3.0, rx: .12, rz: 0 }],
+  ];
+}
+function stateAt(y) {
+  const K = keys(); if (y <= K[0][0]) return K[0][1];
+  for (let i = 0; i < K.length - 1; i++) {
+    const [y0, a] = K[i], [y1, b] = K[i + 1];
+    if (y <= y1) { const t = ease((y - y0) / Math.max(1, y1 - y0)); const o = {}; for (const k in a) o[k] = lerp(a[k], b[k], t); return o; }
+  }
+  return K[K.length - 1][1];
+}
+
+/* ---------- input ---------- */
+const ptr = { x: .5, y: .5 }, ptrS = { x: .5, y: .5 };
+addEventListener("pointermove", (e) => { ptr.x = e.clientX / W; ptr.y = e.clientY / H; });
+
+/* ---------- the frame ---------- */
+let T = 0, sy = scrollY, finishF = 0;
+const tmp = new THREE.Vector3(), tintCol = new THREE.Color(), mix = new THREE.Color();
+const callouts = $$(".callout"), fcs = $$(".fc"), swatchBtns = () => $$("#swatches button");
+const svg = $("#leaders");
+svg.innerHTML = ANCHORS.map(() => '<line/><circle r="4"/>').join("");
+const lines = $$("#leaders line"), dots = $$("#leaders circle");
+
+function frame(dt) {
+  T += dt;
+  sy = REC ? scrollY : damp(sy, scrollY, 9, dt);              // smooth scroll value (the recorder already passes a smooth path)
+  ptrS.x = damp(ptrS.x, ptr.x, 5, dt); ptrS.y = damp(ptrS.y, ptr.y, 5, dt);
+
+  // intro: letters rise one after another, the product drops in
+  const intro = (i) => ease((T - .15 - i * .06) / .9);
+  const heroOut = clamp(sy / H);
+  $("nav").classList.toggle("solid", sy > H * .6);
+  letters.forEach((l, i) => { const u = intro(i); l.style.transform = `translateY(${(1 - u) * 110 + heroOut * (i % 2 ? -40 : 40)}%)`; l.style.opacity = u * (1 - heroOut * 1.2); });
+  const drop = ease((T - .3) / 1.4);
+
+  // product follows the scroll timeline
+  const st = stateAt(sy);
+  pivot.position.set(st.x * vis.w, (st.y * vis.h) + (1 - drop) * 2.2 + Math.sin(T * 1.1) * .04, 0);
+  pivot.scale.setScalar(st.s * lerp(.85, 1, drop));
+  pivot.rotation.set(st.rx * Math.PI * 2, st.ry * Math.PI * 2 + (1 - drop) * 1.2, st.rz * Math.PI * 2);
+  const follow = 1 - clamp(sy / (H * .8));                     // the cursor only steers it in the hero
+  tilt.rotation.y = damp(tilt.rotation.y, (ptrS.x - .5) * .9 * follow, 6, dt);
+  tilt.rotation.x = damp(tilt.rotation.x, (ptrS.y - .5) * .5 * follow, 6, dt);
+
+  // PART 2 · callouts: project 3D anchors to the screen, draw leader lines
+  const pt = prog("turn", sy);
+  pivot.updateMatrixWorld(true);
+  ANCHORS.forEach((a, i) => {
+    const on = ease((pt - .1 - i * .2) / .08) - ease((pt - .26 - i * .2) / .08) * (i < 3 ? 1 : 0) - (i === 3 ? ease((pt - .95) / .05) : 0);
+    tmp.copy(a); tilt.localToWorld(tmp); tmp.project(camera);
+    const px = (tmp.x * .5 + .5) * W, py = (-tmp.y * .5 + .5) * H;
+    const left = i % 2 === 0, el = callouts[i], cw = el.offsetWidth;
+    const lx = left ? W * (portrait() ? .04 : .08) : W * (portrait() ? .86 : .92) - cw, ly = H * (portrait() ? .79 : .62);
+    el.style.left = lx + "px"; el.style.top = ly + "px"; el.style.opacity = on; el.style.transform = `translateY(${(1 - on) * 20}px)`;
+    const ex = left ? lx + cw * .5 : lx + cw * .5, ey = ly - 12;
+    const k = ease((on - .2) / .8);
+    lines[i].setAttribute("x1", px); lines[i].setAttribute("y1", py); lines[i].setAttribute("x2", lerp(px, ex, k)); lines[i].setAttribute("y2", lerp(py, ey, k));
+    lines[i].style.opacity = on; dots[i].setAttribute("cx", px); dots[i].setAttribute("cy", py); dots[i].setAttribute("r", 4 * on);
+  });
+
+  // PART 3 · finishes: scroll walks through them, a click overrides for a while
+  const pf = prog("finish", sy);
+  let target = sy < sec.finish.top ? 0 : Math.min(3, Math.floor(pf * 4.0));
+  if (manualFinish >= 0 && T - manualAt < 4) target = manualFinish;
+  finishF = damp(finishF, target, 5, dt);
+  const i0 = Math.floor(finishF), f = finishF - i0, A = FINISHES[i0], B = FINISHES[Math.min(3, i0 + 1)];
+  tintCol.setHex(A.hex).lerp(mix.setHex(B.hex), f); uTint.value.copy(tintCol); rim.color.copy(tintCol);
+  document.documentElement.style.setProperty("--tint", `color-mix(in oklch, ${A.css} ${Math.round((1 - f) * 100)}%, ${B.css})`);
+  $("#fname").textContent = FINISHES[Math.round(finishF)].name;
+  swatchBtns().forEach((b, i) => b.classList.toggle("on", i === Math.round(finishF)));
+
+  // glow follows the product on screen
+  tmp.set(0, 0, 0).applyMatrix4(pivot.matrixWorld).project(camera);
+  document.documentElement.style.setProperty("--gx", ((tmp.x * .5 + .5) * 100).toFixed(1) + "%");
+  document.documentElement.style.setProperty("--gy", ((-tmp.y * .5 + .5) * 100).toFixed(1) + "%");
+
+  // PART 4 · feature cards: reveal on enter, cursor spotlight + tilt, and each card's own little live visual
+  fcs.forEach((c) => {
+    const r = c.getBoundingClientRect(), u = ease((H - r.top) / (H * .35)), v = ease((H * .8 - r.top) / (H * .35));
+    const lx = ptr.x * W - r.left, ly = ptr.y * H - r.top, inside = lx > 0 && lx < r.width && ly > 0 && ly < r.height;
+    c._rx = damp(c._rx || 0, inside ? -(ly / r.height - .5) * 9 : 0, 8, dt);
+    c._ry = damp(c._ry || 0, inside ? (lx / r.width - .5) * 9 : 0, 8, dt);
+    c._lit = damp(c._lit || 0, inside ? 1 : 0, 8, dt);
+    c.style.setProperty("--mx", lx + "px"); c.style.setProperty("--my", ly + "px"); c.style.setProperty("--lit", c._lit.toFixed(3));
+    c.style.opacity = u; c.style.transform = `translateY(${(1 - u) * 60}px) perspective(900px) rotateX(${c._rx}deg) rotateY(${c._ry}deg)`;
+    c.querySelectorAll("[data-num]").forEach((n) => { n.firstChild.nodeValue = (n.dataset.pre || "") + (n.dataset.num * v).toFixed(+(n.dataset.dec || 0)); });
+    const k = c.dataset.k;
+    if (k === "anc") {                                   // a noisy wave that flattens as the toggle switches on
+      const amp = 1 - .9 * v;
+      const path = (ph, a) => { let d = ""; for (let x = 0; x <= 600; x += 6) { const y = 60 + a * amp * 46 * (Math.sin(x * .045 + T * 5 + ph) * .55 + Math.sin(x * .13 - T * 8 + ph) * .3 + Math.sin(x * .31 + T * 13) * .15); d += (x ? "L" : "M") + x + " " + y.toFixed(1); } return d; };
+      c.querySelector(".w1").setAttribute("d", path(0, 1)); c.querySelector(".w2").setAttribute("d", path(1.7, .8));
+      const t = c.querySelector(".tog"); t.style.background = `oklch(${(.3 + v * .67).toFixed(3)} 0 0 / ${(.14 + v * .86).toFixed(3)})`;
+      t.firstChild.style.transform = `translateX(${v * 22}px)`; t.firstChild.style.background = v > .5 ? "var(--bg)" : "var(--ink)";
+    } else if (k === "bat") {
+      c.querySelector(".rfg").style.strokeDashoffset = 314.16 * (1 - v); c.querySelector(".ringwrap b").textContent = Math.round(40 * v) + "h";
+    } else if (k === "spa") {
+      c.querySelectorAll(".dot").forEach((d, j) => { const a = T * 1.3 + j * 2.094, z = Math.sin(a);
+        d.style.transform = `translate(${Math.cos(a) * 110}px, ${z * 35}px) scale(${.55 + .45 * (z + 1) / 2})`; d.style.zIndex = z > 0 ? 2 : 0; d.style.opacity = .4 + .6 * (z + 1) / 2; });
+    } else if (k === "eq") {
+      c.querySelectorAll(".eq i").forEach((b, j) => { b.style.transform = `scaleY(${((.12 + .88 * Math.abs(Math.sin(j * .7 + T * (2.4 + (j % 5) * .5)) * Math.cos(j * .23 - T * 1.7))) * v).toFixed(3)})`; });
+    } else if (k === "chg") {
+      c.querySelector(".chg i").style.transform = `scaleX(${v})`;
+    }
+  });
+
+  // PART 5 · magnetic button + marquee
+  const mag = $("#mag"), r = mag.getBoundingClientRect();
+  const dx = ptr.x * W - (r.left + r.width / 2 - (mag._x || 0)), dy = ptr.y * H - (r.top + r.height / 2 - (mag._y || 0));
+  const pull = clamp(1 - Math.hypot(dx, dy) / 260);
+  mag._x = damp(mag._x || 0, dx * .5 * pull, 10, dt); mag._y = damp(mag._y || 0, dy * .5 * pull, 10, dt);
+  mag.style.transform = `translate(${mag._x}px, ${mag._y}px)`; mag.firstChild.style.transform = `translate(${mag._x * .4}px, ${mag._y * .4}px)`;
+  $("#marq").style.transform = `translateX(${-((T * 60 + sy * .3) % ($("#marq").scrollWidth / 6))}px)`;
+  $("#grain").style.transform = `translate(${(Math.floor(T * 12) * 37) % 100 - 50}px, ${(Math.floor(T * 12) * 53) % 100 - 50}px)`;
+
+  renderer.render(scene, camera);
+}
+
+if (REC) {
+  window.__tick = (dt) => frame(dt);
+  window.__layout = layout;
+  window.__sections = () => ({ H, ...Object.fromEntries(Object.entries(sec).map(([k, v]) => [k, v])) , end: document.documentElement.scrollHeight - H });
+} else {
+  let last = performance.now();
+  renderer.setAnimationLoop((now) => { frame(Math.min(.05, (now - last) / 1000)); last = now; });
+}
+const wait = () => (ready ? document.fonts.ready.then(() => { layout(); window.__ready = true; }) : setTimeout(wait, 50)); wait();
+</script>
+</body>
+</html>
