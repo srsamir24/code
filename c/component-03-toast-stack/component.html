@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toast stack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --stage: oklch(0.82 0.06 292);
+    --stage-lift: oklch(0.88 0.045 290);
+    --stage-ink: oklch(0.34 0.08 292);
+    --card: oklch(0.995 0.003 290);
+    --card-back: oklch(0.955 0.012 290);
+    --line: oklch(0.92 0.01 290);
+    --ink: oklch(0.21 0.02 290);
+    --ink-2: oklch(0.48 0.02 290);
+    --ok-bg: oklch(0.93 0.06 155);  --ok: oklch(0.48 0.13 155);
+    --busy-bg: oklch(0.93 0.045 255); --busy: oklch(0.5 0.15 260);
+    --warn-bg: oklch(0.93 0.05 25);  --warn: oklch(0.52 0.17 25);
+    --spring: linear(0, 0.08 3%, 0.29 7.5%, 0.62 14%, 0.86 21%, 0.99 28%, 1.04 34%, 1.045 39%, 1.03 46%, 1.005 58%, 0.997 70%, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(60% 50% at 50% 60%, var(--stage-lift), var(--stage));
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 28px;
+    padding: 16px;
+    overflow: hidden;
+  }
+  ::selection { background: var(--stage-ink); color: var(--card); }
+  em, i { font-style: normal; }
+
+  .triggers { display: flex; gap: 8px; justify-content: center; }
+  .trigger {
+    height: 40px; padding: 0 16px 0 13px; border-radius: 20px; border: 0;
+    background: oklch(0.97 0.012 290 / 0.7); color: var(--stage-ink);
+    font: inherit; font-size: 14px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+    cursor: pointer;
+    transition: transform 160ms var(--ease-out), background 160ms;
+  }
+  .trigger svg { width: 16px; height: 16px; }
+  .trigger:hover { background: var(--card); }
+  .trigger:active { transform: scale(0.96); }
+  .trigger:focus-visible, .toast button:focus-visible, .region:focus-visible { outline: 3px solid var(--stage-ink); outline-offset: 3px; }
+
+  /* the stack: newest at the bottom, older ones tuck up behind it */
+  .region {
+    position: relative;
+    width: min(400px, calc(100vw - 32px));
+    height: 236px;
+    border-radius: 20px;
+  }
+  /* slide:css */
+  .toast {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+    padding: 14px 14px 14px 16px;
+    background: var(--card);
+    border-radius: 20px;
+    box-shadow: 0 18px 36px -18px oklch(0.3 0.08 292 / 0.5);
+    transform-origin: bottom center;
+    transform: translateY(calc(var(--i, 0) * -14px)) scale(calc(1 - var(--i, 0) * 0.05));
+    transition: transform 520ms var(--spring), opacity 300ms var(--ease-out), background 300ms;
+    z-index: calc(10 - var(--i, 0));
+    touch-action: pan-y;
+  }
+  .region:not(.open) .toast:not([data-i="0"]) { background: var(--card-back); height: var(--front-h); overflow: hidden; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  body.bare .triggers { display: none; }
+  .toast[data-i="3"], .toast[data-i="4"], .toast[data-i="5"] { opacity: 0; pointer-events: none; }
+  .toast > * { transition: opacity 240ms var(--ease-out); }
+  .region:not(.open) .toast:not([data-i="0"]) > * { opacity: 0; }
+  /* open: fan out by the real heights of the toasts below */
+  .region.open .toast { transform: translateY(calc(var(--y, 0px) * -1)); }
+  /* /slide */
+  .region.open .toast[data-i="3"], .region.open .toast[data-i="4"] { opacity: 1; pointer-events: auto; }
+  /* enter and leave beat the open rule too (same specificity, later in the file) */
+  .toast.enter, .region.open .toast.enter { transform: translateY(110%) scale(0.96); opacity: 0; }
+  .toast.leave { opacity: 0; transform: translateX(var(--dx, 0px)) translateY(calc(var(--i, 0) * -14px)) scale(0.95); }
+  .region.open .toast.leave { opacity: 0; transform: translateX(var(--dx, 0px)) translateY(calc(var(--y, 0px) * -1)) scale(0.95); }
+  .toast.dragging { transition: none; }
+
+  .badge { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; transition: background 300ms, color 300ms; }
+  .badge svg { width: 18px; height: 18px; }
+  .ok .badge { background: var(--ok-bg); color: var(--ok); }
+  .busy .badge { background: var(--busy-bg); color: var(--busy); }
+  .warn .badge { background: var(--warn-bg); color: var(--warn); }
+  .busy .badge svg { animation: spin 900ms linear infinite; }
+  @keyframes spin { to { rotate: 360deg; } }
+  .txt { min-width: 0; line-height: 1.3; }
+  .txt strong { display: block; font-size: 15.5px; font-weight: 600; }
+  .txt span { display: block; font-size: 14px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+  .toast .act {
+    height: 34px; padding: 0 14px; border-radius: 17px; border: 0;
+    font: inherit; font-size: 14px; font-weight: 600;
+    background: oklch(0.955 0.012 290); color: var(--ink); cursor: pointer;
+    transition: background 160ms;
+  }
+  .toast .act:hover { background: oklch(0.92 0.02 290); }
+  .bar {
+    grid-column: 1 / -1; height: 4px; border-radius: 2px; overflow: hidden;
+    background: var(--line); margin: 2px 2px 0 0;
+    transition: opacity 300ms, height 300ms var(--ease-out), margin 300ms var(--ease-out);
+  }
+  .bar i { display: block; height: 100%; background: var(--busy); transform-origin: left; transform: scaleX(var(--p, 0)); transition: transform 300ms var(--ease-out); }
+  .bar.gone { opacity: 0; height: 0; margin-top: -12px; }
+
+  .count {
+    position: absolute; left: 50%; top: 100%; translate: -50% 12px;
+    font-size: 13.5px; font-weight: 600; color: var(--stage-ink);
+    opacity: 0; transition: opacity 200ms;
+  }
+  .region.has-more:not(.open) .count { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+  }
+  @media (max-width: 400px) {
+    .trigger { padding: 0 13px 0 11px; font-size: 13.5px; }
+  }
+</style>
+</head>
+<body>
+<!-- slide:html -->
+<div class="triggers">
+  <button class="trigger" data-kind="deploy"><i data-lucide="rocket"></i>Deploy</button>
+  <button class="trigger" data-kind="upload"><i data-lucide="upload"></i>Upload</button>
+  <button class="trigger" data-kind="delete"><i data-lucide="trash-2"></i>Delete</button>
+</div>
+<section class="region" id="region" aria-label="Notifications, Alt+T to focus" tabindex="-1">
+  <div class="count" id="count"></div>
+</section>
+<p class="sr-only" id="announce" aria-live="polite"></p>
+<!-- /slide -->
+<script>
+  const icons = () => lucide.createIcons({ attrs: { 'stroke-width': 2.2 } });
+  icons();
+  const region = document.getElementById('region');
+  const count = document.getElementById('count');
+  const announce = document.getElementById('announce');
+  const KINDS = {
+    deploy: { cls: 'ok', icon: 'check', title: 'Deployed to production', sub: 'studio-site · 41 s', act: 'Open' },
+    upload: { cls: 'busy', icon: 'loader-circle', title: 'Uploading 12 photos', sub: '0 of 12', act: 'Hide', progress: true },
+    delete: { cls: 'warn', icon: 'trash-2', title: 'Invoice #1048 deleted', sub: 'Undo in 7 s', act: 'Undo', undo: 7 },
+  };
+  let stack = [];
+  const GAP = 10;
+
+  // slide:js
+  function layout() {
+    let y = 0;
+    stack.forEach((t, i) => {
+      t.style.setProperty('--i', i); t.dataset.i = i;
+      t.style.setProperty('--y', y + 'px');
+      y += t.scrollHeight + GAP;
+    });
+    region.style.setProperty('--front-h', stack[0] ? stack[0].offsetHeight + 'px' : 'auto');
+    const hidden = Math.max(0, stack.length - 3);
+    region.classList.toggle('has-more', hidden > 0);
+    count.textContent = hidden ? `+${hidden} more` : '';
+  }
+  // /slide
+  function push(kind) {
+    const k = KINDS[kind];
+    const t = document.createElement('div');
+    t.className = `toast ${k.cls} enter`;
+    announce.textContent = `${k.title}. ${k.sub}`;
+    t.innerHTML = `<div class="badge"><i data-lucide="${k.icon}"></i></div>
+      <div class="txt"><strong>${k.title}</strong><span>${k.sub}</span></div>
+      <button class="act" type="button">${k.act}</button>` + (k.progress ? '<div class="bar"><i></i></div>' : '');
+    region.appendChild(t);
+    icons();
+    stack.unshift(t);
+    layout();
+    requestAnimationFrame(() => requestAnimationFrame(() => t.classList.remove('enter')));
+    t.querySelector('.act').addEventListener('click', () => dismiss(t));
+    drag(t);
+    if (k.progress) {
+      let n = 0;
+      t._iv = setInterval(() => {
+        n++;
+        t.querySelector('.txt span').textContent = `${n} of 12`;
+        t.querySelector('.bar i').style.setProperty('--p', n / 12);
+        if (n === 12) {
+          clearInterval(t._iv);
+          setTimeout(() => {
+            t.classList.replace('busy', 'ok');
+            t.querySelector('.badge').innerHTML = '<i data-lucide="check"></i>';
+            t.querySelector('strong').textContent = '12 photos uploaded';
+            t.querySelector('.txt span').textContent = 'Added to Harbour rebrand';
+            t.querySelector('.act').textContent = 'View';
+            t.querySelector('.bar').classList.add('gone');
+            icons();
+            setTimeout(layout, 320);
+          }, 300);
+        }
+      }, 260);
+    }
+    if (k.undo) {
+      let s = k.undo;
+      t._iv = setInterval(() => {
+        if (region.classList.contains('open')) return;
+        s--;
+        t.querySelector('.txt span').textContent = `Undo in ${s} s`;
+        if (s <= 0) { clearInterval(t._iv); dismiss(t); }
+      }, 1000);
+    } else {
+      t._timer = setTimeout(() => dismiss(t), 8000);
+    }
+  }
+  function dismiss(t, dx = 0) {
+    if (!stack.includes(t)) return;
+    clearTimeout(t._timer); clearInterval(t._iv);
+    t.style.setProperty('--dx', dx + 'px');
+    t.classList.add('leave');
+    stack = stack.filter(x => x !== t);
+    layout();
+    setTimeout(() => t.remove(), 380);
+  }
+  // swipe sideways to dismiss
+  function drag(t) {
+    let x0 = null;
+    t.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; x0 = e.clientX; t.setPointerCapture(e.pointerId); t.classList.add('dragging'); });
+    t.addEventListener('pointermove', e => { if (x0 === null) return; t.style.translate = `${e.clientX - x0}px 0`; });
+    t.addEventListener('pointerup', e => {
+      if (x0 === null) return;
+      const dx = e.clientX - x0; x0 = null;
+      t.classList.remove('dragging'); t.style.translate = '';
+      if (Math.abs(dx) > 90) dismiss(t, dx > 0 ? 420 : -420);
+    });
+  }
+
+  // pause timers and fan out while the pointer or focus is on the stack
+  const open = on => {
+    region.classList.toggle('open', on);
+    stack.forEach(t => { clearTimeout(t._timer); if (!on && !t.classList.contains('warn')) t._timer = setTimeout(() => dismiss(t), 4000); });
+  };
+  region.addEventListener('pointerenter', () => open(true));
+  region.addEventListener('pointerleave', () => open(false));
+  region.addEventListener('focusin', () => open(true));
+  region.addEventListener('focusout', e => { if (!region.contains(e.relatedTarget)) open(false); });
+  document.addEventListener('keydown', e => { if (e.altKey && e.key.toLowerCase() === 't') { e.preventDefault(); region.focus(); } });
+  document.querySelectorAll('.trigger').forEach(b => b.addEventListener('click', () => push(b.dataset.kind)));
+
+  const params = new URLSearchParams(location.search);
+  if (params.has('demo')) {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    (async function loop() {
+      await wait(600); push('deploy');
+      await wait(900); push('upload');
+      await wait(900); push('delete');
+      await wait(1400); open(true);
+      await wait(2600); open(false);
+      await wait(900);
+      [...stack].forEach((t, i) => setTimeout(() => dismiss(t, 420), i * 140));
+      await wait(1200);
+      loop();
+    })();
+  }
+  if (params.has('bare')) document.body.classList.add('bare');
+  if (params.has('still')) {
+    push('deploy'); push('upload'); push('delete');
+    if (params.get('still') === 'open') open(true);
+  }
+</script>
+</body>
+</html>

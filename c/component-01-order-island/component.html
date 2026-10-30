@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Order island</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --stage: oklch(0.84 0.055 252);
+    --stage-lift: oklch(0.9 0.04 248);
+    --island: oklch(0.18 0.012 262);
+    --island-2: oklch(0.245 0.014 262);
+    --island-line: oklch(0.33 0.014 262);
+    --on-island: oklch(0.97 0.005 250);
+    --on-island-2: oklch(0.74 0.015 250);
+    --accent: oklch(0.83 0.15 88);
+    --accent-ink: oklch(0.3 0.07 80);
+    --spring: linear(0, 0.08 3%, 0.29 7.5%, 0.62 14%, 0.86 21%, 0.99 28%, 1.04 34%, 1.045 39%, 1.03 46%, 1.005 58%, 0.997 70%, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(60% 45% at 50% 32%, var(--stage-lift), var(--stage));
+    color: var(--on-island);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+  em, i { font-style: normal; }
+
+  .stage {
+    height: 100dvh;
+    display: grid;
+    place-items: start center;
+    padding: clamp(64px, 26vh, 420px) 24px 0;
+  }
+
+  /* slide:css */
+  .island {
+    position: relative;
+    width: 236px;
+    height: 48px;
+    border-radius: 24px;
+    background: var(--island);
+    overflow: hidden;
+    transition:
+      width 640ms var(--spring),
+      height 640ms var(--spring),
+      border-radius 640ms var(--spring),
+      box-shadow 400ms var(--ease-out);
+    box-shadow: 0 6px 18px -8px oklch(0.2 0.03 260 / 0.45);
+  }
+  .island:hover { box-shadow: 0 10px 26px -10px oklch(0.2 0.03 260 / 0.55); }
+  .island.open {
+    width: 412px;
+    height: 318px;
+    border-radius: 40px;
+    box-shadow: 0 28px 60px -24px oklch(0.2 0.04 260 / 0.6);
+  }
+  /* /slide */
+
+  .compact, .full {
+    position: absolute; inset: 0;
+    transition: opacity 260ms var(--ease-out), filter 360ms var(--ease-out), transform 520ms var(--spring);
+  }
+  .compact {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 8px;
+    border: 0; background: none; color: inherit; font: inherit; text-align: left;
+    cursor: pointer; border-radius: inherit;
+  }
+  .compact:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+  .island.open .compact { opacity: 0; filter: blur(6px); transform: scale(1.3); pointer-events: none; }
+  .full {
+    padding: 22px 22px 20px;
+    opacity: 0; filter: blur(8px); transform: scale(0.86) translateY(-12px);
+    transform-origin: top center;
+    pointer-events: none;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 14px;
+  }
+  .island.open .full { opacity: 1; filter: none; transform: none; pointer-events: auto; transition-delay: 90ms, 90ms, 0ms; }
+
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-ink);
+    display: grid; place-items: center;
+    flex: none;
+  }
+  .avatar svg { width: 17px; height: 17px; }
+  .compact .label { font-size: 14px; font-weight: 500; color: var(--on-island-2); flex: 1; white-space: nowrap; }
+  .compact .label b { color: var(--on-island); font-weight: 600; }
+  .compact .eta {
+    font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px;
+    padding: 0 10px; height: 32px; border-radius: 16px;
+    background: var(--island-2); display: flex; align-items: center; gap: 4px; white-space: nowrap;
+  }
+
+  .head { display: flex; align-items: center; gap: 12px; }
+  .head .avatar { width: 44px; height: 44px; }
+  .head .avatar svg { width: 22px; height: 22px; }
+  .head .who { flex: 1; line-height: 1.25; }
+  .head .who strong { display: block; font-size: 17px; font-weight: 600; }
+  .head .who span { font-size: 14px; color: var(--on-island-2); }
+  .bigeta { display: flex; align-items: baseline; gap: 5px; line-height: 1; }
+  .bigeta .num {
+    position: relative; display: inline-block; height: 38px; overflow: hidden;
+    font-size: 38px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
+  }
+  .bigeta .num span { display: block; transition: transform 600ms var(--spring); }
+  .bigeta .num span + span { position: absolute; left: 0; top: 100%; }
+  .bigeta .num.tick span { transform: translateY(-100%); }
+  .bigeta small { font-size: 15px; font-weight: 500; color: var(--on-island-2); }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .steps div { height: 5px; border-radius: 3px; background: var(--island-line); overflow: hidden; }
+  .steps div i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width 900ms var(--ease-out); }
+  .steps div.done i { width: 100%; }
+  .steps div.now i { width: var(--p, 40%); }
+  .stepnames { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 12.5px; color: var(--on-island-2); margin-top: 8px; }
+  .stepnames .on { color: var(--on-island); font-weight: 600; }
+
+  .map { position: relative; border-radius: 18px; overflow: hidden; background: var(--island-2); min-height: 0; }
+  .map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .map .streets path { stroke: var(--island-line); stroke-width: 6; fill: none; stroke-linecap: round; }
+  .map .ahead { stroke: var(--on-island-2); stroke-opacity: 0.45; stroke-width: 2.5; fill: none; stroke-dasharray: 4 7; stroke-linecap: round; }
+  .map .done { stroke: var(--accent); stroke-width: 4; fill: none; stroke-linecap: round; }
+  .map .rider { fill: var(--accent); stroke: var(--island); stroke-width: 3; }
+  .map .home rect { fill: var(--on-island); }
+
+  .actions { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; }
+  .btn {
+    height: 46px; border-radius: 23px; border: 0;
+    font: inherit; font-size: 15px; font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--island-2); color: var(--on-island);
+    cursor: pointer;
+    transition: background 160ms, transform 160ms var(--ease-out);
+  }
+  .btn:hover { background: var(--island-line); }
+  .btn:active { transform: scale(0.97); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.primary:hover { background: oklch(0.87 0.14 90); }
+  .btn.icon { width: 46px; padding: 0; }
+  .btn svg { width: 18px; height: 18px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+  }
+  @media (max-width: 480px) {
+    .island.open { width: calc(100vw - 48px); }
+  }
+</style>
+</head>
+<body>
+<main class="stage">
+  <!-- slide:html -->
+  <div class="island" id="island">
+    <button class="compact" type="button" aria-expanded="false" aria-controls="full">
+      <span class="avatar"><i data-lucide="bike"></i></span>
+      <span class="label"><b>Mia</b> is on the way</span>
+      <span class="eta"><span data-eta>4</span> min</span>
+    </button>
+    <div class="full" id="full" aria-hidden="true">
+    <!-- /slide -->
+      <div class="head">
+        <div class="avatar"><i data-lucide="bike"></i></div>
+        <div class="who"><strong>Mia, on a bike</strong><span>2 bowls from Lilla Pho</span></div>
+        <div class="bigeta"><span class="num"><span>4</span><span>3</span></span><small>min</small></div>
+      </div>
+      <div>
+        <div class="steps">
+          <div class="done"><i></i></div>
+          <div class="now"><i></i></div>
+          <div><i></i></div>
+        </div>
+        <div class="stepnames"><span>Picked up</span><span class="on">On the way</span><span>At your door</span></div>
+      </div>
+      <div class="map" aria-hidden="true">
+        <svg viewBox="0 0 368 120" preserveAspectRatio="xMidYMid slice">
+          <g class="streets">
+            <path d="M -10 96 H 380" />
+            <path d="M 120 -10 V 130" />
+            <path d="M -10 40 C 100 40 220 50 380 22" />
+            <path d="M 260 -10 L 230 130" />
+          </g>
+          <path class="ahead" d="M 40 94 C 90 94 96 40 160 40 S 250 74 322 34" />
+          <path class="done" id="done" d="M 40 94 C 90 94 96 40 160 40 S 250 74 322 34" />
+          <g class="home" transform="translate(322 34)">
+            <rect x="-13" y="-13" width="26" height="26" rx="9" />
+            <path d="M -5 1 L 0 -4 L 5 1 V 6 H -5 Z" fill="none" stroke="oklch(0.18 0.012 262)" stroke-width="2" stroke-linejoin="round" />
+          </g>
+          <circle class="rider" id="rider" r="8" cx="40" cy="94" />
+        </svg>
+      </div>
+      <div class="actions">
+        <button class="btn primary" type="button"><i data-lucide="message-circle"></i>Message</button>
+        <button class="btn" type="button"><i data-lucide="phone"></i>Call</button>
+        <button class="btn icon" type="button" data-close aria-label="Collapse"><i data-lucide="chevron-up"></i></button>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+  lucide.createIcons({ attrs: { 'stroke-width': 2.2 } });
+  const island = document.getElementById('island');
+  const compact = island.querySelector('.compact');
+  const full = island.querySelector('.full');
+  const now = island.querySelector('.steps .now');
+  const num = island.querySelector('.bigeta .num');
+  const etaSmall = island.querySelector('[data-eta]');
+  const trail = document.getElementById('done');
+  const rider = document.getElementById('rider');
+  const LEN = trail.getTotalLength();
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let raf = 0, tickTimer = 0;
+
+  // rider travels along the real path, the amber line follows it, the rest stays dashed
+  // slide:js
+  function ride(to, ms) {
+    cancelAnimationFrame(raf);
+    const t0 = performance.now();
+    const step = t => {
+      const k = reduce ? 1 : Math.min(1, (t - t0) / ms);
+      const e = 1 - Math.pow(1 - k, 3);
+      const d = LEN * to * e;
+      const pt = trail.getPointAtLength(d);
+      rider.setAttribute('cx', pt.x); rider.setAttribute('cy', pt.y);
+      trail.style.strokeDasharray = `${d} ${LEN}`;
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+  // /slide
+  function setOpen(open) {
+    island.classList.toggle('open', open);
+    compact.setAttribute('aria-expanded', open);
+    full.setAttribute('aria-hidden', !open);
+    full.querySelectorAll('button').forEach(b => b.tabIndex = open ? 0 : -1);
+    now.style.setProperty('--p', open ? '62%' : '40%');
+    clearTimeout(tickTimer);
+    if (open) {
+      num.classList.remove('tick'); etaSmall.textContent = '4';
+      trail.style.strokeDasharray = `0 ${LEN}`;
+      ride(0.58, 2600);
+      tickTimer = setTimeout(() => { num.classList.add('tick'); etaSmall.textContent = '3'; }, 2400);
+    }
+  }
+  compact.addEventListener('click', () => setOpen(true));
+  full.querySelector('[data-close]').addEventListener('click', () => { setOpen(false); compact.focus(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && island.classList.contains('open')) { setOpen(false); compact.focus(); } });
+  document.addEventListener('pointerdown', e => { if (!island.contains(e.target)) setOpen(false); });
+  setOpen(false);
+
+  const params = new URLSearchParams(location.search);
+  // ?demo: loops open / hold / close for recording
+  if (params.has('demo')) {
+    const loop = () => {
+      setTimeout(() => setOpen(true), 900);
+      setTimeout(() => setOpen(false), 5600);
+      setTimeout(loop, 6800);
+    };
+    loop();
+  }
+  if (params.has('open')) setOpen(true);
+</script>
+</body>
+</html>

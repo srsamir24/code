@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Command palette</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --stage: oklch(0.34 0.07 175);
+    --stage-lift: oklch(0.43 0.08 172);
+    --panel: oklch(0.995 0.002 165);
+    --panel-2: oklch(0.965 0.004 165);
+    --line: oklch(0.92 0.005 165);
+    --ink: oklch(0.2 0.015 170);
+    --ink-2: oklch(0.45 0.012 170);
+    --ink-3: oklch(0.58 0.01 170);
+    --accent: oklch(0.6 0.13 168);
+    --hit: oklch(0.92 0.07 168);
+    --spring: linear(0, 0.08 3%, 0.29 7.5%, 0.62 14%, 0.86 21%, 0.99 28%, 1.03 34%, 1.03 40%, 1.01 50%, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(55% 45% at 50% 45%, var(--stage-lift), var(--stage));
+    color: var(--ink);
+    display: grid; place-items: center;
+    -webkit-font-smoothing: antialiased;
+    padding: 16px;
+  }
+  ::selection { background: var(--hit); color: var(--ink); }
+  em, i { font-style: normal; }
+
+  .palette {
+    width: min(560px, 100%);
+    background: var(--panel);
+    border-radius: 24px;
+    box-shadow:
+      0 50px 90px -40px oklch(0.15 0.06 175 / 0.75),
+      0 12px 24px -12px oklch(0.15 0.06 175 / 0.35);
+    overflow: hidden;
+    animation: rise 560ms var(--spring) both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(16px) scale(0.97); } }
+
+  .search {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 20px; height: 68px;
+    border-bottom: 1px solid var(--line);
+  }
+  .search svg { width: 20px; height: 20px; color: var(--ink-3); flex: none; }
+  .search input {
+    flex: 1; min-width: 0; border: 0; background: none; outline: none;
+    font: inherit; font-size: 19px; font-weight: 500; color: var(--ink);
+    caret-color: var(--accent);
+  }
+  .search input::placeholder { color: var(--ink-2); }
+  kbd {
+    font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink-2); line-height: 1;
+    min-width: 24px; height: 24px; padding: 0 7px;
+    display: inline-grid; place-items: center;
+    border-radius: 7px; background: var(--panel-2);
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+
+  /* the list's height follows its results on a spring */
+  /* slide:css */
+  .viewport { overflow: hidden; transition: height 420ms var(--spring); }
+  .list {
+    position: relative;
+    max-height: 372px;
+    overflow-y: auto;
+    padding: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+  .list.more { mask-image: linear-gradient(#000 82%, transparent); }
+  /* /slide */
+  .group { padding: 12px 12px 6px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
+  .item {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; gap: 12px;
+    height: 48px; padding: 0 12px;
+    border-radius: 16px;
+    font-size: 16px; font-weight: 500; color: var(--ink-2);
+    cursor: pointer;
+    transition: color 160ms, transform 200ms var(--ease-out);
+  }
+  .item .ic {
+    width: 30px; height: 30px; border-radius: 9px; flex: none;
+    display: grid; place-items: center;
+    background: var(--panel-2); color: var(--ink-2);
+    transition: background 200ms, color 200ms;
+  }
+  .item .ic svg { width: 16px; height: 16px; }
+  .item .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .name b { font-weight: inherit; color: var(--ink); background: var(--hit); border-radius: 3px; }
+  .item .hint { font-size: 13.5px; color: var(--ink-3); display: flex; gap: 4px; }
+  .item.active { color: var(--ink); }
+  .item.active .ic { background: var(--accent); color: var(--panel); }
+  .item.picked { transform: scale(0.98); }
+  .item[hidden], .group[hidden] { display: none; }
+
+  /* one highlight that stretches from the old row to the new one, then settles */
+  .glide {
+    position: absolute; left: 8px; right: 8px; top: 0; height: 48px;
+    border-radius: 16px; background: var(--panel-2);
+    pointer-events: none;
+  }
+
+  .empty { display: none; padding: 40px 16px; text-align: center; color: var(--ink-2); font-size: 15px; gap: 6px; }
+  .empty strong { color: var(--ink); font-size: 17px; font-weight: 600; }
+  .list.is-empty .empty { display: grid; }
+  .list.is-empty .glide { opacity: 0; }
+
+  .foot {
+    display: flex; align-items: center; gap: 18px;
+    min-height: 52px; padding: 12px 20px;
+    border-top: 1px solid var(--line);
+    font-size: 13.5px; color: var(--ink-2);
+  }
+  .foot span { display: inline-flex; align-items: center; gap: 6px; line-height: 1; }
+  .foot kbd svg { width: 13px; height: 13px; }
+  .foot .status { margin-left: auto; color: var(--accent); font-weight: 600; opacity: 0; transform: translateY(4px); transition: opacity 200ms, transform 300ms var(--ease-out); }
+  .foot .status.show { opacity: 1; transform: none; }
+  .foot .status svg { width: 15px; height: 15px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+  }
+  @media (max-width: 480px) {
+    .item .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="palette" role="dialog" aria-label="Command palette">
+  <!-- slide:html -->
+  <label class="search">
+    <i data-lucide="search"></i>
+    <input id="q" type="text" placeholder="Search or jump to…" autocomplete="off" spellcheck="false"
+      role="combobox" aria-expanded="true" aria-controls="list" aria-autocomplete="list">
+    <kbd>Esc</kbd>
+  </label>
+  <!-- /slide -->
+  <div class="viewport" id="viewport">
+    <div class="list" id="list" role="listbox">
+      <div class="glide" aria-hidden="true"></div>
+      <div class="empty"><strong>Nothing called that</strong>Try a page name, a person or a setting.</div>
+    </div>
+  </div>
+  <div class="foot">
+    <span><kbd><i data-lucide="arrow-up"></i></kbd><kbd><i data-lucide="arrow-down"></i></kbd> move</span>
+    <span><kbd><i data-lucide="corner-down-left"></i></kbd> open</span>
+    <span class="status" id="status" aria-live="polite"><i data-lucide="check"></i><span></span></span>
+  </div>
+</div>
+<script>
+  const DATA = [
+    ['Suggestions', [
+      ['New invoice', 'file-plus-2', ['N']],
+      ['Invite a teammate', 'user-plus', ['I']],
+      ['Open inbox', 'inbox', ['G', 'I']],
+    ]],
+    ['Projects', [
+      ['Harbour rebrand', 'folder', []],
+      ['Invoices, October', 'folder', []],
+      ['Studio website', 'folder', []],
+    ]],
+    ['Settings', [
+      ['Billing and plans', 'credit-card', []],
+      ['Notifications', 'bell', []],
+      ['Switch to dark theme', 'moon', ['T']],
+    ]],
+  ];
+  const list = document.getElementById('list');
+  const viewport = document.getElementById('viewport');
+  const glide = list.querySelector('.glide');
+  const q = document.getElementById('q');
+  const status = document.getElementById('status');
+  const rows = [];
+  let gid = 0;
+  for (const [group, items] of DATA) {
+    const g = document.createElement('div');
+    g.className = 'group'; g.textContent = group; g.id = 'g' + gid++;
+    list.insertBefore(g, list.querySelector('.empty'));
+    for (const [name, icon, keys] of items) {
+      const el = document.createElement('div');
+      el.className = 'item'; el.setAttribute('role', 'option'); el.id = 'o' + rows.length;
+      el.innerHTML = `<span class="ic"><i data-lucide="${icon}"></i></span><span class="name"></span>` +
+        `<span class="hint">${keys.map(k => `<kbd>${k}</kbd>`).join('')}</span>`;
+      list.insertBefore(el, list.querySelector('.empty'));
+      rows.push({ el, name, group: g, order: rows.length, nameEl: el.querySelector('.name') });
+    }
+  }
+  lucide.createIcons({ attrs: { 'stroke-width': 2.1 } });
+
+  // subsequence match with a score: word starts and runs of letters count more
+  // slide:js
+  function match(name, query) {
+    query = query.toLowerCase().replace(/\s+/g, '');
+    if (!query) return { hits: [], score: 0 };
+    const n = name.toLowerCase(), hits = [];
+    let from = 0, score = 0;
+    for (const ch of query) {
+      const i = n.indexOf(ch, from);
+      if (i < 0) return null;
+      if (i === 0 || n[i - 1] === ' ') score += 3;
+      if (i === hits.at(-1) + 1) score += 2;
+      score -= (i - from) * 0.1;
+      hits.push(i); from = i + 1;
+    }
+    return { hits, score };
+  }
+  // /slide
+  const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+  let visible = [], active = 0;
+  function render() {
+    const query = q.value.trim();
+    const before = viewport.offsetHeight;
+    visible = [];
+    const groupsOn = new Set();
+    for (const r of rows) {
+      const m = match(r.name, query);
+      r.el.hidden = !m;
+      if (!m) continue;
+      r.score = m.score;
+      visible.push(r); groupsOn.add(r.group);
+      // letters that match in a row share one mark
+      r.nameEl.innerHTML = [...r.name].map((c, i) => m.hits.includes(i) ? `<b>${esc(c)}</b>` : esc(c)).join('').replaceAll('</b><b>', '');
+    }
+    // best match first inside each group, groups keep their order
+    for (const g of new Set(rows.map(r => r.group))) {
+      const inG = visible.filter(r => r.group === g).sort((a, b) => b.score - a.score || a.order - b.order);
+      let anchor = g;
+      for (const r of inG) { anchor.after(r.el); anchor = r.el; }
+    }
+    visible = [...list.querySelectorAll('.item:not([hidden])')].map(el => rows.find(r => r.el === el));
+    list.querySelectorAll('.group').forEach(g => g.hidden = !groupsOn.has(g));
+    list.classList.toggle('is-empty', visible.length === 0);
+    // animate the panel height to fit
+    viewport.style.height = 'auto';
+    const after = viewport.offsetHeight;
+    viewport.style.height = before + 'px';
+    viewport.offsetHeight;
+    viewport.style.height = after + 'px';
+    setActive(0, true);
+    moreHint();
+  }
+  function moreHint() { list.classList.toggle('more', list.scrollTop + list.clientHeight < list.scrollHeight - 2); }
+  list.addEventListener('scroll', moreHint);
+
+  let glideAnim;
+  function setActive(i, instant) {
+    if (!visible.length) { q.removeAttribute('aria-activedescendant'); return; }
+    const prev = visible[active] && visible[active].el;
+    active = (i + visible.length) % visible.length;
+    rows.forEach(r => { r.el.classList.remove('active'); r.el.setAttribute('aria-selected', 'false'); });
+    const el = visible[active].el;
+    el.classList.add('active'); el.setAttribute('aria-selected', 'true');
+    q.setAttribute('aria-activedescendant', el.id);
+    const to = el.offsetTop;
+    glideAnim && glideAnim.cancel();
+    glide.style.transform = `translateY(${to}px)`;
+    glide.style.height = '48px';
+    if (!instant && prev && prev !== el && !prev.hidden) {
+      const from = prev.offsetTop, top = Math.min(from, to), span = Math.abs(to - from) + 48;
+      glideAnim = glide.animate([
+        { transform: `translateY(${from}px)`, height: '48px' },
+        { transform: `translateY(${top}px)`, height: span + 'px', offset: 0.35 },
+        { transform: `translateY(${to}px)`, height: '48px' },
+      ], { duration: 420, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+    }
+    const t = el.offsetTop - 8, b = el.offsetTop + el.offsetHeight + 8;
+    if (t < list.scrollTop) list.scrollTop = t;
+    else if (b > list.scrollTop + list.clientHeight) list.scrollTop = b - list.clientHeight;
+  }
+  let statusTimer;
+  function pick() {
+    if (!visible.length) return;
+    const r = visible[active];
+    r.el.classList.add('picked');
+    setTimeout(() => r.el.classList.remove('picked'), 180);
+    status.querySelector('span').textContent = `Opened ${r.name}`;
+    status.classList.add('show');
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => status.classList.remove('show'), 1400);
+  }
+  q.addEventListener('input', render);
+  q.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive(active + 1); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); }
+    if (e.key === 'Enter') { e.preventDefault(); pick(); }
+    if (e.key === 'Escape') { q.value = ''; render(); }
+  });
+  list.addEventListener('mousemove', e => {
+    const el = e.target.closest('.item'); if (!el) return;
+    const i = visible.findIndex(r => r.el === el);
+    if (i >= 0 && i !== active) setActive(i);
+  });
+  list.addEventListener('click', e => { if (e.target.closest('.item')) { pick(); q.focus(); } });
+  viewport.style.height = viewport.offsetHeight + 'px';
+  render();
+  q.focus();
+
+  // ?demo: arrows down a few rows, types "inv", opens the match, clears, loops
+  const params = new URLSearchParams(location.search);
+  if (params.has('demo')) {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    (async function loop() {
+      q.value = ''; render(); await wait(900);
+      for (let k = 0; k < 3; k++) { setActive(active + 1); await wait(420); }
+      await wait(400);
+      for (const ch of 'inv') { q.value += ch; render(); await wait(230); }
+      await wait(600); setActive(1); await wait(600); pick(); await wait(1400);
+      while (q.value) { q.value = q.value.slice(0, -1); render(); await wait(90); }
+      await wait(500);
+      loop();
+    })();
+  }
+  if (params.has('q')) { q.value = params.get('q'); render(); }
+</script>
+</body>
+</html>

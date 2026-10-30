@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code input</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --stage: oklch(0.44 0.16 266);
+    --stage-lift: oklch(0.52 0.17 268);
+    --panel: oklch(0.995 0.003 266);
+    --cell: oklch(0.965 0.008 266);
+    --line: oklch(0.9 0.015 266);
+    --ink: oklch(0.2 0.03 266);
+    --ink-2: oklch(0.47 0.03 266);
+    --accent: oklch(0.5 0.19 266);
+    --ok: oklch(0.58 0.14 155);
+    --bad: oklch(0.56 0.19 25);
+    --spring: linear(0, 0.08 3%, 0.29 7.5%, 0.62 14%, 0.86 21%, 0.99 28%, 1.04 34%, 1.045 39%, 1.03 46%, 1.005 58%, 0.997 70%, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(60% 45% at 50% 45%, var(--stage-lift), var(--stage));
+    color: var(--ink);
+    display: grid; place-items: center;
+    padding: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--accent); color: var(--panel); }
+  em, i { font-style: normal; }
+
+  .panel {
+    width: min(420px, 100%);
+    background: var(--panel);
+    border-radius: 28px;
+    padding: 34px 28px 26px;
+    box-shadow: 0 50px 90px -40px oklch(0.15 0.1 266 / 0.8), 0 10px 24px -12px oklch(0.15 0.1 266 / 0.35);
+    text-align: center;
+  }
+  h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+  .sub { font-size: 15px; color: var(--ink-2); margin-top: 6px; line-height: 1.45; }
+  .sub b { color: var(--ink); font-weight: 600; }
+
+  /* slide:css */
+  .code { position: relative; display: grid; grid-template-columns: repeat(3, 1fr) 12px repeat(3, 1fr); gap: 8px; align-items: center; margin: 26px 0 18px; }
+  .code input {
+    position: absolute; inset: 0; opacity: 0;  /* one real input, six drawn cells */
+    font-size: 16px; caret-color: transparent;
+  }
+  .cell {
+    height: 60px; border-radius: 14px; background: var(--cell);
+    display: grid; place-items: center;
+    font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums;
+    box-shadow: inset 0 0 0 1.5px transparent;
+    transition: box-shadow 200ms, background 200ms;
+  }
+  .cell.on { box-shadow: inset 0 0 0 2px var(--accent); background: var(--panel); }
+  .cell span { display: block; animation: pop 420ms var(--spring); }
+  @keyframes pop { from { transform: translateY(10px) scale(0.6); opacity: 0; } }
+  /* /slide */
+  .dash { height: 3px; border-radius: 2px; background: var(--line); }
+  .cell .caret { display: block; width: 2px; height: 26px; border-radius: 1px; background: var(--accent); animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .code .cell { transition: box-shadow 260ms, background 260ms, color 260ms; }
+  .code.ok .cell { box-shadow: inset 0 0 0 2px var(--ok); background: var(--panel); color: var(--ok); transition-delay: calc(var(--n) * 90ms); }
+  .code.ok .cell span { animation: wave 600ms var(--spring) both; animation-delay: calc(var(--n) * 90ms); }
+  @keyframes wave { 40% { transform: translateY(-8px); } }
+  .code.bad { animation: shake 420ms var(--ease-out); }
+  .code.bad .cell { box-shadow: inset 0 0 0 2px var(--bad); color: var(--bad); }
+  @keyframes shake { 20% { translate: -8px; } 40% { translate: 7px; } 60% { translate: -4px; } 80% { translate: 2px; } }
+
+  .status { min-height: 22px; font-size: 14.5px; font-weight: 600; color: var(--ink-2); display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .status.ok { color: var(--ok); }
+  .status.bad { color: var(--bad); }
+  .status svg { width: 16px; height: 16px; }
+  .resend {
+    margin-top: 14px; border: 0; background: none; font: inherit; font-size: 14.5px; font-weight: 600;
+    color: var(--accent); cursor: pointer; padding: 6px 10px; border-radius: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  .resend:disabled { color: var(--ink-2); cursor: default; }
+  .resend:focus-visible, .code:focus-within .cell.on { outline: none; }
+  .resend:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+  }
+  @media (max-width: 400px) {
+    .cell { height: 52px; font-size: 22px; }
+    .code { gap: 6px; }
+  }
+</style>
+</head>
+<body>
+<main class="panel">
+  <h1>Check your inbox</h1>
+  <p class="sub">We sent a 6-digit code to <b>ola@harbour.studio</b></p>
+  <!-- slide:html -->
+  <label class="code" id="code">
+    <input id="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" aria-label="6-digit code">
+    <div class="cell" style="--n:0"></div><div class="cell" style="--n:1"></div><div class="cell" style="--n:2"></div>
+    <span class="dash" aria-hidden="true"></span>
+    <div class="cell" style="--n:3"></div><div class="cell" style="--n:4"></div><div class="cell" style="--n:5"></div>
+  </label>
+  <p class="status" id="status" aria-live="polite"></p>
+  <!-- /slide -->
+  <button class="resend" id="resend" type="button" disabled>Resend code in 0:30</button>
+</main>
+<script>
+  lucide.createIcons({ attrs: { 'stroke-width': 2.1 } });
+  const CORRECT = '428619';
+  const otp = document.getElementById('otp');
+  const code = document.getElementById('code');
+  const cells = [...code.querySelectorAll('.cell')];
+  const status = document.getElementById('status');
+  const resend = document.getElementById('resend');
+  let last = '';
+
+  // slide:js
+  function draw() {
+    const v = otp.value.replace(/\D/g, '').slice(0, 6);
+    otp.value = v;
+    const focused = document.activeElement === otp;
+    cells.forEach((cell, i) => {
+      const ch = v[i] || '';
+      const on = focused && i === Math.min(v.length, 5);
+      if (ch !== last[i] || !ch) cell.innerHTML = ch
+        ? `<span>${ch}</span>`
+        : on ? '<i class="caret"></i>' : '';
+      cell.classList.toggle('on', on);
+    });
+    last = v;
+    if (v.length === 6) check(v);
+  }
+  // /slide
+  function check(v) {
+    status.textContent = 'Checking…'; status.className = 'status';
+    setTimeout(() => {
+      if (v === CORRECT) {
+        code.classList.add('ok');
+        status.className = 'status ok';
+        status.innerHTML = '<i data-lucide="check"></i>Verified';
+        lucide.createIcons({ attrs: { 'stroke-width': 2.6 } });
+        otp.blur();
+      } else {
+        code.classList.remove('bad'); code.offsetWidth; code.classList.add('bad');
+        status.className = 'status bad'; status.textContent = 'That code didn’t match. Try again.';
+        setTimeout(() => { otp.value = ''; draw(); }, 700);
+      }
+    }, 450);
+  }
+  otp.addEventListener('input', () => { code.classList.remove('bad', 'ok'); if (otp.value.length < 6) { status.textContent = ''; status.className = 'status'; } draw(); });
+  ['focus', 'blur', 'keyup', 'click'].forEach(e => otp.addEventListener(e, draw));
+
+  let left = 30;
+  const tick = setInterval(() => {
+    left--;
+    resend.textContent = left > 0 ? `Resend code in 0:${String(left).padStart(2, '0')}` : 'Resend code';
+    if (left <= 0) { resend.disabled = false; clearInterval(tick); }
+  }, 1000);
+
+  otp.focus(); draw();
+  const params = new URLSearchParams(location.search);
+  if (params.has('v')) { otp.value = params.get('v'); draw(); }
+  if (params.has('demo')) {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    (async function loop() {
+      otp.focus(); otp.value = ''; code.classList.remove('ok', 'bad'); status.textContent = ''; draw();
+      await wait(800);
+      for (const d of CORRECT) { otp.value += d; otp.dispatchEvent(new Event('input')); await wait(260); }
+      await wait(2600); loop();
+    })();
+  }
+</script>
+</body>
+</html>
