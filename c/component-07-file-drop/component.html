@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>File drop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --stage: oklch(0.85 0.065 205);
+    --stage-lift: oklch(0.91 0.045 200);
+    --panel: oklch(0.995 0.003 205);
+    --soft: oklch(0.96 0.012 205);
+    --line: oklch(0.89 0.02 205);
+    --ink: oklch(0.22 0.035 220);
+    --ink-2: oklch(0.48 0.03 220);
+    --accent: oklch(0.5 0.12 215);
+    --ok: oklch(0.55 0.13 160);
+    --bad: oklch(0.55 0.19 25);
+    --bad-bg: oklch(0.95 0.03 25);
+    --spring: linear(0, 0.08 3%, 0.29 7.5%, 0.62 14%, 0.86 21%, 0.99 28%, 1.04 34%, 1.045 39%, 1.03 46%, 1.005 58%, 0.997 70%, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(60% 45% at 50% 45%, var(--stage-lift), var(--stage));
+    color: var(--ink);
+    display: grid; place-items: center;
+    padding: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--line); color: var(--ink); }
+  em, i { font-style: normal; }
+
+  .card {
+    width: min(440px, 100%);
+    background: var(--panel);
+    border-radius: 28px;
+    padding: 20px;
+    box-shadow: 0 50px 90px -40px oklch(0.3 0.08 215 / 0.55), 0 10px 24px -12px oklch(0.3 0.08 215 / 0.25);
+  }
+
+  .drop {
+    position: relative; display: grid; justify-items: center; gap: 4px;
+    padding: 28px 16px 26px; border-radius: 20px; cursor: pointer; text-align: center;
+    background: var(--soft);
+    transition: background 250ms, transform 400ms var(--spring);
+  }
+  /* a dashed outline drawn in SVG, so the dashes can march while you drag */
+  .drop svg.edge { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .drop svg.edge rect { x: 1px; y: 1px; width: calc(100% - 2px); height: calc(100% - 2px); fill: none; stroke: var(--line); stroke-width: 2; stroke-dasharray: 8 7; transition: stroke 250ms; }
+  .drop.over { background: oklch(0.94 0.035 210); transform: scale(1.015); }
+  .drop.over svg.edge rect { stroke: var(--accent); animation: march 600ms linear infinite; }
+  @keyframes march { to { stroke-dashoffset: -15; } }
+  .drop:focus-within { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .drop .up { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--panel); color: var(--accent); margin-bottom: 8px; transition: transform 400ms var(--spring); }
+  .drop.over .up { transform: translateY(-4px); }
+  .drop .up svg { width: 20px; height: 20px; }
+  .drop strong { font-size: 16px; font-weight: 600; }
+  .drop strong u { text-decoration-color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 2px; color: var(--accent); text-decoration-line: underline; }
+  .drop span { font-size: 13.5px; color: var(--ink-2); }
+
+  .files { display: grid; gap: 6px; margin-top: 12px; }
+  .file {
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+    padding: 10px 10px 10px 12px; border-radius: 16px;
+    animation: in 480ms var(--spring) both;
+  }
+  @keyframes in { from { opacity: 0; transform: translateY(-8px) scale(0.97); } }
+  .file.out { animation: out 260ms var(--ease-out) forwards; }
+  @keyframes out { to { opacity: 0; transform: translateX(16px); } }
+  .kind {
+    width: 38px; height: 44px; border-radius: 9px; background: var(--soft);
+    display: grid; place-items: end center; padding-bottom: 6px;
+    font-size: 10px; font-weight: 700; color: var(--ink-2); letter-spacing: 0.02em;
+  }
+  .kind.pdf { background: oklch(0.94 0.03 25); color: oklch(0.5 0.15 25); }
+  .kind.png, .kind.jpg { background: oklch(0.94 0.035 160); color: oklch(0.45 0.11 160); }
+  .kind.fig { background: oklch(0.94 0.035 290); color: oklch(0.47 0.13 290); }
+  .meta { min-width: 0; }
+  .meta b { display: block; font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta small { display: block; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .track { height: 4px; border-radius: 2px; background: var(--soft); margin-top: 7px; overflow: hidden; }
+  .track i { display: block; height: 100%; background: var(--accent); border-radius: inherit; transform-origin: left; transform: scaleX(var(--p, 0)); transition: transform 300ms var(--ease-out), background 300ms; }
+  .file.done .track { height: 0; margin-top: 0; transition: height 300ms var(--ease-out), margin 300ms var(--ease-out); }
+  .file.done .meta small { color: var(--ok); }
+  .file.bad { background: var(--bad-bg); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .file.bad .meta small { color: var(--bad); }
+  .file.bad .track { display: none; }
+  .act {
+    width: 34px; height: 34px; border-radius: 50%; border: 0; background: none; color: var(--ink-2);
+    display: grid; place-items: center; cursor: pointer; transition: background 160ms, color 160ms;
+  }
+  .act:hover { background: var(--soft); color: var(--ink); }
+  .act:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .act svg { width: 17px; height: 17px; }
+  .file.done .act.state { color: var(--ok); }
+  .done-tick { animation: tick 500ms var(--spring); }
+  @keyframes tick { from { transform: scale(0.4); opacity: 0; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+    .drop.over svg.edge rect { animation: none; }
+  }
+</style>
+</head>
+<body>
+<main class="card">
+  <label class="drop" id="drop">
+    <svg class="edge" aria-hidden="true"><rect width="100%" height="100%" rx="19" /></svg>
+    <span class="up"><i data-lucide="arrow-up"></i></span>
+    <strong>Drop files or <u>browse</u></strong>
+    <span>PDF, PNG, JPG or Figma, up to 25 MB each</span>
+    <input type="file" id="pick" multiple accept=".pdf,.png,.jpg,.jpeg,.fig" aria-label="Upload files">
+  </label>
+  <div class="files" id="files"></div>
+  <p class="sr-only" id="said" aria-live="polite"></p>
+</main>
+<script>
+  const icons = () => lucide.createIcons({ attrs: { 'stroke-width': 2.2 } });
+  icons();
+  const drop = document.getElementById('drop');
+  const list = document.getElementById('files');
+  const LIMIT = 25 * 1024 * 1024;
+  const TYPES = ['pdf', 'png', 'jpg', 'jpeg', 'fig'];
+  const said = document.getElementById('said');
+  const fmt = b => b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.round(b / 1024) + ' KB';
+
+  function add(file) {
+    const ext = (file.name.split('.').pop() || '').toLowerCase().slice(0, 4);
+    const row = document.createElement('div');
+    row.className = 'file';
+    row.innerHTML = `<div class="kind ${ext}">${ext.toUpperCase()}</div>
+      <div class="meta"><b></b><small></small>
+        <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div></div>
+      <button class="act" type="button"><i data-lucide="x"></i></button>`;
+    row.querySelector('b').textContent = file.name;
+    row.querySelector('.track').setAttribute('aria-label', file.name);
+    row.querySelector('.act').setAttribute('aria-label', `Cancel ${file.name}`);
+    list.prepend(row);
+    icons();
+    const small = row.querySelector('small'), bar = row.querySelector('.track i');
+    row.querySelector('.act').addEventListener('click', () => remove(row));
+    const problem = !TYPES.includes(ext) ? `.${ext} files aren't supported`
+      : file.size > LIMIT ? `${fmt(file.size)} is over the 25 MB limit` : '';
+    if (problem) {
+      row.classList.add('bad');
+      small.textContent = problem;
+      said.textContent = `${file.name}: ${problem}`;
+      row.querySelector('.act').setAttribute('aria-label', `Remove ${file.name}`);
+      return row;
+    }
+    said.textContent = `Uploading ${file.name}`;
+    upload(row, file.size, small, bar);
+    return row;
+  }
+  // a fake network: bytes arrive in uneven chunks, like a real upload
+  function upload(row, size, small, bar, from = 0) {
+    let sent = from;
+    const tick = () => {
+      if (!row.isConnected) return;
+      sent = Math.min(size, sent + size * (0.03 + Math.random() * 0.09));
+      const p = sent / size;
+      bar.style.setProperty('--p', p);
+      bar.parentElement.setAttribute('aria-valuenow', Math.round(p * 100));
+      small.textContent = `${fmt(sent)} of ${fmt(size)} · ${Math.round(p * 100)}%`;
+      if (p < 1) row._t = setTimeout(tick, 120 + Math.random() * 160);
+      else finish(row, size, small);
+    };
+    tick();
+  }
+  function finish(row, size, small) {
+    row.classList.add('done');
+    small.textContent = `${fmt(size)} · Uploaded`;
+    const btn = row.querySelector('.act');
+    btn.classList.add('state');
+    btn.setAttribute('aria-label', `Remove ${row.querySelector('b').textContent}`);
+    said.textContent = `${row.querySelector('b').textContent} uploaded`;
+    btn.innerHTML = '<i data-lucide="circle-check" class="done-tick"></i>';
+    icons();
+  }
+  function remove(row) {
+    clearTimeout(row._t);
+    row.classList.add('out');
+    setTimeout(() => row.remove(), 260);
+  }
+
+  ['dragenter', 'dragover'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => [...e.dataTransfer.files].forEach(add));
+  document.getElementById('pick').addEventListener('change', e => { [...e.target.files].forEach(add); e.target.value = ''; });
+
+  // stills and demo use stand-in files with real sizes
+  const fake = (name, mb) => ({ name, size: mb * 1048576 });
+  const params = new URLSearchParams(location.search);
+  if (params.has('still')) {
+    const a = add(fake('brand-guidelines.pdf', 8.4));
+    const b = add(fake('hero-shot@2x.png', 3.1));
+    const c = add(fake('campaign-video-raw.pdf', 212));
+    add(fake('homepage-v3.fig', 14.2));
+    // freeze at a moment where every state is visible
+    setTimeout(() => {
+      [a, b].forEach(r => clearTimeout(r._t));
+      finish(a, 8.4 * 1048576, a.querySelector('small'));
+      const s = 14.2 * 1048576 * 0.62, f = list.firstElementChild;
+      clearTimeout(f._t);
+      f.querySelector('.track i').style.setProperty('--p', 0.62);
+      f.querySelector('small').textContent = `${fmt(s)} of 14.2 MB · 62%`;
+      const s2 = 3.1 * 1048576 * 0.34;
+      b.querySelector('.track i').style.setProperty('--p', 0.34);
+      b.querySelector('small').textContent = `${fmt(s2)} of 3.1 MB · 34%`;
+    }, 200);
+    if (params.get('still') === 'over') drop.classList.add('over');
+    // everything that could upload is done
+    if (params.get('still') === 'done') setTimeout(() => [...list.children].forEach(r => {
+      if (r.classList.contains('bad') || r.classList.contains('done')) return;
+      clearTimeout(r._t);
+      const mb = r.querySelector('b').textContent.endsWith('.fig') ? 14.2 : 3.1;
+      finish(r, mb * 1048576, r.querySelector('small'));
+    }), 260);
+  }
+  if (params.has('demo')) {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    (async function loop() {
+      drop.classList.add('over'); await wait(900); drop.classList.remove('over');
+      add(fake('brand-guidelines.pdf', 8.4)); await wait(300);
+      add(fake('hero-shot@2x.png', 3.1)); await wait(300);
+      add(fake('campaign-video-raw.pdf', 212)); await wait(5200);
+      [...list.children].forEach((r, i) => setTimeout(() => remove(r), i * 120));
+      await wait(900); loop();
+    })();
+  }
+</script>
+</body>
+</html>

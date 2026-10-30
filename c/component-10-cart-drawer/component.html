@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cart drawer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --stage: oklch(0.82 0.075 12);
+    --stage-lift: oklch(0.88 0.055 12);
+    --panel: oklch(0.995 0.003 12);
+    --soft: oklch(0.96 0.01 12);
+    --line: oklch(0.92 0.012 12);
+    --ink: oklch(0.21 0.02 12);
+    --ink-2: oklch(0.5 0.02 12);
+    --go: oklch(0.24 0.02 12);
+    --ok: oklch(0.55 0.13 155);
+    --spring: linear(0, 0.08 3%, 0.29 7.5%, 0.62 14%, 0.86 21%, 0.99 28%, 1.04 34%, 1.045 39%, 1.03 46%, 1.005 58%, 0.997 70%, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(60% 45% at 50% 45%, var(--stage-lift), var(--stage));
+    color: var(--ink);
+    display: grid; place-items: center;
+    padding: 16px;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  ::selection { background: var(--line); color: var(--ink); }
+  em, i { font-style: normal; }
+
+  .drawer {
+    width: min(420px, 100%);
+    background: var(--panel);
+    border-radius: 28px;
+    padding: 22px 20px 20px;
+    box-shadow: 0 50px 90px -40px oklch(0.35 0.09 12 / 0.6), 0 10px 24px -12px oklch(0.35 0.09 12 / 0.3);
+    display: grid; gap: 16px;
+  }
+  .top { display: flex; align-items: center; justify-content: space-between; }
+  .top h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .top h1 span { color: var(--ink-2); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .x { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--soft); color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+  .x svg { width: 18px; height: 18px; }
+
+  /* free shipping: a bar that fills, with the amount still missing */
+  .ship { font-size: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .ship b { color: var(--ink); font-weight: 600; }
+  .ship.free b { color: var(--ok); }
+  .ship .track { height: 6px; border-radius: 3px; background: var(--soft); margin-top: 8px; overflow: hidden; }
+  .ship .track i { display: block; height: 100%; border-radius: inherit; background: var(--go); transform-origin: left; transform: scaleX(var(--p, 0)); transition: transform 600ms var(--spring), background 300ms; }
+  .ship.free .track i { background: var(--ok); }
+
+  .items { display: grid; }
+  .item {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center;
+    padding: 12px 0; border-top: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .item:last-child { padding-bottom: 0; }
+  .item:first-child { border-top: 0; padding-top: 0; }
+  .item.gone { opacity: 0; padding-block: 0; max-height: 0; border-top-color: transparent; transition: max-height 360ms var(--ease-out), opacity 200ms, padding 360ms var(--ease-out); }
+  /* the products are posters, drawn in CSS */
+  .art { width: 60px; height: 76px; border-radius: 8px; position: relative; overflow: hidden; box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.05); }
+  .art.tide { background: linear-gradient(oklch(0.83 0.07 230) 0 55%, oklch(0.5 0.12 245) 55%); }
+  .art.tide::after { content: ""; position: absolute; width: 26px; height: 26px; border-radius: 50%; background: oklch(0.86 0.13 75); left: 17px; top: 18px; }
+  .art.bloom { background: oklch(0.92 0.05 150); }
+  .art.bloom::before, .art.bloom::after { content: ""; position: absolute; border-radius: 50%; }
+  .art.bloom::before { width: 44px; height: 44px; left: -8px; bottom: -6px; background: oklch(0.62 0.17 20); }
+  .art.bloom::after { width: 30px; height: 30px; right: -4px; top: 10px; background: oklch(0.42 0.1 160); }
+  .art.grid { background: repeating-linear-gradient(90deg, oklch(0.25 0.02 260) 0 2px, transparent 2px 12px), repeating-linear-gradient(0deg, oklch(0.25 0.02 260) 0 2px, transparent 2px 12px), oklch(0.88 0.12 95); }
+  .name b { display: block; font-size: 15px; font-weight: 600; }
+  .name small { display: block; font-size: 13.5px; color: var(--ink-2); margin-top: 2px; }
+  .qty { display: inline-flex; align-items: center; margin-top: 8px; border-radius: 12px; background: var(--soft); }
+  .qty button { width: 30px; height: 30px; border: 0; background: none; color: var(--ink); cursor: pointer; display: grid; place-items: center; border-radius: 10px; }
+  .qty button:hover { background: var(--line); }
+  .qty button:focus-visible, .x:focus-visible, .go:focus-visible { outline: 2px solid var(--go); outline-offset: 2px; }
+  .qty button svg { width: 14px; height: 14px; }
+  .qty output { min-width: 22px; text-align: center; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .price { align-self: start; font-size: 15.5px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+  .roll { display: inline-block; }
+  .roll.bump { animation: bump 380ms var(--spring); }
+  @keyframes bump { 30% { transform: translateY(-5px); opacity: 0.4; } }
+
+  .undo { font-size: 14px; color: var(--ink-2); display: none; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 14px; background: var(--soft); }
+  .undo.show { display: flex; animation: in 360ms var(--spring); }
+  @keyframes in { from { opacity: 0; transform: translateY(6px); } }
+  .undo button:focus-visible { outline: 2px solid var(--go); outline-offset: 3px; border-radius: 4px; }
+  .undo button { border: 0; background: none; font: inherit; font-weight: 600; color: var(--ink); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+  .total { display: flex; justify-content: space-between; align-items: baseline; padding-top: 14px; border-top: 1px solid var(--line); }
+  .total span { font-size: 15px; color: var(--ink-2); }
+  .total strong { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .go {
+    height: 54px; border-radius: 16px; border: 0; background: var(--go); color: var(--panel);
+    font: inherit; font-size: 16px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: transform 160ms var(--ease-out);
+  }
+  .go:active { transform: scale(0.98); }
+  .go svg { width: 18px; height: 18px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+  }
+</style>
+</head>
+<body>
+<aside class="drawer" aria-label="Cart">
+  <div class="top">
+    <h1>Your cart <span id="count"></span></h1>
+    <button class="x" type="button" aria-label="Close cart"><i data-lucide="x"></i></button>
+  </div>
+  <div class="ship" id="ship" aria-live="polite"><p id="shipText"></p><div class="track"><i></i></div></div>
+  <div class="items" id="items"></div>
+  <div class="undo" id="undo"><span id="undoText"></span><button type="button" id="undoBtn">Undo</button></div>
+  <div class="total"><span>Subtotal</span><strong id="sub"></strong></div>
+  <button class="go" type="button"><i data-lucide="lock"></i>Check out</button>
+</aside>
+<script>
+  const FREE = 120;
+  const cart = [
+    { id: 'tide', name: 'Low tide', size: 'A2 poster', price: 38, qty: 1 },
+    { id: 'bloom', name: 'Bloom', size: '50 × 70 print', price: 46, qty: 1 },
+    { id: 'grid', name: 'Graph paper', size: 'A3 poster', price: 24, qty: 1 },
+  ];
+  const items = document.getElementById('items');
+  const money = n => '$' + n.toFixed(0);
+  let lastRemoved = null;
+
+  function row(it) {
+    const el = document.createElement('div');
+    el.className = 'item'; el.dataset.id = it.id;
+    el.innerHTML = `<div class="art ${it.id}" role="img" aria-label="${it.name} artwork"></div>
+      <div class="name"><b>${it.name}</b><small>${it.size}</small>
+        <div class="qty"><button type="button" data-d="-1" aria-label="${it.qty > 1 ? 'One less' : 'Remove'} ${it.name}"><i data-lucide="minus"></i></button>
+        <output aria-live="polite">${it.qty}</output>
+        <button type="button" data-d="1" aria-label="One more ${it.name}"><i data-lucide="plus"></i></button></div></div>
+      <div class="price"><span class="roll">${money(it.price * it.qty)}</span></div>`;
+    return el;
+  }
+  function totals() {
+    const sub = cart.reduce((s, it) => s + it.price * it.qty, 0);
+    const n = cart.reduce((s, it) => s + it.qty, 0);
+    document.getElementById('sub').textContent = money(sub);
+    document.getElementById('count').textContent = `(${n})`;
+    const ship = document.getElementById('ship'), left = FREE - sub;
+    ship.classList.toggle('free', left <= 0);
+    document.getElementById('shipText').innerHTML = left > 0
+      ? `<b>${money(left)}</b> away from free shipping` : '<b>Free shipping</b> unlocked';
+    ship.querySelector('.track i').style.setProperty('--p', Math.min(1, sub / FREE));
+  }
+  // qty changes bump the line total; going to 0 removes the line with an undo
+  function change(id, d) {
+    const it = cart.find(x => x.id === id), el = items.querySelector(`[data-id="${id}"]`);
+    it.qty += d;
+    if (it.qty < 1) return remove(it, el);
+    el.querySelector('output').textContent = it.qty;
+    el.querySelector('[data-d="-1"]').setAttribute('aria-label', `${it.qty > 1 ? 'One less' : 'Remove'} ${it.name}`);
+    const p = el.querySelector('.roll');
+    p.textContent = money(it.price * it.qty);
+    p.classList.remove('bump'); p.offsetWidth; p.classList.add('bump');
+    totals();
+  }
+  function remove(it, el) {
+    el.style.maxHeight = el.offsetHeight + 'px'; el.offsetHeight;
+    el.classList.add('gone');
+    setTimeout(() => el.remove(), 380);
+    lastRemoved = { it, index: cart.indexOf(it) };
+    cart.splice(lastRemoved.index, 1);
+    document.getElementById('undoText').textContent = `${it.name} removed`;
+    document.getElementById('undo').classList.add('show');
+    // the focused button is about to vanish, so focus moves to Undo instead of the page
+    if (el.contains(document.activeElement)) document.getElementById('undoBtn').focus();
+    totals();
+  }
+  document.getElementById('undoBtn').addEventListener('click', () => {
+    if (!lastRemoved) return;
+    const { it, index } = lastRemoved; it.qty = 1;
+    cart.splice(index, 0, it);
+    const el = row(it);
+    items.insertBefore(el, items.children[index] || null);
+    lucide.createIcons({ attrs: { 'stroke-width': 2.4 } });
+    document.getElementById('undo').classList.remove('show');
+    el.querySelector('[data-d="1"]').focus();
+    lastRemoved = null; totals();
+  });
+  items.addEventListener('click', e => {
+    const b = e.target.closest('.qty button'); if (!b) return;
+    change(b.closest('.item').dataset.id, +b.dataset.d);
+  });
+  cart.forEach(it => items.appendChild(row(it)));
+  lucide.createIcons({ attrs: { 'stroke-width': 2.4 } });
+  totals();
+
+  const params = new URLSearchParams(location.search);
+  if (params.has('free')) change('grid', 1);
+  if (params.has('removed')) change('grid', -1);
+  if (params.has('demo')) {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    (async function loop() {
+      await wait(900); change('grid', 1);
+      await wait(1400); change('tide', -1);
+      await wait(1600); document.getElementById('undoBtn').click();
+      await wait(1200); change('grid', -1);
+      await wait(1800); loop();
+    })();
+  }
+</script>
+</body>
+</html>
