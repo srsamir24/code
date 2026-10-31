@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zellap · Depth field hero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* One font (Inter Tight), no buttons, no labels on the effect. ?bare = the field alone; ?rec = recorder drives time;
+     ?auto = a scripted hand moves through the field (used inside the desk stage, where no mouse reaches the iframes). */
+  :root { --bg: #060708; --fg: #f4f4f6; --muted: rgb(244 244 246 / .62); --teal: #2ee6b0; --pad: clamp(20px, 4.4vw, 64px); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--fg); font-family: "Inter Tight", system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  .room { position: fixed; inset: 0; background:
+      radial-gradient(70% 55% at 62% 38%, rgb(149 91 227 / .14), transparent 70%),
+      radial-gradient(55% 45% at 8% 100%, rgb(0 176 127 / .09), transparent 70%),
+      linear-gradient(160deg, #0c1a1b, #0a0d13 46%, #060708); }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; mix-blend-mode: screen; }
+  /* a dark pool under the headline so the copy never fights the brightest dots */
+  .lens { position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(60% 46% at 22% 74%, rgb(6 7 8 / .72), transparent 72%); }
+
+  .site { position: relative; z-index: 2; height: 100%; display: grid; grid-template-rows: auto 1fr auto; padding: 0 var(--pad); pointer-events: none; }
+  nav { display: flex; align-items: center; justify-content: space-between; min-height: 84px; }
+  .brand { font-weight: 700; font-size: 22px; letter-spacing: -.035em; }
+  .brand span { color: var(--teal); }
+  .links { display: flex; gap: 34px; font-size: 15px; font-weight: 500; color: var(--muted); }
+  .links a { color: inherit; text-decoration: none; }
+  .menu { display: none; font-size: 15px; font-weight: 500; color: var(--muted); }
+  .hero { align-self: end; padding-bottom: clamp(28px, 6vh, 64px); }
+  h1 { font-weight: 700; font-size: clamp(46px, 7.4vw, 124px); line-height: .92; letter-spacing: -.055em; max-width: 9.5ch; }
+  h1 b { font-weight: 700; color: var(--teal); }
+  .sub { margin-top: clamp(16px, 2.4vh, 26px); max-width: 34ch; font-size: clamp(16px, 1.35vw, 20px); line-height: 1.45; color: var(--muted); font-weight: 400; }
+  .foot { display: flex; justify-content: space-between; padding: 0 0 26px; font-size: 13px; font-weight: 500; color: rgb(244 244 246 / .45); border-top: 1px solid rgb(255 255 255 / .08); padding-top: 16px; }
+
+  @media (max-width: 760px) {
+    .links { display: none; } .menu { display: block; }
+    nav { min-height: 68px; }
+    .lens { background: radial-gradient(90% 40% at 30% 78%, rgb(6 7 8 / .75), transparent 72%); }
+    h1 { font-size: 15vw; max-width: 8ch; }
+    .sub { font-size: 17px; max-width: 26ch; }
+  }
+  .bare .site, .bare .lens { display: none; }
+  .nonav nav { visibility: hidden; }
+</style>
+</head>
+<body>
+<div class="room" aria-hidden="true"></div>
+<canvas id="field" aria-hidden="true"></canvas>
+<div class="lens" aria-hidden="true"></div>
+<div class="site">
+  <nav aria-label="Main">
+    <div class="brand">Zellap<span>.</span></div>
+    <div class="links"><a href="#">Work</a><a href="#">Studio</a><a href="#">Journal</a><a href="#">Contact</a></div>
+    <div class="menu">Menu</div>
+  </nav>
+  <main class="hero">
+    <h1>Websites people <b>remember.</b></h1>
+    <p class="sub">Web design and code, built by hand. Move your cursor through the field.</p>
+  </main>
+  <div class="foot"><span>Selected work, 2026</span><span>Scroll</span></div>
+</div>
+
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js" } }</script>
+<script type="module">
+import * as THREE from 'three';
+
+const Q = location.search, REC = /rec/.test(Q), AUTO = /auto/.test(Q), BARE = /bare/.test(Q);
+if (BARE) document.documentElement.classList.add('bare');
+if (/nonav/.test(Q)) document.documentElement.classList.add('nonav');
+const DPR = +(Q.match(/dpr=([\d.]+)/) || [])[1] || Math.min(devicePixelRatio, 2);
+const reduce = !REC && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const canvas = document.getElementById('field');
+const Z = { launchHi: '#00d7a4', launch: '#00b07f', growth: '#955be3', growthPale: '#e6d7ff', scale: '#ca358b', nexus: '#4c5edb' };
+
+const COUNT = 9000, FOV = 50, TAN = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
+const NEAR_D = 6, FAR_D = 110, FOCUS = 30;
+const TOUCH = AUTO && innerWidth < 760;
+const RS = AUTO && !TOUCH ? 0.5 : 0.36, UNIT = 30 * TAN;
+const PUSH = 150, DRAG = 13, K = 14, C = 4.2, DT = 1 / 240, LAP = 48;
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, preserveDrawingBuffer: REC });
+renderer.setClearColor(0x000000, 1);
+renderer.setPixelRatio(DPR);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 400);
+
+let seed = 7;
+const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const base = new Float32Array(COUNT * 3), off = new Float32Array(COUNT * 3), vel = new Float32Array(COUNT * 3);
+const pos = new Float32Array(COUNT * 3), energy = new Float32Array(COUNT), size = new Float32Array(COUNT), col = new Float32Array(COUNT * 3);
+const pal = [Z.launchHi, Z.launch, Z.nexus, Z.growth, Z.growth, Z.scale].map(c => new THREE.Color(c));
+const pale = new THREE.Color(Z.growthPale);
+const palette = (u, c) => { const x = Math.min(.9999, Math.max(0, u)) * (pal.length - 1), i = Math.floor(x); return c.copy(pal[i]).lerp(pal[i + 1], x - i); };
+function seedField(aspect) {
+  seed = 7; const c = new THREE.Color();
+  for (let i = 0; i < COUNT; i++) {
+    const d = NEAR_D + (FAR_D - NEAR_D) * Math.pow(rnd(), .62);
+    const u = (rnd() * 2 - 1) * 1.25, v = (rnd() * 2 - 1) * 1.25;
+    base[i * 3] = u * d * TAN * aspect; base[i * 3 + 1] = v * d * TAN; base[i * 3 + 2] = 30 - d;
+    const band = .5 + .38 * Math.sin(u * 1.4 + v * .9 + .6) + (rnd() - .5) * .35;
+    palette(band, c).lerp(pale, rnd() < .42 ? .55 + rnd() * .4 : rnd() * .25);
+    col.set([c.r, c.g, c.b], i * 3);
+    size[i] = .55 + Math.pow(rnd(), 3) * 1.9;
+  }
+  off.fill(0); vel.fill(0);
+}
+const geo = new THREE.BufferGeometry();
+const aPos = new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage);
+const aEnergy = new THREE.BufferAttribute(energy, 1).setUsage(THREE.DynamicDrawUsage);
+geo.setAttribute('position', aPos); geo.setAttribute('aEnergy', aEnergy);
+geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1)); geo.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+const mat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  uniforms: { uScale: { value: 1 }, uWake: { value: new THREE.Color(Z.launchHi) } },
+  vertexShader: `
+    attribute float aSize; attribute float aEnergy; attribute vec3 aColor;
+    uniform float uScale; uniform vec3 uWake;
+    varying vec3 vColor; varying float vAlpha; varying float vSoft;
+    void main() {
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      float d = -mv.z;
+      float blur = clamp(abs(d - ${FOCUS.toFixed(1)}) / 55.0, 0.0, 1.0);
+      float fog = pow(clamp(1.0 - (d - 12.0) / ${(FAR_D - 6).toFixed(1)}, 0.0, 1.0), 1.5) * smoothstep(${NEAR_D.toFixed(1)}, 13.0, d);
+      float e = clamp(aEnergy, 0.0, 1.0);
+      vColor = mix(aColor, uWake, e * 0.85);
+      vAlpha = fog * (0.85 + 1.6 * e) / (1.0 + blur * 1.6);
+      vSoft = 0.3 + blur * 0.6;
+      gl_PointSize = uScale * aSize * (1.0 + blur * 1.2 + e * 0.9) * 95.0 / d;
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `
+    varying vec3 vColor; varying float vAlpha; varying float vSoft;
+    void main() {
+      float r = length(gl_PointCoord - 0.5) * 2.0;
+      float a = 1.0 - smoothstep(1.0 - vSoft, 1.0, r);
+      if (a <= 0.0) discard;
+      gl_FragColor = vec4(vColor * vAlpha * a, 1.0);
+    }`,
+});
+scene.add(new THREE.Points(geo, mat));
+
+// pointer: real events, or the scripted hand (?auto) that sweeps through the field on a slow figure eight
+const ptr = { x: 0, y: 0, in: false };
+const hand = { x: 0, y: 0, vx: 0, vy: 0, on: 0 }, par = { x: 0, y: 0 };
+const toNdc = e => { ptr.x = e.clientX / innerWidth * 2 - 1; ptr.y = -(e.clientY / innerHeight * 2 - 1); };
+if (!AUTO) {
+  addEventListener('pointermove', e => { toNdc(e); if (!ptr.in) { hand.x = ptr.x; hand.y = ptr.y; } ptr.in = e.clientX >= 0 && e.clientY >= 0; }, { passive: true });
+  document.documentElement.addEventListener('pointerleave', () => { ptr.in = false; });
+}
+let simT = 0;
+const camPos = new THREE.Vector3(), dir = new THREE.Vector3(), right = new THREE.Vector3(), up = new THREE.Vector3(), rot = new THREE.Matrix3();
+function placeCamera() {
+  const ph = simT / LAP * Math.PI * 2, s = reduce ? 0 : 1;
+  camera.position.set(s * (Math.sin(ph) * 2.4 + par.x * 2.6), s * (Math.sin(ph * 2) * .9 + par.y * 1.8), 30 + s * Math.cos(ph) * 1.6);
+  camera.lookAt(s * Math.sin(ph) * .8, 0, -30);
+  camera.updateMatrixWorld();
+}
+function step(dt) {
+  simT += dt;
+  if (AUTO && TOUCH) {   // a phone has no cursor: a thumb swipes through, lifts, swipes back
+    const c = simT % 1.9, u = Math.min(1, c / .75), e = u * u * (3 - 2 * u), dirn = Math.floor(simT / 1.9) % 2 ? -1 : 1;
+    ptr.in = c < .8; ptr.x = dirn * (-.7 + 1.4 * e); ptr.y = -.15 + .35 * Math.sin(e * Math.PI) * dirn;
+  } else if (AUTO) { ptr.in = true; ptr.x = .62 * Math.sin(simT * .85 + .4); ptr.y = .34 * Math.sin(simT * 1.7 + 1.1) + .05; }
+  const kh = 1 - Math.exp(-dt * 26), kp = 1 - Math.exp(-dt * 2.2);
+  const px = hand.x, py = hand.y;
+  hand.x += (ptr.x - hand.x) * kh; hand.y += (ptr.y - hand.y) * kh;
+  hand.vx = (hand.x - px) / dt; hand.vy = (hand.y - py) / dt;
+  hand.on += ((ptr.in && !reduce ? 1 : 0) - hand.on) * (1 - Math.exp(-dt * 8));
+  par.x += (ptr.x * (ptr.in ? 1 : 0) - par.x) * kp; par.y += (ptr.y * (ptr.in ? 1 : 0) - par.y) * kp;
+  placeCamera();
+  camPos.copy(camera.position);
+  right.setFromMatrixColumn(camera.matrixWorld, 0); up.setFromMatrixColumn(camera.matrixWorld, 1);
+  dir.set(hand.x * TAN * camera.aspect, hand.y * TAN, -1).applyMatrix3(rot.setFromMatrix4(camera.matrixWorld)).normalize();
+  const on = hand.on;
+  for (let i = 0, j = 0; i < COUNT; i++, j += 3) {
+    let ox = off[j], oy = off[j + 1], oz = off[j + 2], vx = vel[j], vy = vel[j + 1], vz = vel[j + 2];
+    if (on > .001) {
+      const wx = base[j] + ox - camPos.x, wy = base[j + 1] + oy - camPos.y, wz = base[j + 2] + oz - camPos.z;
+      const t = wx * dir.x + wy * dir.y + wz * dir.z;
+      const cx = wx - dir.x * t, cy = wy - dir.y * t, cz = wz - dir.z * t, r2 = cx * cx + cy * cy + cz * cz;
+      const R = RS * t * TAN, sc = t * TAN / UNIT;
+      if (t > 0 && r2 < R * R) {
+        const r = Math.sqrt(r2) + 1e-4, f = (1 - r / R) ** 2 * on;
+        const push = PUSH * sc * f / r, drag = DRAG * f * t * TAN, sx = hand.vx * camera.aspect, sy = hand.vy;
+        vx += (cx * push + (right.x * sx + up.x * sy) * drag) * dt;
+        vy += (cy * push + (right.y * sx + up.y * sy) * drag) * dt;
+        vz += (cz * push + (right.z * sx + up.z * sy) * drag) * dt;
+      }
+    }
+    vx += (-K * ox - C * vx) * dt; vy += (-K * oy - C * vy) * dt; vz += (-K * oz - C * vz) * dt;
+    off[j] = ox + vx * dt; off[j + 1] = oy + vy * dt; off[j + 2] = oz + vz * dt;
+    vel[j] = vx; vel[j + 1] = vy; vel[j + 2] = vz;
+  }
+}
+function render() {
+  for (let i = 0, j = 0; i < COUNT; i++, j += 3) {
+    pos[j] = base[j] + off[j]; pos[j + 1] = base[j + 1] + off[j + 1]; pos[j + 2] = base[j + 2] + off[j + 2];
+    energy[i] = Math.min(1, Math.hypot(off[j], off[j + 1], off[j + 2]) * .8 * UNIT / ((30 - base[j + 2]) * TAN));
+  }
+  aPos.needsUpdate = aEnergy.needsUpdate = true;
+  renderer.render(scene, camera);
+}
+function layout() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  mat.uniforms.uScale.value = h / 1000 * DPR;
+  seedField(camera.aspect); placeCamera();
+}
+let acc = 0;
+const frame = dt => { acc += dt; while (acc >= DT) { step(DT); acc -= DT; } render(); };
+layout();
+if (REC) {
+  window.__tick = frame;
+  window.__layout = layout;
+  window.__sections = () => ({ H: innerHeight, hero: { top: 0, len: 1 }, end: 0 });
+  document.fonts.ready.then(() => { frame(0); window.__ready = true; });
+} else {
+  addEventListener('resize', layout);
+  let last = performance.now();
+  const loop = now => { frame(Math.min(.05, (now - last) / 1000)); last = now; requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
