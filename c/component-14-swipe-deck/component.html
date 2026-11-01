@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swipe deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --stage: oklch(0.3 0.1 18);
+    --stage-lift: oklch(0.4 0.13 21);
+    --stage-step: oklch(0.42 0.12 20);
+    --ink: oklch(0.96 0.015 25);
+    --ink-2: oklch(0.82 0.05 22);
+    --sleeve: oklch(0.985 0.005 60);
+    --sleeve-ink: oklch(0.22 0.03 20);
+    --sleeve-ink-2: oklch(0.5 0.03 20);
+    --chip: oklch(0.945 0.012 40);
+    --save: oklch(0.89 0.19 130);
+    --save-ink: oklch(0.27 0.08 140);
+    --skip: oklch(0.985 0.005 60);
+    --skip-ink: oklch(0.38 0.14 20);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --spring: linear(0, 0.08 3%, 0.29 7.5%, 0.62 14%, 0.86 21%, 0.99 28%, 1.04 34%, 1.045 39%, 1.03 46%, 1.005 58%, 0.997 70%, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(70% 55% at 50% 44%, var(--stage-lift), var(--stage));
+    color: var(--ink);
+    display: grid; place-items: center;
+    padding: 16px;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;  /* thrown cards leave the page; fit() keeps the app inside it */
+  }
+  ::selection { background: var(--save); color: var(--save-ink); }
+  em, i { font-style: normal; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* the app is wider than the deck, so a dragged card stays inside the frame */
+  .app { width: min(400px, 100%); display: grid; justify-items: center; gap: 26px; }
+  /* title and count stay left, out of the way of the record sliding out */
+  header { width: 300px; display: grid; gap: 2px; }
+  h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+  .count { font-size: 15px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; display: inline-flex; gap: 0.3em; }
+  /* the position is a column of digits that rolls */
+  .wheel { display: inline-block; height: 1.2em; line-height: 1.2em; overflow: hidden; color: var(--ink); }
+  .wheel span { display: block; transform: translateY(calc(var(--n, 1) * -1.2em)); transition: transform 460ms var(--spring); }
+
+  /* slide:css */
+  .deck { position: relative; width: 300px; height: 420px; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .card { position: absolute; inset: 0 0 auto; height: 392px; cursor: grab; will-change: transform; }
+  .card.grabbing { cursor: grabbing; }
+  .card.thrown { pointer-events: none; }
+  .sleeve {
+    position: relative; z-index: 1; height: 100%;
+    background: var(--sleeve); border-radius: 22px; padding: 10px;
+    box-shadow: 0 2px 4px oklch(0.18 0.08 18 / 0.3), 0 18px 40px -18px oklch(0.12 0.08 18 / 0.55);
+  }
+  .dim { position: absolute; inset: 0; border-radius: inherit; background: var(--stage); opacity: 0; pointer-events: none; }
+  /* the record slides out of the sleeve as you drag toward Save */
+  .disc {
+    position: absolute; left: 30px; top: 14px; width: 240px; height: 240px; border-radius: 50%;
+    background:
+      radial-gradient(circle, oklch(0.14 0.01 20) 0 5px, var(--label) 6px 40px, transparent 41px),
+      conic-gradient(from 20deg, oklch(0.4 0.01 20), oklch(0.16 0.01 20) 12% 40%, oklch(0.42 0.01 20) 52%, oklch(0.16 0.01 20) 64% 90%, oklch(0.4 0.01 20)),
+      oklch(0.16 0.01 20);
+    box-shadow: 0 6px 16px -8px oklch(0.1 0.05 18 / 0.6);
+  }
+  .disc::after { content: ""; position: absolute; inset: 14px; border-radius: 50%; background: repeating-radial-gradient(circle, oklch(1 0 0 / 0.05) 0 2px, transparent 2px 5px); }
+  .stamp {
+    position: absolute; top: 26px; z-index: 3;
+    display: flex; align-items: center; gap: 6px;
+    padding: 9px 17px 9px 13px; border-radius: 999px;
+    font-size: 18px; font-weight: 800; letter-spacing: -0.01em;
+    opacity: 0; pointer-events: none;
+    box-shadow: 0 10px 22px -10px oklch(0.12 0.06 20 / 0.7);
+  }
+  .stamp svg { width: 18px; height: 18px; }
+  .stamp.save { left: 22px; background: var(--save); color: var(--save-ink); transform-origin: left center; }
+  .stamp.save svg { fill: currentColor; }
+  .stamp.skip { right: 22px; background: var(--skip); color: var(--skip-ink); transform-origin: right center; }
+  /* /slide */
+
+  .cover { position: relative; width: 280px; height: 280px; border-radius: 14px; overflow: hidden; isolation: isolate; }
+  .sheen { position: absolute; inset: 0 -200%; z-index: 2; pointer-events: none; opacity: 0;
+    background: linear-gradient(100deg, transparent 42%, oklch(1 0 0 / 0.22) 50%, transparent 58%); }
+  .info { padding: 13px 6px 0; }
+  .info b { display: block; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; color: var(--sleeve-ink); }
+  .info small { display: block; font-size: 14.5px; font-weight: 500; color: var(--sleeve-ink-2); margin-top: 1px; }
+  .meta { display: flex; gap: 6px; margin-top: 10px; }
+  .meta span { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px 4px 7px; border-radius: 999px; background: var(--chip); color: var(--sleeve-ink-2); font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .meta svg { width: 13px; height: 13px; }
+
+  /* sleeves, drawn in CSS: one idea each */
+  .c-orbit { background: oklch(0.42 0.2 264); }
+  .c-orbit .sun { position: absolute; width: 214px; height: 214px; right: -62px; top: -48px; border-radius: 50%; background: oklch(0.73 0.19 46); }
+  .c-orbit .moon { position: absolute; width: 50px; height: 50px; left: 70px; top: 128px; border-radius: 50%; background: oklch(0.93 0.05 85); }
+  .c-orbit .t { position: absolute; left: 18px; bottom: 14px; font-size: 54px; line-height: 0.86; font-weight: 800; letter-spacing: -0.055em; color: oklch(0.95 0.04 85); }
+  .c-orbit .a { position: absolute; left: 20px; top: 18px; font-size: 13px; font-weight: 700; color: oklch(0.95 0.04 85); }
+
+  .c-weather { background: oklch(0.91 0.2 122); padding: 20px 18px 18px; display: flex; flex-direction: column; color: oklch(0.2 0.03 130); }
+  .c-weather .t { font-size: 36px; line-height: 0.9; font-weight: 800; letter-spacing: -0.05em; }
+  .c-weather .a { font-size: 13px; font-weight: 700; margin-top: 8px; }
+  .c-weather .bars { margin-top: auto; display: grid; gap: 7px; justify-items: end; }
+  .c-weather .bars i { display: block; height: var(--h); width: var(--w); background: currentColor; border-radius: 2px; }
+
+  .c-hollow { background: oklch(0.19 0.02 330); }
+  .c-hollow .big { position: absolute; left: -22px; top: -62px; font-size: 300px; line-height: 1; font-weight: 800; letter-spacing: -0.11em; color: oklch(0.77 0.16 355); }
+  .c-hollow .t { position: absolute; left: 18px; bottom: 16px; font-size: 17px; font-weight: 700; letter-spacing: -0.02em; color: oklch(0.97 0.01 355); }
+  .c-hollow .a { position: absolute; right: 18px; bottom: 17px; font-size: 13px; font-weight: 600; color: oklch(0.77 0.16 355); }
+
+  .c-coastal { background: oklch(0.57 0.1 200); }
+  .c-coastal svg { position: absolute; inset: 0; }
+  .c-coastal .lbl { position: absolute; right: 0; top: 0; padding: 16px 18px 12px 14px; border-radius: 0 0 0 14px; background: oklch(0.57 0.1 200); display: grid; justify-items: end; gap: 8px; }
+  .c-coastal .t { text-align: right; font-size: 34px; line-height: 0.9; font-weight: 800; letter-spacing: -0.05em; color: oklch(0.95 0.035 90); }
+  .c-coastal .a { font-size: 13px; font-weight: 700; color: oklch(0.95 0.035 90); }
+
+  .c-machines { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: 105px 105px 1fr; background: oklch(0.95 0.025 90); }
+  .c-machines > i { position: relative; overflow: hidden; background: var(--bg); }
+  .c-machines > i::before { content: ""; position: absolute; background: var(--fg); }
+  .c-machines .q1 { --bg: oklch(0.86 0.16 90); --fg: oklch(0.5 0.17 258); }
+  .c-machines .q1::before { inset: 0 auto auto 0; width: 200%; height: 200%; border-radius: 50%; transform: translate(-50%, 0); }
+  .c-machines .q2 { --bg: oklch(0.2 0.02 260); --fg: oklch(0.95 0.025 90); }
+  .c-machines .q2::before { left: 8%; right: 8%; top: -42%; aspect-ratio: 1; border-radius: 50%; }
+  .c-machines .q3 { --bg: oklch(0.6 0.21 29); --fg: oklch(0.86 0.16 90); }
+  .c-machines .q3::before { inset: 20% 16%; border-radius: 50%; }
+  .c-machines .q4 { --bg: oklch(0.5 0.17 258); --fg: oklch(0.6 0.21 29); }
+  .c-machines .q4::before { right: 0; top: 0; width: 100%; height: 100%; border-radius: 0 0 0 100%; }
+  .c-machines .q5 { --bg: oklch(0.95 0.025 90); --fg: oklch(0.2 0.02 260); }
+  .c-machines .q5::before { inset: 22%; border-radius: 50%; box-shadow: 0 0 0 9px oklch(0.95 0.025 90), 0 0 0 17px oklch(0.6 0.21 29); }
+  .c-machines .q6 { --bg: oklch(0.86 0.16 90); --fg: oklch(0.2 0.02 260); }
+  .c-machines .q6::before { left: 50%; top: 0; width: 100%; height: 100%; border-radius: 50%; }
+  .c-machines .band { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; color: oklch(0.2 0.02 260); }
+  .c-machines .band b { font-size: 25px; font-weight: 800; letter-spacing: -0.045em; }
+  .c-machines .band small { font-size: 13px; font-weight: 700; }
+
+  .c-season { background: linear-gradient(135deg, oklch(0.88 0.08 168) 0 50%, oklch(0.36 0.13 332) 50%); }
+  .c-season .sun { position: absolute; width: 150px; height: 150px; left: 65px; top: 65px; border-radius: 50%;
+    background: linear-gradient(135deg, oklch(0.9 0.13 92) 0 50%, oklch(0.74 0.15 62) 50%); }
+  .c-season .t { position: absolute; left: 18px; top: 16px; font-size: 32px; line-height: 0.9; font-weight: 800; letter-spacing: -0.05em; color: oklch(0.36 0.13 332); }
+  .c-season .a { position: absolute; right: 18px; bottom: 17px; font-size: 13px; font-weight: 700; color: oklch(0.88 0.08 168); }
+
+  /* buttons mirror the stamps */
+  .actions { display: flex; align-items: center; gap: 12px; }
+  .act {
+    height: 54px; border: 0; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font: inherit; font-size: 16px; font-weight: 700;
+    transition: transform 160ms var(--ease-out), opacity 200ms;
+  }
+  .act svg { width: 19px; height: 19px; }
+  .act.skip { width: 122px; background: var(--skip); color: var(--skip-ink); }
+  .act.save { width: 122px; background: var(--save); color: var(--save-ink); }
+  .act.save svg { fill: currentColor; }
+  .act.undo { width: 48px; height: 48px; background: var(--stage-step); color: var(--ink); }
+  .act { transform: scale(var(--swell, 1)); }
+  .act:active { transform: scale(calc(var(--swell, 1) * 0.95)); transition-duration: 100ms; }
+  .act:disabled { background: var(--stage-step); color: var(--ink-2); opacity: 0.4; cursor: default; }
+  .act:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+  @media (hover: hover) and (pointer: fine) {
+    .act.undo:not(:disabled):hover { background: oklch(0.46 0.13 20); }
+  }
+
+  /* end state: the saved sleeves fanned out */
+  .end { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; text-align: center; gap: 8px; }
+  .end[hidden] { display: none; }
+  .fan { position: relative; width: 300px; height: 192px; margin-bottom: 16px; }
+  .mini {
+    position: absolute; left: 50%; top: 14px; width: 156px; height: 156px; margin-left: -78px;
+    padding: 6px; border-radius: 12px; background: var(--sleeve);
+    box-shadow: 0 2px 4px oklch(0.18 0.08 18 / 0.3), 0 16px 30px -14px oklch(0.12 0.08 18 / 0.6);
+    transform: translate(0, 10px) rotate(0deg) scale(0.92); opacity: 0;
+    transition: transform 620ms var(--spring), opacity 240ms var(--ease-out);
+    transition-delay: calc(var(--i) * 50ms);
+  }
+  .mini .cover { width: 280px; height: 280px; transform: scale(0.5143); transform-origin: 0 0; border-radius: 16px; }
+  .mini .clip { width: 144px; height: 144px; border-radius: 8px; overflow: hidden; }
+  .end.in .mini { transform: translate(var(--x), var(--y)) rotate(var(--r)); opacity: 1; }
+  .end h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; }
+  .end p { font-size: 15px; color: var(--ink-2); }
+  .end h2, .end p, .again { opacity: 0; transform: translateY(6px); transition: transform 400ms var(--ease-out), opacity 300ms var(--ease-out); transition-delay: 160ms; }
+  .end.in h2, .end.in p, .end.in .again { opacity: 1; transform: none; }
+  .again { margin-top: 14px; height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--stage-step); color: var(--ink); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+  .again svg { width: 16px; height: 16px; }
+  .again:active { transform: scale(0.96); transition-duration: 100ms; }
+  .again:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wheel span, .mini, .end h2, .end p, .again { transition-property: opacity; }
+  }
+</style>
+</head>
+<body>
+<!-- slide:html -->
+<main class="app">
+  <header>
+    <h1>This week's records</h1>
+    <p class="count" aria-hidden="true"><span class="wheel"><span id="wheel">0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9</span></span>of 6</p>
+  </header>
+  <section class="deck" id="deck" aria-label="Records. Right arrow saves, left arrow skips, Z undoes.">
+    <div class="end" id="end" hidden>
+      <div class="fan" id="fan"></div>
+      <h2 id="endTitle"></h2>
+      <p id="endText"></p>
+      <button class="again" type="button" id="again"><i data-lucide="rotate-ccw"></i>Start over</button>
+    </div>
+  </section>
+  <div class="actions">
+    <button class="act skip" type="button" id="skipBtn"><i data-lucide="x"></i>Skip</button>
+    <button class="act undo" type="button" id="undoBtn" aria-label="Undo"><i data-lucide="undo-2"></i></button>
+    <button class="act save" type="button" id="saveBtn"><i data-lucide="heart"></i>Save</button>
+  </div>
+  <p class="sr" id="live" aria-live="polite"></p>
+</main>
+<!-- /slide -->
+<script>
+  const RECORDS = [
+    { id: 'orbit', title: 'Slow Orbit', artist: 'Mira Holm', tracks: 9, min: 38, label: 'oklch(0.73 0.19 46)',
+      art: '<i class="sun"></i><i class="moon"></i><span class="a">Mira Holm</span><span class="t">Slow<br>Orbit</span>' },
+    { id: 'weather', title: 'Paper Weather', artist: 'The Lindens', tracks: 11, min: 42, label: 'oklch(0.91 0.2 122)',
+      art: '<span class="t">Paper<br>Weather</span><span class="a">The Lindens</span><span class="bars">' +
+        [[5, 64], [7, 88], [10, 52], [13, 100], [17, 76], [22, 100]].map(([h, w]) => `<i style="--h:${h}px;--w:${w}%"></i>`).join('') + '</span>' },
+    { id: 'hollow', title: 'Hollow Hours', artist: 'Juno Vale', tracks: 8, min: 31, label: 'oklch(0.77 0.16 355)',
+      art: '<span class="big" aria-hidden="true">HH</span><span class="t">Hollow Hours</span><span class="a">Juno Vale</span>' },
+    { id: 'coastal', title: 'Coastal Static', artist: 'Arlo Fenn', tracks: 10, min: 46, label: 'oklch(0.7 0.16 35)',
+      art: '<svg viewBox="0 0 280 280" aria-hidden="true">' +
+        Array.from({ length: 11 }, (_, i) => `<circle cx="20" cy="270" r="${34 + i * 24}" fill="none" stroke="oklch(0.95 0.035 90)" stroke-width="${10 - i * 0.7}"/>`).join('') +
+        '<circle cx="20" cy="270" r="18" fill="oklch(0.7 0.16 35)"/></svg><span class="lbl"><span class="t">Coastal<br>Static</span><span class="a">Arlo Fenn</span></span>' },
+    { id: 'machines', title: 'Soft Machines', artist: 'Kite Club', tracks: 12, min: 44, label: 'oklch(0.6 0.21 29)',
+      art: '<i class="q1"></i><i class="q2"></i><i class="q3"></i><i class="q4"></i><i class="q5"></i><i class="q6"></i><span class="band"><b>Soft Machines</b><small>Kite Club</small></span>' },
+    { id: 'season', title: 'Low Season', artist: 'Ines Moreau', tracks: 7, min: 29, label: 'oklch(0.9 0.13 92)',
+      art: '<i class="sun"></i><span class="t">Low<br>Season</span><span class="a">Ines Moreau</span>' },
+  ];
+
+  const FLICK = 0.11, ROT = 0.065, DEPTH = 14;
+  let W = 300, COMMIT = W * 0.4, k = 1, refocus = false;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const deck = document.getElementById('deck'), end = document.getElementById('end');
+  const $ = id => document.getElementById(id);
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  let queue = [], history = [], drag = null, rest = 0, raf = 0, last = 0, frozen = false;
+  const flying = new Set();
+
+  function make(rec) {
+    const el = document.createElement('article');
+    el.className = 'card';
+    el.setAttribute('aria-label', `${rec.title} by ${rec.artist}`);
+    el.innerHTML = `<div class="disc" style="--label:${rec.label}"></div>
+      <div class="sleeve">
+        <div class="cover c-${rec.id}" role="img" aria-label="${rec.title} sleeve">${rec.art}<span class="sheen"></span></div>
+        <span class="stamp save" aria-hidden="true"><i data-lucide="heart"></i>Save</span>
+        <span class="stamp skip" aria-hidden="true"><i data-lucide="x"></i>Skip</span>
+        <div class="info"><b>${rec.title}</b><small>${rec.artist}</small>
+          <div class="meta"><span><i data-lucide="disc-3"></i>${rec.tracks} tracks</span><span><i data-lucide="clock-3"></i>${rec.min} min</span></div></div>
+        <div class="dim"></div>
+      </div>`;
+    el.rec = rec;
+    el.s = { x: 0, y: 0, r: 0, vx: 0, vy: 0, vr: 0, f: 1, spring: false };
+    el.parts = ['.save', '.skip', '.disc', '.sleeve', '.dim', '.sheen'].map(q => el.querySelector(q));
+    return el;
+  }
+
+  // slide:js
+  // each frame: the top card follows its state, the cards
+  // under it lift as it leaves (q = 0..1)
+  function render() {
+    const top = queue[0];
+    const q = top ? clamp(Math.abs(top.s.x) / (W * 0.6)) : 0;
+    queue.forEach((el, i) => {
+      const d = Math.max(0, i + rest - (i > 0 ? q : 0));
+      paint(el, d);
+      el.style.zIndex = 40 - i;
+      el.style.opacity = d > 2.5 ? 0 : 1;
+    });
+    flying.forEach(el => paint(el, 0));
+    const p = top ? top.s.x / COMMIT : 0;
+    $('saveBtn').style.setProperty('--swell', 1 + 0.07 * clamp(p));
+    $('skipBtn').style.setProperty('--swell', 1 + 0.07 * clamp(-p));
+  }
+  function paint(el, d) {
+    const { x, y, r } = el.s, p = x / COMMIT;
+    const [save, skip, disc, sleeve, dim, sheen] = el.parts;
+    el.style.transform = `translate(${x}px, ${y + d * DEPTH}px) rotate(${r}deg) scale(${1 - d * 0.05})`;
+    const a = clamp(p * 1.2 - 0.1), b = clamp(-p * 1.2 - 0.1);
+    save.style.opacity = a; save.style.transform = `rotate(-12deg) scale(${0.72 + 0.28 * a})`;
+    skip.style.opacity = b; skip.style.transform = `rotate(12deg) scale(${0.72 + 0.28 * b})`;
+    disc.style.transform = `translateY(${-a * 118}px) rotate(${a * 60}deg)`;
+    const l = clamp(Math.abs(x) / W);
+    sleeve.style.boxShadow = `0 ${2 + l * 4}px ${4 + l * 8}px oklch(0.18 0.08 18 / ${0.3 - l * 0.1}), 0 ${18 + l * 34}px ${40 + l * 40}px -18px oklch(0.12 0.08 18 / ${0.55 + l * 0.15})`;
+    dim.style.opacity = Math.min(d, 2) * 0.16;
+    sheen.style.opacity = l * 1.6;
+    sheen.style.transform = `translateX(${-x * 0.45}px)`;
+  }
+
+  // grab point decides the spin: top half one way, bottom half the other
+  deck.addEventListener('pointerdown', e => {
+    const el = queue[0];
+    if (drag || !e.isPrimary || e.button > 0 || !el || !el.contains(e.target)) return;
+    e.preventDefault();
+    el.setPointerCapture(e.pointerId);
+    const b = el.getBoundingClientRect();
+    const f = clamp((b.top + b.height / 2 - e.clientY) / (b.height / 2), -1, 1);
+    el.s.f = (f < 0 ? -1 : 1) * Math.max(0.35, Math.abs(f));
+    el.s.spring = false;
+    el.classList.add('grabbing');
+    drag = { el, id: e.pointerId, cx: e.clientX, cy: e.clientY, x0: el.s.x, y0: el.s.y, pts: [] };
+    sample(e);
+  });
+  deck.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dy = (e.clientY - drag.cy) / k;
+    // up and down is rubber-banded: the further you pull, the less it follows
+    move(drag.x0 + (e.clientX - drag.cx) / k, drag.y0 + dy * 0.55 / (1 + Math.abs(dy) / 260));
+    sample(e);
+  });
+  function sample(e) {
+    drag.pts.push([e.timeStamp, drag.el.s.x, drag.el.s.y]);
+    while (drag.pts.length > 2 && e.timeStamp - drag.pts[0][0] > 100) drag.pts.shift();
+  }
+  function move(x, y) {
+    const s = drag.el.s;
+    s.x = x; s.y = y; s.r = x * ROT * s.f;
+    kick();
+  }
+
+  // velocity over the last 100 ms; a flick wins over distance
+  function release(e) {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    const { el, pts } = drag, s = el.s;
+    const [t0, x0, y0] = pts[0], [t1, x1, y1] = pts[pts.length - 1];
+    const dt = Math.max(16, t1 - t0);
+    // held still before letting go: no flick
+    const stale = (e ? e.timeStamp : performance.now()) - t1 > 60;
+    const still0 = stale || (e && e.type === 'pointercancel');
+    const vx = still0 ? 0 : (x1 - x0) / dt, vy = still0 ? 0 : (y1 - y0) / dt;
+    el.classList.remove('grabbing');
+    drag = null;
+    let dir = 0;
+    if (Math.abs(vx) > FLICK) dir = Math.sign(vx) === Math.sign(s.x) ? Math.sign(vx) : 0;
+    else if (Math.abs(s.x) > COMMIT) dir = Math.sign(s.x);
+    if (dir) return throwTop(dir, Math.max(Math.abs(vx), 0.9), vy);
+    s.vx = vx * 1000; s.vy = vy * 1000; s.vr = s.vx * ROT * s.f;
+    s.spring = true;
+    kick();
+  }
+  deck.addEventListener('pointerup', release);
+  deck.addEventListener('pointercancel', release);
+  deck.addEventListener('lostpointercapture', release);
+
+  function throwTop(dir, speed = 1.3, vy = -0.12) {
+    const el = queue.shift();
+    if (!el) return;
+    const q = clamp(Math.abs(el.s.x) / (W * 0.6));
+    rest += 1 - q;            // the cards below keep their place, then settle
+    const s = el.s;
+    s.spring = false;
+    s.vx = dir * speed; s.vy = clamp(vy, -0.8, 0.8);
+    s.vr = s.vx * ROT * s.f * 1.4;
+    el.classList.add('thrown');
+    el.style.zIndex = 50;
+    history.push({ el, dir });
+    if (reduce) { s.x = dir * 30; el.animate({ opacity: [1, 0] }, { duration: 200, fill: 'forwards' }); }
+    flying.add(el);
+    $('live').textContent = `${dir > 0 ? 'Saved' : 'Skipped'} ${el.rec.title}.`;
+    refocus = ['saveBtn', 'skipBtn'].includes(document.activeElement.id);
+    status();
+    kick();
+  }
+  // /slide
+
+  function tick(now) {
+    const dt = Math.min(32, now - last); last = now;
+    let busy = !!drag;
+    if (reduce) rest = 0;
+    if (Math.abs(rest) > 0.002) { rest *= Math.exp(-dt / 80); busy = true; } else rest = 0;
+    const top = queue[0];
+    if (top && top.s.spring) busy = spring(top.s, dt / 1000) || busy;
+    flying.forEach(el => {
+      const s = el.s;
+      if (reduce) { if (now - (s.t0 ??= now) > 220) out(el); else busy = true; return; }
+      s.x += s.vx * dt; s.y += s.vy * dt; s.r += s.vr * dt;
+      s.vy += 0.0009 * dt;  // a little gravity
+      if (Math.abs(s.x) > innerWidth / 2 + 420) out(el); else busy = true;
+    });
+    render();
+    raf = busy && !frozen ? requestAnimationFrame(tick) : 0;
+  }
+  function kick() { if (!raf && !frozen) { last = performance.now(); raf = requestAnimationFrame(tick); } }
+  // a spring with a little overshoot: stiffness 380, damping 24
+  function spring(s, dt) {
+    for (const k of ['x', 'y', 'r']) {
+      const v = 'v' + k;
+      s[v] += (-380 * s[k] - 24 * s[v]) * dt;
+      s[k] += s[v] * dt;
+    }
+    if (reduce || (Math.abs(s.x) < 0.3 && Math.abs(s.vx) < 6 && Math.abs(s.y) < 0.3 && Math.abs(s.r) < 0.05)) {
+      Object.assign(s, { x: 0, y: 0, r: 0, vx: 0, vy: 0, vr: 0, spring: false });
+      return false;
+    }
+    return true;
+  }
+  function out(el) {
+    flying.delete(el);
+    el.getAnimations().forEach(a => a.cancel());  // before remove(), or the fade sticks
+    el.remove();
+    delete el.s.t0;
+    if (!queue.length && !flying.size) showEnd();
+  }
+
+  // Undo: the card flies back from where it left
+  function undo() {
+    if (drag || !history.length) return;
+    const { el } = history.pop();
+    flying.delete(el);
+    el.getAnimations().forEach(a => a.cancel());
+    el.classList.remove('thrown');
+    if (!el.isConnected) deck.append(el);
+    const s = el.s;
+    s.x = clamp(s.x, -innerWidth / 2 - 200, innerWidth / 2 + 200);
+    s.r = clamp(s.r, -40, 40);
+    s.vx = s.vy = s.vr = 0;
+    if (reduce) { s.x = s.y = s.r = 0; el.animate({ opacity: [0, 1] }, { duration: 200 }); }
+    s.spring = true;
+    queue.unshift(el);
+    status();
+    if (!end.hidden && (end.contains(document.activeElement) || document.activeElement === document.body)) $('saveBtn').focus();
+    hideEnd();
+    $('live').textContent = `Back: ${el.rec.title}.`;
+    kick();
+  }
+
+  function status() {
+    const done = history.length, n = RECORDS.length;
+    $('wheel').style.setProperty('--n', Math.min(done + 1, n));
+    $('saveBtn').disabled = $('skipBtn').disabled = !queue.length;
+    $('undoBtn').disabled = !done;
+    const t = queue[0] ? ' ' + queue[0].rec.title : '';
+    $('saveBtn').setAttribute('aria-label', 'Save' + t);
+    $('skipBtn').setAttribute('aria-label', 'Skip' + t);
+  }
+
+  function showEnd() {
+    const saved = history.filter(h => h.dir > 0).map(h => h.el.rec);
+    const n = saved.length, k = Math.min(n, 5);
+    $('fan').innerHTML = saved.slice(-k).map((rec, i) => {
+      const o = i - (k - 1) / 2;
+      return `<div class="mini" style="--i:${i};--x:${o * 70}px;--y:${Math.abs(o) * 10}px;--r:${o * 11}deg"><div class="clip"><div class="cover c-${rec.id}">${rec.art}</div></div></div>`;
+    }).join('');
+    $('endTitle').textContent = n ? `You saved ${n} record${n > 1 ? 's' : ''}` : 'Nothing saved this week';
+    $('endText').textContent = `Skipped ${RECORDS.length - n}. Undo brings the last one back.`;
+    end.hidden = false;
+    end.offsetWidth;
+    end.classList.add('in');
+    $('live').textContent = $('endTitle').textContent + '.';
+    // the Save/Skip button that had focus is now disabled: hand focus to Start over
+    if (refocus) $('again').focus();
+    refocus = false;
+  }
+  function hideEnd() { end.classList.remove('in'); end.hidden = true; }
+
+  function reset() {
+    queue.concat([...flying]).forEach(el => el.remove());
+    flying.clear(); history = []; rest = 0;
+    queue = RECORDS.map(make);
+    queue.slice().reverse().forEach(el => deck.append(el));
+    lucide.createIcons({ attrs: { 'stroke-width': 2.4 } });
+    hideEnd(); status(); render();
+  }
+
+  $('saveBtn').addEventListener('click', () => !drag && throwTop(1));
+  $('skipBtn').addEventListener('click', () => !drag && throwTop(-1));
+  $('undoBtn').addEventListener('click', undo);
+  $('again').addEventListener('click', () => {
+    reset(); $('saveBtn').focus();
+    $('live').textContent = `${RECORDS.length} records. ${RECORDS[0].title} first.`;
+  });
+  addEventListener('keydown', e => {
+    if (e.target.closest('button') && (e.key === 'Enter' || e.key === ' ')) return;
+    if (e.key === 'ArrowRight' && !drag) { e.preventDefault(); throwTop(1); }
+    else if (e.key === 'ArrowLeft' && !drag) { e.preventDefault(); throwTop(-1); }
+    else if (e.key === 'Backspace' || e.key === 'z' || e.key === 'Z') { e.preventDefault(); undo(); }
+  });
+
+  // fit: small or landscape screens scale the whole app down instead of cutting it off
+  const app = document.querySelector('.app');
+  function fit() {
+    app.style.zoom = 1;
+    k = Math.min(1, (innerWidth - 24) / 330, (innerHeight - 24) / app.offsetHeight);
+    app.style.zoom = k;
+    W = deck.offsetWidth; COMMIT = W * 0.4;
+  }
+  addEventListener('resize', fit);
+  fit();
+  reset();
+
+  // carousel states and the demo loop
+  const params = new URLSearchParams(location.search);
+  const still = params.get('still');
+  function skipInstant(dir) { throwTop(dir); out([...flying].pop()); rest = 0; }
+  if (still) {
+    frozen = true;
+    if (still === 'drag') {
+      Object.assign(queue[0].s, { x: COMMIT * 0.85, y: 6, f: 1, r: COMMIT * 0.85 * ROT });
+    } else if (still === 'throw') {
+      skipInstant(1);
+      throwTop(-1);
+      Object.assign([...flying][0].s, { x: -250, y: 34, r: -27 });
+      rest = 0.12;
+    } else if (still === 'done') {
+      [1, -1, 1, -1, 1, -1].forEach(skipInstant);
+    }
+    render();
+  }
+  if (params.has('demo')) {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const ease = t => t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+    // a ghost finger: drags the top card, then lets go with a velocity
+    function ghost(toX, toY, ms, f) {
+      const el = queue[0];
+      el.s.f = f; el.s.spring = false;
+      drag = { el, id: -1, pts: [] };
+      const t0 = performance.now();
+      return new Promise(done => (function step(now) {
+        const t = clamp((now - t0) / ms), k = ease(t);
+        move(toX * k, toY * k);
+        drag.pts.push([now, el.s.x, el.s.y]);
+        while (drag.pts.length > 2 && now - drag.pts[0][0] > 100) drag.pts.shift();
+        if (t < 1) requestAnimationFrame(step); else { release(); done(); }
+      })(t0));
+    }
+    (async function loop() {
+      await wait(900);  await ghost(150, -10, 900, 1);
+      await wait(1000); await ghost(-70, 6, 700, -0.7);
+      await wait(900);  await ghost(-80, 4, 140, 1);
+      await wait(1000); throwTop(1);
+      await wait(1000); undo();
+      await wait(1300); throwTop(1);
+      await wait(700);  throwTop(-1);
+      await wait(700);  throwTop(1);
+      await wait(700);  throwTop(-1);
+      await wait(3200); reset(); loop();
+    })();
+  }
+</script>
+</body>
+</html>

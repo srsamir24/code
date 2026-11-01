@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card checkout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --stage: oklch(0.79 0.105 62);
+    --stage-lift: oklch(0.87 0.08 72);
+    --panel: oklch(0.993 0.004 70);
+    --soft: oklch(0.962 0.009 70);
+    --soft-2: oklch(0.935 0.012 70);
+    --ink: oklch(0.22 0.025 50);
+    --ink-2: oklch(0.5 0.03 55);
+    --accent: oklch(0.68 0.17 48);
+    --accent-ink: oklch(0.6 0.17 45);
+    --err: oklch(0.53 0.15 30);
+    --ok: oklch(0.52 0.12 160);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    min-height: 100dvh;
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(60% 45% at 50% 42%, var(--stage-lift), var(--stage));
+    color: var(--ink);
+    display: grid; place-items: center;
+    padding: 16px;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+  }
+  ::selection { background: oklch(0.86 0.09 62); color: var(--ink); }
+  em, i { font-style: normal; }
+
+  .checkout { width: min(400px, 100%); display: grid; }
+
+  /* slide:css */
+  /* the card: two faces in one 3D object, turned by a spring */
+  .scene { position: relative; z-index: 2; width: 340px; height: 214px; justify-self: center; margin-bottom: -96px; perspective: 900px; }
+  .card { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
+  .face { position: absolute; inset: 0; border-radius: 15px; overflow: hidden; backface-visibility: hidden; background: oklch(0.3 0.012 60); color: oklch(0.97 0.01 80); }
+  .back { transform: rotateY(180deg); }
+  /* /slide */
+  /* narrow phones: the card shrinks so it never outgrows the panel */
+  @media (max-width: 371px) { .scene { zoom: 0.88; } }
+  @media (max-width: 330px) { .scene { zoom: 0.8; } }
+  .base, .wipe { position: absolute; inset: 0; background: var(--fill); }
+  .wipe { clip-path: circle(0% at var(--wx) var(--wy)); }
+  .front { --wx: 86%; --wy: 17%; }
+  .back { --wx: 86%; --wy: 84%; }
+  /* guilloche rings, the kind printed on real cards */
+  .rings { position: absolute; inset: 0; background: repeating-radial-gradient(circle at 8% 118%, oklch(1 0 0 / 0.055) 0 1px, transparent 1px 7px); }
+
+  /* light: an iridescent foil and a specular sheen, both steered by the tilt */
+  .foil {
+    position: absolute; inset: 0; mix-blend-mode: color-dodge; opacity: 0.6;
+    background: repeating-linear-gradient(105deg, oklch(0.72 0.15 350) 0, oklch(0.8 0.14 85) 14px, oklch(0.78 0.13 165) 28px, oklch(0.7 0.14 250) 42px, oklch(0.72 0.15 350) 56px);
+    background-position: var(--fx) 0;
+    -webkit-mask-image: radial-gradient(ellipse 34% 46% at var(--gx) var(--gy), #000, transparent);
+    mask-image: radial-gradient(ellipse 34% 46% at var(--gx) var(--gy), #000, transparent);
+  }
+  .glare { position: absolute; inset: 0; mix-blend-mode: screen; background: radial-gradient(ellipse 60% 80% at var(--gx) var(--gy), oklch(1 0 0 / 0.26), oklch(1 0 0 / 0.06) 45%, transparent 70%); }
+  .back .glare { background: radial-gradient(ellipse 60% 80% at calc(100% - var(--gx)) var(--gy), oklch(1 0 0 / 0.22), transparent 70%); }
+  .shade { position: absolute; inset: 0; background: oklch(0.1 0.02 260); opacity: var(--shade, 0); }
+
+  .shadow { position: absolute; inset: 0; border-radius: 18px; background: oklch(0.3 0.09 45); will-change: transform; }
+  .shadow.ambient { filter: blur(22px); }
+  .shadow.contact { filter: blur(6px); }
+
+  /* front */
+  .issuer { position: absolute; left: 22px; top: 19px; font-size: 17px; font-weight: 800; letter-spacing: -0.03em; }
+  .mark { position: absolute; right: 22px; top: 18px; height: 28px; display: grid; place-items: center end; }
+  .back .mark { top: auto; bottom: 18px; }
+  .mark > * { grid-area: 1 / 1; }
+  .visa { font-size: 25px; font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
+  .mc { width: 46px; height: 28px; position: relative; }
+  .mc b { position: absolute; top: 0; width: 28px; height: 28px; border-radius: 50%; background: oklch(0.97 0.01 80 / 0.92); }
+  .mc b + b { right: 0; background: oklch(0.97 0.01 80 / 0.5); }
+  .amex { font-size: 11.5px; font-weight: 800; letter-spacing: 0.02em; padding: 6px 7px; border-radius: 5px; background: oklch(0.97 0.01 80); color: var(--fill-ink, oklch(0.4 0.08 225)); }
+  .chip { position: absolute; left: 22px; top: 66px; width: 44px; height: 34px; }
+  .wave { position: absolute; left: 76px; top: 72px; width: 18px; height: 22px; opacity: 0.8; }
+  .holo { position: absolute; right: 22px; top: 66px; width: 46px; height: 32px; border-radius: 6px; overflow: hidden;
+    background: conic-gradient(from var(--ha, 0deg) at 50% 55%, oklch(0.86 0.1 350), oklch(0.9 0.1 90), oklch(0.88 0.1 170), oklch(0.84 0.1 250), oklch(0.86 0.1 350)); }
+  .holo::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, oklch(1 0 0 / 0.35) 0 1.5px, transparent 1.5px 4px); }
+  .num { position: absolute; left: 22px; top: 116px; display: flex; gap: 13px; font-size: 21.5px; font-weight: 600; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; text-shadow: 0 1px 0 oklch(0 0 0 / 0.35), 0 -1px 0 oklch(1 0 0 / 0.12); }
+  .g { display: flex; }
+  .s { display: inline-grid; width: 0.64em; height: 1.3em; overflow: hidden; justify-items: center; align-items: center; }
+  .s > i { grid-area: 1 / 1; }
+  .foot { position: absolute; left: 22px; right: 22px; bottom: 19px; display: flex; justify-content: space-between; align-items: end; gap: 12px; }
+  .who { font-size: 14.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .who.empty, .exp b.empty { opacity: 0.5; }
+  .exp { display: grid; justify-items: end; gap: 1px; }
+  .exp small { font-size: 10.5px; font-weight: 500; opacity: 0.7; }
+  .exp b { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  /* Amex prints its 4-digit code on the front */
+  .cid { position: absolute; right: 22px; top: 106px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 2px 5px; border-radius: 5px; display: none; transition: box-shadow 200ms var(--ease-out); }
+  .is-amex .cid { display: flex; }
+  .is-amex .holo { display: none; }
+  .cid-on .cid { box-shadow: 0 0 0 2px var(--accent); }
+
+  /* back */
+  .stripe { position: absolute; left: 0; right: 0; top: 24px; height: 42px; background: oklch(0.16 0.01 260); }
+  .sig { position: absolute; left: 22px; top: 84px; width: 206px; height: 38px; border-radius: 4px;
+    background: repeating-linear-gradient(-28deg, oklch(0.95 0.02 80) 0 5px, oklch(0.9 0.03 70) 5px 7px); }
+  .code { position: absolute; left: 236px; top: 84px; width: 66px; height: 38px; border-radius: 6px; background: oklch(0.99 0.004 80); color: var(--ink);
+    display: grid; place-items: center; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums;
+    transition: box-shadow 220ms var(--ease-out), transform 260ms var(--ease-out); }
+  .code > span { display: flex; }
+  .cvc-on .code { box-shadow: 0 0 0 3px var(--accent); transform: scale(1.06); }
+  .code-label { position: absolute; left: 236px; top: 128px; font-size: 10.5px; font-weight: 500; opacity: 0.7; }
+  .fine { position: absolute; left: 22px; bottom: 20px; width: 196px; font-size: 9.5px; line-height: 1.35; opacity: 0.6; }
+
+  /* the form */
+  .panel {
+    position: relative; z-index: 1;
+    background: var(--panel); border-radius: 28px; padding: 118px 20px 20px;
+    box-shadow: 0 50px 90px -40px oklch(0.4 0.1 50 / 0.55), 0 10px 24px -12px oklch(0.4 0.1 50 / 0.3);
+    display: grid; gap: 14px;
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .f { display: grid; gap: 7px; min-width: 0; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13.5px; }
+  .top label { color: var(--ink-2); font-weight: 500; }
+  .top span { color: var(--ink-2); white-space: nowrap; }
+  .top .err:not(:empty) ~ .hint { display: none; }
+  .top .err { white-space: normal; text-align: right; color: var(--err); font-weight: 500; transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out); }
+  .top .err:empty { opacity: 0; transform: translateY(3px); }
+  input {
+    width: 100%; height: 50px; border: 0; border-radius: 13px; padding: 0 15px;
+    background: var(--soft); color: var(--ink); caret-color: var(--accent);
+    font: inherit; font-size: 16.5px; font-weight: 500; font-variant-numeric: tabular-nums;
+    outline: 2px solid transparent; outline-offset: -2px;
+    transition: background-color 160ms ease, outline-color 160ms ease;
+  }
+  input::placeholder { color: oklch(0.62 0.025 60); }
+  @media (hover: hover) and (pointer: fine) { input:hover { background: var(--soft-2); } }
+  input:focus { background: var(--panel); outline-color: var(--accent-ink); }
+  input[aria-invalid="true"] { outline-color: oklch(0.53 0.15 30 / 0.45); }
+  input[aria-invalid="true"]:focus { outline-color: var(--err); }
+
+  .pay {
+    position: relative; height: 54px; margin-top: 4px; border: 0; border-radius: 16px;
+    background: var(--ink); color: var(--panel); font: inherit; font-size: 16.5px; font-weight: 600; cursor: pointer;
+    clip-path: inset(0 0 round 16px);
+    transition: transform 140ms var(--ease-out), clip-path 420ms var(--ease-in-out), background-color 300ms ease;
+  }
+  .pay:active { transform: scale(0.97); }
+  .pay:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: -5px; }
+  .pay > span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 220ms var(--ease-out), filter 220ms var(--ease-out), transform 260ms var(--ease-out); }
+  .pay svg { width: 18px; height: 18px; }
+  .spin, .done { opacity: 0; filter: blur(2px); }
+  .spin svg { animation: turn 700ms linear infinite; }
+  @keyframes turn { to { transform: rotate(1turn); } }
+  .pay[data-state="loading"], .pay[data-state="done"] { outline: none; }
+  .pay[data-state="loading"] { clip-path: inset(0 calc(50% - 27px) round 27px); pointer-events: none; }
+  .pay[data-state="loading"] .label, .pay[data-state="done"] .label { opacity: 0; filter: blur(2px); transform: scale(0.96); }
+  .pay[data-state="loading"] .spin { opacity: 1; filter: none; }
+  .pay[data-state="done"] { background: var(--ok); pointer-events: none; }
+  .pay[data-state="done"] .done { opacity: 1; filter: none; }
+  .done path { stroke-dasharray: 24; stroke-dashoffset: 24; }
+  .pay[data-state="done"] .done path { stroke-dashoffset: 0; transition: stroke-dashoffset 360ms 120ms var(--ease-out); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pay { transition: background-color 200ms ease; }
+    .pay[data-state="loading"], .pay[data-state="done"] { outline: none; }
+  .pay[data-state="loading"] { clip-path: inset(0 0 round 16px); }
+    .code { transition: box-shadow 200ms ease; }
+    .cvc-on .code { transform: none; }
+  }
+</style>
+</head>
+<body>
+<main class="checkout">
+  <div class="scene" id="scene" aria-hidden="true">
+    <div class="shadow ambient" id="shA"></div>
+    <div class="shadow contact" id="shC"></div>
+    <div class="card" id="card">
+      <div class="face front">
+        <div class="base"></div><div class="wipe"></div><div class="rings"></div>
+        <span class="issuer">fjell</span>
+        <div class="mark"></div>
+        <svg class="chip" viewBox="0 0 44 34"><rect width="44" height="34" rx="6" fill="oklch(0.83 0.09 85)"/><path d="M0 11h14M0 23h14M30 11h14M30 23h14M14 0v34M30 0v34M14 17h16" stroke="oklch(0.62 0.08 75)" stroke-width="1.4" fill="none"/></svg>
+        <svg class="wave" viewBox="0 0 18 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7.5a5 5 0 0 1 0 7M7 4.5a10 10 0 0 1 0 13M12 1.5a15 15 0 0 1 0 19"/></svg>
+        <div class="holo"></div>
+        <div class="cid" id="cid"></div>
+        <div class="num" id="cNum"></div>
+        <div class="foot">
+          <div class="who empty" id="cName">Your name</div>
+          <div class="exp"><small>Expires</small><b class="empty" id="cExp">MM/YY</b></div>
+        </div>
+        <div class="foil"></div><div class="glare"></div><div class="shade"></div>
+      </div>
+      <div class="face back">
+        <div class="base"></div><div class="wipe"></div><div class="rings"></div>
+        <div class="stripe"></div>
+        <div class="sig"></div>
+        <div class="code"><span id="cCvc"></span></div>
+        <span class="code-label">Security code</span>
+        <p class="fine">Issued by Fjell Bank. If you find this card, hand it in at any branch.</p>
+        <div class="mark"></div>
+        <div class="glare"></div><div class="shade"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- slide:html -->
+  <form class="panel" id="form" novalidate>
+    <div class="f">
+      <div class="top"><label for="num">Card number</label><span class="err" id="numErr" aria-live="polite"></span></div>
+      <input id="num" inputmode="numeric" autocomplete="cc-number" placeholder="1234 1234 1234 1234" aria-describedby="numErr">
+    </div>
+    <div class="row">
+      <div class="f">
+        <div class="top"><label for="exp">Expiry</label><span class="err" id="expErr" aria-live="polite"></span></div>
+        <input id="exp" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY" maxlength="5" aria-describedby="expErr">
+      </div>
+      <div class="f">
+        <div class="top"><label for="cvc">CVC</label><span class="err" id="cvcErr" aria-live="polite"></span><span class="hint" id="cvcHint">3 on the back</span></div>
+        <input id="cvc" inputmode="numeric" autocomplete="cc-csc" placeholder="123" maxlength="3" aria-describedby="cvcHint cvcErr">
+      </div>
+    </div>
+    <div class="f">
+      <div class="top"><label for="name">Name on card</label><span class="err" id="nameErr" aria-live="polite"></span></div>
+      <input id="name" autocomplete="cc-name" autocapitalize="words" spellcheck="false" placeholder="As it's printed" aria-describedby="nameErr">
+    </div>
+    <button class="pay" id="pay" type="submit" data-state="idle">
+      <span class="label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>Pay $86.00</span>
+      <span class="spin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3a9 9 0 1 1-9 9"/></svg></span>
+      <span class="done" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Paid</span>
+    </button>
+    <p class="sr" id="status" role="status" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)"></p>
+  </form>
+  <!-- /slide -->
+</main>
+<script>
+  const $ = id => document.getElementById(id);
+  const card = $('card'), num = $('num'), exp = $('exp'), cvc = $('cvc'), nameIn = $('name'), pay = $('pay');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const EASE = 'cubic-bezier(0.23, 1, 0.32, 1)';
+  const params = new URLSearchParams(location.search);
+  const still = params.get('still');
+
+  const BRANDS = {
+    none: { groups: [4, 4, 4, 4], cvc: 3, fill: ['oklch(0.38 0.015 60)', 'oklch(0.25 0.012 60)'], mark: '' },
+    visa: { groups: [4, 4, 4, 4], cvc: 3, fill: ['oklch(0.42 0.13 262)', 'oklch(0.22 0.09 268)'], mark: '<b class="visa">VISA</b>' },
+    mc:   { groups: [4, 4, 4, 4], cvc: 3, fill: ['oklch(0.4 0.08 165)', 'oklch(0.23 0.05 172)'], mark: '<span class="mc"><b></b><b></b></span>' },
+    amex: { groups: [4, 6, 5], cvc: 4, fill: ['oklch(0.55 0.09 225)', 'oklch(0.36 0.08 235)'], mark: '<span class="amex">AMEX</span>' },
+  };
+  const fillOf = b => `linear-gradient(140deg, ${BRANDS[b].fill[0]}, ${BRANDS[b].fill[1]})`;
+
+  function detect(d) {
+    if (/^3[47]/.test(d)) return 'amex';
+    if (/^4/.test(d)) return 'visa';
+    if (/^5[1-5]/.test(d)) return 'mc';
+    const n = +d.slice(0, 4);
+    if (d.length >= 4 && n >= 2221 && n <= 2720) return 'mc';
+    return 'none';
+  }
+  function luhn(d) {
+    let sum = 0;
+    for (let i = 0; i < d.length; i++) {
+      let x = +d[d.length - 1 - i];
+      if (i % 2) { x *= 2; if (x > 9) x -= 9; }
+      sum += x;
+    }
+    return sum % 10 === 0;
+  }
+
+  /* ---------- rolling digits ---------- */
+  function slots(el, groups) {
+    el.innerHTML = groups.map(n => `<span class="g">${'<span class="s"><i>•</i></span>'.repeat(n)}</span>`).join('');
+    return [...el.querySelectorAll('.s')];
+  }
+  function roll(slot, ch, animate) {
+    const old = slot.lastElementChild;
+    if (old.textContent === ch) return;
+    const up = ch !== '•'; // digits roll up into place, deletions drop back down
+    const neu = document.createElement('i'); neu.textContent = ch; slot.append(neu);
+    if (!animate) return old.remove();
+    const off = up ? 70 : -70;
+    if (reduce) {
+      neu.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
+      return old.remove();
+    }
+    old.animate([{ transform: 'none', opacity: 1 }, { transform: `translateY(${-off}%)`, opacity: 0, filter: 'blur(2px)' }], { duration: 200, easing: EASE }).onfinish = () => old.remove();
+    neu.animate([{ transform: `translateY(${off}%)`, opacity: 0, filter: 'blur(2px)' }, { transform: 'none', opacity: 1, filter: 'blur(0)' }], { duration: 300, easing: EASE });
+  }
+  const paint = (list, str, animate = true) => list.forEach((s, i) => roll(s, str[i] ?? '•', animate));
+
+  /* ---------- brand: colour field wipes in from the logo corner ---------- */
+  let brand = null, numSlots = [], cvcSlots = [], cidSlots = [];
+  function setBrand(b, animate = true) {
+    if (b === brand) return;
+    const prev = brand; brand = b;
+    const B = BRANDS[b];
+    if (!prev || BRANDS[prev].groups.join() !== B.groups.join()) numSlots = slots($('cNum'), B.groups);
+    if (!prev || BRANDS[prev].cvc !== B.cvc) { cvcSlots = slots($('cCvc'), [B.cvc]); cidSlots = slots($('cid'), [B.cvc]); }
+    card.classList.toggle('is-amex', b === 'amex');
+    cvc.maxLength = B.cvc; cvc.placeholder = B.cvc === 4 ? '1234' : '123';
+    $('cvcHint').textContent = b === 'amex' ? '4 on the front' : '3 on the back';
+    card.querySelectorAll('.mark').forEach(m => {
+      m.innerHTML = B.mark;
+      if (animate && m.firstChild) m.firstChild.animate([{ opacity: 0, transform: 'scale(0.9)', filter: 'blur(2px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }], { duration: 320, delay: 120, easing: EASE, fill: 'backwards' });
+    });
+    card.querySelectorAll('.face').forEach(face => {
+      const base = face.querySelector('.base'), wipe = face.querySelector('.wipe');
+      wipe.getAnimations().forEach(a => a.finish());
+      if (!animate || !prev) { base.style.setProperty('--fill', fillOf(b)); return; }
+      wipe.style.setProperty('--fill', fillOf(b));
+      const at = getComputedStyle(face);
+      const pos = `at ${at.getPropertyValue('--wx')} ${at.getPropertyValue('--wy')}`;
+      const frames = reduce ? [{ opacity: 0, clipPath: `circle(150% ${pos})` }, { opacity: 1, clipPath: `circle(150% ${pos})` }]
+                            : [{ clipPath: `circle(0% ${pos})` }, { clipPath: `circle(150% ${pos})` }];
+      wipe.animate(frames, { duration: reduce ? 240 : 620, easing: 'cubic-bezier(0.77, 0, 0.175, 1)' }).onfinish = () => base.style.setProperty('--fill', fillOf(b));
+    });
+    onCvc();   // trims a 4-digit code to 3 and repaints the new slots
+    if (animate) sync();
+  }
+
+  /* ---------- the 3D card: one spring per axis ---------- */
+  const S = { rx: { x: 0, v: 0, t: 0 }, ry: { x: 0, v: 0, t: 0 } };
+  let tilt = { x: 0, y: 0 }, flipped = false, raf = 0, last = 0;
+  const shA = $('shA'), shC = $('shC');
+  function render() {
+    const rx = S.rx.x, ry = S.ry.x, r = ry * Math.PI / 180;
+    const lift = 34 * Math.abs(Math.sin(r));          // the card lifts as it turns
+    const cos = Math.abs(Math.cos(r));
+    const side = Math.sin((ry - Math.round(ry / 180) * 180) * Math.PI / 180);
+    card.style.transform = `translateZ(${lift}px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+    card.style.setProperty('--gx', `${50 + side * 60}%`);
+    card.style.setProperty('--fx', `${side * 160 + rx * 4}px`);   // the foil bands slide as the card turns
+    card.style.setProperty('--gy', `${50 - Math.sin(rx * Math.PI / 180) * 190}%`);
+    card.style.setProperty('--shade', ((1 - cos) * 0.55).toFixed(3));
+    card.style.setProperty('--ha', `${side * 220 + rx * 6}deg`);
+    // shadow falls away from the light and away from the tilt, and spreads as the card lifts
+    const sx = -side * 34, sy = 46 - rx * 1.1 + lift * 0.6;
+    shA.style.transform = `translate(${sx}px, ${sy}px) scale(${0.86 * Math.max(cos, 0.18)}, ${0.8 - lift * 0.003})`;
+    shA.style.opacity = (0.5 - lift * 0.004).toFixed(3);
+    shC.style.transform = `translate(${sx * 0.3}px, ${12 - rx * 0.3 + lift * 0.25}px) scale(${0.94 * Math.max(cos, 0.12)}, 0.92)`;
+    shC.style.opacity = (0.38 - lift * 0.008).toFixed(3);
+  }
+  // slide:js
+  function step(now) {
+    const dt = Math.min(0.032, Math.max(0, now - last) / 1e3);
+    last = now;
+    let busy = false;
+    for (const a of Object.values(S)) {    // rx and ry
+      const f = -180 * (a.x - a.t) - 19 * a.v;  // k, damping
+      a.v += f * dt;
+      a.x += a.v * dt;
+      const live = Math.abs(a.x - a.t) + Math.abs(a.v) > .01;
+      if (live) busy = true; else { a.x = a.t; a.v = 0; }
+    }
+    render();
+    raf = busy ? requestAnimationFrame(step) : 0;
+  }
+  // /slide
+  function sync() {
+    S.rx.t = tilt.x;
+    S.ry.t = (flipped ? 180 : 0) + tilt.y;  // flip = +180
+    if (still) return;
+    // reduced motion: no spring, straight to the target
+    if (reduce) { S.rx.x = S.rx.t = 0; S.ry.x = S.ry.t = flipped ? 180 : 0; return render(); }
+    if (!raf) raf = requestAnimationFrame(step);
+  }
+  function flip(on) { if (flipped !== on) { flipped = on; card.classList.toggle('cvc-on', on); sync(); } }
+
+  // tilt toward the pointer, wherever it is on the page
+  const scene = $('scene');
+  addEventListener('pointermove', e => {
+    if (still || reduce || e.pointerType === 'touch' && !e.buttons) return;
+    demoTilt = false;
+    const r = scene.getBoundingClientRect();
+    const nx = Math.max(-1, Math.min(1, (e.clientX - r.left - r.width / 2) / (r.width / 2 + 140)));
+    const ny = Math.max(-1, Math.min(1, (e.clientY - r.top - r.height / 2) / (r.height / 2 + 200)));
+    tilt = { x: -ny * 14, y: nx * 18 }; sync();
+  });
+  document.documentElement.addEventListener('pointerleave', () => { tilt = { x: 0, y: 0 }; sync(); });
+
+  /* ---------- inputs ---------- */
+  const group = (d, groups) => { let out = [], i = 0; for (const n of groups) { if (i >= d.length) break; out.push(d.slice(i, i += n)); } return out.join(' '); };
+  function err(id, input, msg) { $(id).textContent = msg; input.setAttribute('aria-invalid', msg ? 'true' : 'false'); }
+
+  function onNumber(advance) {
+    const caret = num.value.slice(0, num.selectionStart).replace(/\D/g, '').length;
+    let d = num.value.replace(/\D/g, '');
+    setBrand(detect(d));
+    const max = BRANDS[brand].groups.reduce((a, b) => a + b);
+    d = d.slice(0, max);
+    num.value = group(d, BRANDS[brand].groups);
+    if (document.activeElement === num) {          // keep the caret where the user typed
+      let p = 0, seen = 0;
+      while (seen < caret && p < num.value.length) { if (/\d/.test(num.value[p])) seen++; p++; }
+      num.setSelectionRange(p, p);
+    }
+    paint(numSlots, d);
+    err('numErr', num, d.length === max && !luhn(d) ? 'Looks like a typo' : '');
+    if (advance && d.length === max && luhn(d)) exp.focus();
+  }
+  function checkExpiry(final) {
+    const d = exp.value.replace(/\D/g, '');
+    const m = +d.slice(0, 2), y = 2000 + +d.slice(2);
+    const now = new Date();
+    if (d.length >= 2 && (m < 1 || m > 12)) return 'Month 01–12';
+    if (d.length === 4 && (y < now.getFullYear() || y === now.getFullYear() && m < now.getMonth() + 1)) return 'Expired';
+    if (final && d.length < 2) return 'Add the month';
+    if (final && d.length < 4) return 'Add the year';
+    return '';
+  }
+  function onExpiry(advance) {
+    let d = exp.value.replace(/\D/g, '').slice(0, 4);
+    if (d.length === 1 && d > '1') d = '0' + d;     // "4" can only mean April
+    exp.value = d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d;
+    const shown = (d + 'MMYY'.slice(d.length)).replace(/^(..)/, '$1/');
+    $('cExp').textContent = shown; $('cExp').classList.toggle('empty', !d);
+    const msg = checkExpiry(false);
+    err('expErr', exp, msg);
+    if (advance && d.length === 4 && !msg) cvc.focus();
+  }
+  function onCvc() {
+    const d = cvc.value.replace(/\D/g, '').slice(0, BRANDS[brand].cvc);
+    cvc.value = d;
+    paint(cvcSlots, d); paint(cidSlots, d);
+    if (d.length === BRANDS[brand].cvc) err('cvcErr', cvc, '');
+  }
+  function onName() {
+    const v = nameIn.value.trim();
+    $('cName').textContent = v || 'Your name'; $('cName').classList.toggle('empty', !v);
+    if (v) err('nameErr', nameIn, '');
+  }
+  // after Paid, the next edit makes the button payable again
+  $('form').addEventListener('input', () => { if (pay.dataset.state === 'done') pay.dataset.state = 'idle'; });
+  num.addEventListener('input', e => onNumber(e.inputType !== 'deleteContentBackward'));
+  exp.addEventListener('input', e => onExpiry(e.inputType !== 'deleteContentBackward'));
+  cvc.addEventListener('input', onCvc);
+  nameIn.addEventListener('input', onName);
+  num.addEventListener('blur', () => { const d = num.value.replace(/\D/g, ''); if (d && d.length < BRANDS[brand].groups.reduce((a, b) => a + b)) err('numErr', num, 'A few digits short'); });
+  exp.addEventListener('blur', () => exp.value && err('expErr', exp, checkExpiry(true)));
+  // the code lives on the back, so the card turns over; Amex keeps it on the front
+  cvc.addEventListener('focus', () => {
+    if (brand === 'amex') card.classList.add('cid-on');
+    else flip(true);
+  });
+  cvc.addEventListener('blur', () => { card.classList.remove('cid-on'); flip(false); });
+
+  $('form').addEventListener('submit', e => {
+    e.preventDefault();
+    if (pay.dataset.state !== 'idle') return;   // Enter while loading does nothing
+    const d = num.value.replace(/\D/g, ''), max = BRANDS[brand].groups.reduce((a, b) => a + b);
+    err('numErr', num, d.length < max ? (d ? 'A few digits short' : 'Add your card number') : luhn(d) ? '' : 'Looks like a typo');
+    err('expErr', exp, checkExpiry(true));
+    const n = BRANDS[brand].cvc;
+    err('cvcErr', cvc, cvc.value.length < n ? `Needs ${n} digits` : '');
+    err('nameErr', nameIn, nameIn.value.trim() ? '' : 'Add the name on the card');
+    const bad = [num, exp, cvc, nameIn].find(i => i.getAttribute('aria-invalid') === 'true');
+    if (bad) return bad.focus();
+    pay.dataset.state = 'loading'; $('status').textContent = 'Paying';
+    setTimeout(() => { pay.dataset.state = 'done'; $('status').textContent = 'Paid $86.00'; }, 1500);
+  });
+
+  /* ---------- start, stills and demo ---------- */
+  setBrand('none', false);
+  render();
+  function fill(n, x, c, who) {
+    num.value = n; onNumber(false);
+    exp.value = x; onExpiry(false);
+    nameIn.value = who; onName();
+    if (c) { cvc.value = c; onCvc(); }
+  }
+  if (still === 'front') {
+    fill('4539 5260 1815 9083', '09/29', '', 'Maren Solberg');
+    S.rx.x = 15; S.ry.x = -25; render();
+  }
+  if (still === 'back') {
+    fill('4539 5260 1815 9083', '09/29', '381', 'Maren Solberg');
+    cvc.focus();
+    S.rx.x = 8; S.ry.x = 180 + 17; render();
+  }
+
+  if (still === 'amex') {
+    fill('3714 544992 07074', '06/30', '7284', 'Ines Haugland');
+    cvc.focus();
+    S.rx.x = 10; S.ry.x = 18; render();
+  }
+
+  let demoTilt = params.has('demo');
+  if (params.has('demo')) {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const type = async (el, text, fn, gap = 70) => { el.focus(); for (const ch of text) { el.value += ch; fn(); await wait(gap); } };
+    (function wobble(t) { if (demoTilt) { tilt = { x: Math.sin(t / 1300) * 8, y: Math.sin(t / 900) * 15 }; sync(); } requestAnimationFrame(wobble); })(0);
+    (async function loop() {
+      fill('', '', '', ''); cvc.value = ''; onCvc(); pay.dataset.state = 'idle'; setBrand('none');
+      await wait(900);
+      await type(num, '5412849340722470', () => onNumber(false), 85); exp.focus();
+      await type(exp, '1128', () => onExpiry(false), 110);
+      await wait(200); cvc.focus(); await wait(700);
+      await type(cvc, '417', onCvc, 160); await wait(700);
+      await type(nameIn, 'Jonas Eide', onName, 60); await wait(500);
+      nameIn.blur(); pay.click(); await wait(2800);
+      pay.dataset.state = 'idle'; num.focus(); num.value = ''; onNumber(false); await wait(400);
+      await type(num, '371454499207074', () => onNumber(false), 85); await wait(600);
+      cvc.focus(); await wait(1600); cvc.blur();
+      await wait(1200); loop();
+    })();
+  }
+</script>
+</body>
+</html>

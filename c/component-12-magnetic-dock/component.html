@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magnetic dock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --stage: oklch(0.7 0.065 358);
+    --stage-lift: oklch(0.79 0.055 358);
+    --shelf: oklch(0.955 0.018 358);
+    --shelf-edge: oklch(0.995 0.005 358);
+    --bezel: oklch(0.23 0.025 350);
+    --ink: oklch(0.24 0.03 358);
+    --tip: oklch(0.25 0.03 358);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(60% 45% at 50% 52%, var(--stage-lift), var(--stage));
+    color: var(--ink);
+    display: grid; place-items: center;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+  }
+  ::selection { background: var(--shelf); color: var(--ink); }
+  em, i { font-style: normal; }
+  svg text { font-family: "Inter Tight", system-ui, sans-serif; }
+
+  /* a small display for context: flat-colour wallpaper, three desktop files, the dock on its bottom edge */
+  /* the display is drawn at 580px and scaled down as one piece on small screens */
+  .fit { width: calc(580px * var(--fit, 1)); height: calc(var(--screen-h, 420px) * var(--fit, 1)); }
+  .screen {
+    transform: scale(var(--fit, 1)); transform-origin: 0 0;
+    width: 580px; padding: 10px; border-radius: 30px; background: var(--bezel);
+    box-shadow: 0 2px 3px oklch(0.25 0.05 355 / 0.3), 0 36px 40px -26px oklch(0.25 0.06 355 / 0.6);
+  }
+  .display { position: relative; height: 380px; padding: 16px; border-radius: 20px; overflow: hidden; background: oklch(0.88 0.04 30); }
+  .wall { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .files { position: absolute; top: 18px; right: 14px; display: flex; gap: 4px; align-items: end; }
+  .file { display: grid; justify-items: center; gap: 5px; width: 76px; font-size: 12px; font-weight: 600; color: oklch(0.3 0.05 350); }
+  .doc { position: relative; width: 36px; height: 44px; border-radius: 4px; background: oklch(0.99 0.004 60); box-shadow: 0 1px 2px oklch(0.3 0.05 350 / 0.25); overflow: hidden; }
+  .doc::after { content: ""; position: absolute; top: 0; right: 0; width: 11px; height: 11px; background: oklch(0.88 0.02 40); border-bottom-left-radius: 3px; }
+  .doc.pic::before { content: ""; position: absolute; inset: 8px 5px 14px; border-radius: 2px; background: linear-gradient(oklch(0.8 0.08 230) 55%, oklch(0.62 0.1 160) 55%); }
+  .doc.text::before { content: ""; position: absolute; left: 6px; right: 8px; top: 15px; height: 18px; background: repeating-linear-gradient(oklch(0.8 0.02 350) 0 2.5px, transparent 2.5px 6px); }
+  .folder { position: relative; width: 46px; height: 36px; margin-top: 8px; border-radius: 5px; background: oklch(0.5 0.13 345); box-shadow: 0 1px 2px oklch(0.3 0.05 350 / 0.25); }
+  .folder::before { content: ""; position: absolute; left: 0; top: -6px; width: 20px; height: 9px; border-radius: 4px 4px 0 0; background: inherit; }
+
+  /* the dock: one box with room above the shelf for magnified icons and the label */
+  .dock { position: absolute; left: 0; bottom: 8px; width: 560px; height: 172px; touch-action: none; }
+  .shelf {
+    position: absolute; bottom: 0; left: 0; height: 56px; border-radius: 19px;
+    background: var(--shelf);
+    box-shadow:
+      inset 0 1px 0 var(--shelf-edge),
+      0 1px 2px oklch(0.35 0.08 358 / 0.25),
+      0 24px 40px -18px oklch(0.35 0.08 358 / 0.55);
+  }
+  .sep { position: absolute; bottom: 13px; left: 0; width: 2px; height: 28px; border-radius: 1px; background: oklch(0.45 0.05 358 / 0.28); }
+
+  /* tiles are drawn at full magnification (92px) and only ever scaled down, so they stay sharp */
+  .app {
+    position: absolute; left: 0; bottom: 9px; width: 92px; height: 92px; padding: 0;
+    border: 0; background: none; font: inherit; cursor: pointer; transform-origin: 0 100%;
+    filter: drop-shadow(0 1px 1px oklch(0.3 0.06 358 / 0.3)) drop-shadow(0 6px 7px oklch(0.3 0.06 358 / 0.22));
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .app:focus { outline: none; }
+  /* the ring is divided by the icon's own scale, so it stays 3px whatever size the icon is */
+  .app:focus-visible { outline: calc(3px / var(--k, 1)) solid var(--ink); outline-offset: calc(5px / var(--k, 1)); border-radius: 22px; }
+
+  .dot {
+    position: absolute; left: 0; bottom: 2px; width: 5px; height: 5px; margin-left: -2.5px;
+    border-radius: 50%; background: var(--ink);
+    opacity: 0; scale: 0.5;
+    transition: opacity 200ms var(--ease-out), scale 200ms var(--ease-out);
+  }
+  .dot.on { opacity: 0.85; scale: 1; }
+  /* a shadow left on the shelf while an icon is in the air: it shrinks and fades as the icon rises */
+  .pool {
+    position: absolute; left: 0; bottom: 6px; width: 60px; height: 10px; margin-left: -30px;
+    border-radius: 50%; background: radial-gradient(closest-side, oklch(0.3 0.07 358 / 0.45), transparent);
+    opacity: 0; pointer-events: none;
+  }
+
+  /* the label: follows the icon every frame, scales from its bottom edge, instant after the first */
+  .tip { position: absolute; left: 0; bottom: 0; pointer-events: none; }
+  .tip-in {
+    display: block; position: relative;
+    padding: 6px 11px 7px; border-radius: 9px;
+    background: var(--tip); color: oklch(0.98 0.005 358);
+    font-size: 13.5px; font-weight: 600; letter-spacing: -0.005em; white-space: nowrap;
+    opacity: 0; transform: translateY(4px) scale(0.96); transform-origin: 50% 100%;
+    transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
+  }
+  .tip-in::after {
+    content: ""; position: absolute; left: 50%; bottom: -4px; width: 9px; height: 9px; margin-left: -4.5px;
+    background: inherit; border-radius: 2px; transform: rotate(45deg);
+  }
+  .tip.open .tip-in { opacity: 1; transform: none; }
+  .tip.instant .tip-in { transition-duration: 0ms; }
+
+  .cursor { position: absolute; left: 0; bottom: 0; width: 22px; height: 22px; pointer-events: none; display: none; }
+  .cursor.on { display: block; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tip-in, .tip.open .tip-in { transform: none; }
+  }
+</style>
+</head>
+<body>
+<!-- the icon art shares one squircle and one light source -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <clipPath id="sq" clipPathUnits="userSpaceOnUse"><path d="M50 0C90 0 100 10 100 50S90 100 50 100 0 90 0 50 10 0 50 0Z"/></clipPath>
+    <linearGradient id="lit" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".3"/>
+      <stop offset=".45" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".12"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="fit" id="fit"><div class="screen" id="screen">
+<div class="display">
+  <svg class="wall" viewBox="0 0 560 380" preserveAspectRatio="none" aria-hidden="true">
+    <circle cx="150" cy="120" r="58" style="fill:oklch(0.94 0.06 75)"/>
+    <path d="M0 210C110 162 210 178 320 208s180 8 240-26V380H0z" style="fill:oklch(0.77 0.07 358)"/>
+    <path d="M0 270c120-36 250-24 360-11s160-9 200-25V380H0z" style="fill:oklch(0.64 0.09 350)"/>
+  </svg>
+  <div class="files">
+    <div class="file"><span class="doc pic"></span>Moodboard</div>
+    <div class="file"><span class="doc text"></span>Brief.pdf</div>
+    <div class="file"><span class="folder"></span>Fonts</div>
+  </div>
+<div class="dock" id="dock" role="toolbar" aria-label="Dock">
+  <div class="shelf" id="shelf"></div>
+  <span class="sep" id="sep" aria-hidden="true"></span>
+
+  <button class="app" type="button" aria-label="Sketch" aria-pressed="false">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><g clip-path="url(#sq)">
+      <rect width="100" height="100" style="fill:oklch(0.9 0.05 255)"/>
+      <rect x="37" y="9" width="26" height="14" rx="4" style="fill:oklch(0.68 0.17 32)"/>
+      <path d="M50 89L31 53c0-15 8-25 19-31 11 6 19 16 19 31z" style="fill:oklch(0.42 0.14 262)"/>
+      <path d="M50 87V58" stroke-width="3.5" stroke-linecap="round" style="stroke:oklch(0.9 0.05 255)"/>
+      <circle cx="50" cy="53" r="5.5" style="fill:oklch(0.9 0.05 255)"/>
+      <rect width="100" height="100" fill="url(#lit)"/></g></svg>
+  </button>
+  <button class="app" type="button" aria-label="Swatches" aria-pressed="false">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><g clip-path="url(#sq)">
+      <rect width="100" height="100" style="fill:oklch(0.95 0.06 92)"/>
+      <rect x="39" y="22" width="22" height="58" rx="7" transform="rotate(-30 50 74)" style="fill:oklch(0.42 0.13 345)"/>
+      <rect x="39" y="22" width="22" height="58" rx="7" transform="rotate(30 50 74)" style="fill:oklch(0.47 0.09 165)"/>
+      <rect x="39" y="22" width="22" height="58" rx="7" style="fill:oklch(0.68 0.17 32)"/>
+      <circle cx="50" cy="72" r="4" style="fill:oklch(0.95 0.06 92)"/>
+      <rect width="100" height="100" fill="url(#lit)"/></g></svg>
+  </button>
+  <button class="app" type="button" aria-label="Type" aria-pressed="false">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><g clip-path="url(#sq)">
+      <rect width="100" height="100" style="fill:oklch(0.92 0.045 345)"/>
+      <text x="50" y="66" text-anchor="middle" font-size="46" font-weight="800" letter-spacing="-2" style="fill:oklch(0.42 0.13 345)">Aa</text>
+      <rect x="24" y="73" width="52" height="6" rx="3" style="fill:oklch(0.68 0.17 32)"/>
+      <rect width="100" height="100" fill="url(#lit)"/></g></svg>
+  </button>
+  <button class="app" type="button" aria-label="Layout" aria-pressed="false">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><g clip-path="url(#sq)">
+      <rect width="100" height="100" style="fill:oklch(0.92 0.045 160)"/>
+      <rect x="21" y="21" width="27" height="58" rx="7" style="fill:oklch(0.47 0.09 165)"/>
+      <rect x="53" y="21" width="26" height="26" rx="7" style="fill:oklch(0.47 0.09 165)"/>
+      <rect x="53" y="53" width="26" height="26" rx="7" style="fill:oklch(0.68 0.17 32)"/>
+      <rect width="100" height="100" fill="url(#lit)"/></g></svg>
+  </button>
+  <button class="app" type="button" aria-label="Inbox" aria-pressed="false">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><g clip-path="url(#sq)">
+      <rect width="100" height="100" style="fill:oklch(0.92 0.045 210)"/>
+      <rect x="32" y="18" width="36" height="28" rx="4" style="fill:oklch(0.86 0.13 88)"/>
+      <path d="M38 27h24M38 35h15" stroke-width="3.5" stroke-linecap="round" style="stroke:oklch(0.62 0.12 75)"/>
+      <path d="M19 50h19l5 9h14l5-9h19v24a7 7 0 0 1-7 7H26a7 7 0 0 1-7-7z" style="fill:oklch(0.45 0.1 225)"/>
+      <rect width="100" height="100" fill="url(#lit)"/></g></svg>
+  </button>
+  <button class="app" type="button" aria-label="Plan" aria-pressed="false">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><g clip-path="url(#sq)">
+      <rect width="100" height="100" style="fill:oklch(0.93 0.045 40)"/>
+      <rect x="20" y="24" width="60" height="56" rx="9" style="fill:oklch(0.99 0.005 40)"/>
+      <path d="M20 33a9 9 0 0 1 9-9h42a9 9 0 0 1 9 9v7H20z" style="fill:oklch(0.6 0.17 32)"/>
+      <rect x="33" y="16" width="6" height="15" rx="3" style="fill:oklch(0.42 0.13 345)"/><rect x="61" y="16" width="6" height="15" rx="3" style="fill:oklch(0.42 0.13 345)"/>
+      <g style="fill:oklch(0.6 0.17 32 / 0.3)"><circle cx="33" cy="53" r="4"/><circle cx="50" cy="53" r="4"/><circle cx="67" cy="53" r="4"/><circle cx="33" cy="68" r="4"/><circle cx="67" cy="68" r="4"/></g>
+      <circle cx="50" cy="68" r="6.5" style="fill:oklch(0.42 0.13 345)"/>
+      <rect width="100" height="100" fill="url(#lit)"/></g></svg>
+  </button>
+  <button class="app" type="button" aria-label="Sound" aria-pressed="false">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><g clip-path="url(#sq)">
+      <rect width="100" height="100" style="fill:oklch(0.34 0.08 345)"/>
+      <g style="fill:oklch(0.86 0.13 88)"><rect x="21" y="42" width="7" height="16" rx="3.5"/><rect x="33" y="33" width="7" height="34" rx="3.5"/><rect x="57" y="29" width="7" height="42" rx="3.5"/><rect x="69" y="39" width="7" height="22" rx="3.5"/></g>
+      <rect x="45" y="22" width="7" height="56" rx="3.5" style="fill:oklch(0.68 0.17 32)"/>
+      <rect width="100" height="100" fill="url(#lit)"/></g></svg>
+  </button>
+  <button class="app" type="button" aria-label="Downloads" data-stack>
+    <svg viewBox="0 0 100 100" aria-hidden="true"><g clip-path="url(#sq)">
+      <rect width="100" height="100" style="fill:oklch(0.93 0.012 345)"/>
+      <path d="M50 20v34M37 43l13 13 13-13" fill="none" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" style="stroke:oklch(0.68 0.17 32)"/>
+      <path d="M24 60v11a7 7 0 0 0 7 7h38a7 7 0 0 0 7-7V60" fill="none" stroke-width="8" stroke-linecap="round" style="stroke:oklch(0.36 0.03 345)"/>
+      <rect width="100" height="100" fill="url(#lit)"/></g></svg>
+  </button>
+  <button class="app" type="button" aria-label="Trash" data-stack>
+    <svg viewBox="0 0 100 100" aria-hidden="true"><g clip-path="url(#sq)">
+      <rect width="100" height="100" style="fill:oklch(0.93 0.012 345)"/>
+      <rect x="41" y="17" width="18" height="9" rx="3" style="fill:oklch(0.36 0.03 345)"/>
+      <rect x="23" y="24" width="54" height="9" rx="4.5" style="fill:oklch(0.36 0.03 345)"/>
+      <path d="M30 38h40l-3 37a6 6 0 0 1-6 5.5H39a6 6 0 0 1-6-5.5z" style="fill:oklch(0.36 0.03 345)"/>
+      <path d="M43 47v24M57 47v24" stroke-width="4" stroke-linecap="round" style="stroke:oklch(0.93 0.012 345)"/>
+      <rect width="100" height="100" fill="url(#lit)"/></g></svg>
+  </button>
+
+  <span class="pool"></span><span class="pool"></span><span class="pool"></span><span class="pool"></span>
+  <span class="pool"></span><span class="pool"></span><span class="pool"></span>
+  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+  <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+  <div class="tip" id="tip" aria-hidden="true"><span class="tip-in" id="tipText"></span></div>
+  <svg class="cursor" id="cursor" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2.5v17.2l4.3-4.1 2.8 6.4 3.1-1.3-2.8-6.3h6z" fill="#111" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+</div>
+</div>
+</div></div>
+
+<script>
+  const BASE = 38, MAX = 92 / 38, GAP = 5, PADX = 9, SEP = 12;
+  const RANGE = 106;                       // px from the pointer where magnification ends
+  const dock = document.getElementById('dock');
+  const apps = [...dock.querySelectorAll('.app')];
+  const dots = [...dock.querySelectorAll('.dot')];
+  const pools = [...dock.querySelectorAll('.pool')];
+  const SEP_AT = apps.findIndex(b => b.hasAttribute('data-stack'));
+  const W = dock.clientWidth;
+  const state = apps.map(() => ({ s: 1, v: 0, press: 1, running: false, bounceAt: null, hops: null }));
+
+  // fit the whole display to small screens; pointer maths divides by the same factor
+  const fitEl = document.getElementById('fit'), screenEl = document.getElementById('screen');
+  let K = 1;
+  function fit() {
+    const h = screenEl.offsetHeight;
+    K = Math.min(1, (innerWidth - 24) / 580, (innerHeight - 24) / h);
+    fitEl.style.setProperty('--fit', K); fitEl.style.setProperty('--screen-h', h + 'px');
+  }
+  fit(); addEventListener('resize', fit);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // rest centres: distance is always measured here, so growth never feeds back into itself
+  const restW = apps.length * BASE + (apps.length - 1) * GAP + SEP + PADX * 2;
+  const rest = [];
+  { let x = (W - restW) / 2 + PADX;
+    apps.forEach((_, i) => { if (i === SEP_AT) x += SEP; rest.push(x + BASE / 2); x += BASE + GAP; }); }
+  // cosine falloff: 1 under the pointer, easing to 0 at RANGE
+  const falloff = d => d >= RANGE ? 0 : (1 + Math.cos(Math.PI * d / RANGE)) / 2;
+
+  let pointer = null;                     // dock-local x, or null when nothing is hovered or focused
+  let mode = null, raf = 0, last = 0;
+
+  const BOUNCE = [{ ms: 420, h: 0.55 }, { ms: 330, h: 0.22 }];   // two hops, the second lower
+  const NUDGE = [{ ms: 240, h: 0.14 }];                           // Downloads and Trash: one small hop
+  function bounceY(i, now) {
+    const st = state[i]; if (st.bounceAt === null) return 0;
+    let t = now - st.bounceAt;
+    for (const b of st.hops) {
+      if (t < b.ms) { const u = t / b.ms; return -4 * u * (1 - u) * b.h * BASE * st.s; }
+      t -= b.ms;
+    }
+    st.bounceAt = null; return 0;
+  }
+
+  function nearest(x) {
+    let best = 0;
+    rest.forEach((c, i) => { if (Math.abs(c - x) < Math.abs(rest[best] - x)) best = i; });
+    return best;
+  }
+
+  const shelf = document.getElementById('shelf'), sep = document.getElementById('sep');
+  const tip = document.getElementById('tip'), tipText = document.getElementById('tipText');
+  const cursor = document.getElementById('cursor');
+  let tipFor = -1, tipWarm = false, tipTimer = 0, coolTimer = 0;
+
+  function frame(now) {
+    const dt = Math.min(0.032, (now - last) / 1000 || 0.016); last = now;
+    let moving = false;
+    // one spring per icon toward its target size; the spring keeps its velocity if the target moves
+    state.forEach((st, i) => {
+      const d = pointer === null ? Infinity
+        : Math.abs(pointer - rest[i]);
+      const target = 1 + (MAX - 1) * falloff(d);
+      if (reduce) { st.s = target; st.v = 0; }
+      else {
+        const a = -420 * (st.s - target) - 30 * st.v;
+        st.v += a * dt; st.s += st.v * dt;
+      }
+      st.press += ((st.pressed ? 0.94 : 1) - st.press) * Math.min(1, dt * 28);
+      if (Math.abs(st.s - target) > 0.001 || Math.abs(st.v) > 0.001 || st.bounceAt !== null || Math.abs(st.press - (st.pressed ? 0.94 : 1)) > 0.002) moving = true;
+    });
+    // neighbours make room: widths add up left to right and the shelf stays centred
+    const widths = state.map(st => BASE * st.s);
+    const total = widths.reduce((a, b) => a + b, 0) + GAP * (apps.length - 1) + SEP + PADX * 2;
+    let x = (W - total) / 2 + PADX;
+    shelf.style.transform = `translateX(${(W - total) / 2}px)`;
+    shelf.style.width = total + 'px';
+    const centres = [], tops = [];
+    apps.forEach((b, i) => {
+      if (i === SEP_AT) { sep.style.transform = `translateX(${x + (SEP - GAP) / 2 - 1}px)`; x += SEP; }
+      const w = widths[i], k = (w / 92) * state[i].press;
+      if (b === document.activeElement) b.style.setProperty('--k', k);
+      const y = bounceY(i, now);
+      const off = (w - w * state[i].press) / 2;
+      b.style.transform = `translate(${x + off}px, ${y}px) scale(${k})`;
+      centres.push(x + w / 2); tops.push(9 + w * state[i].press - y);
+      if (dots[i]) dots[i].style.transform = `translateX(${x + w / 2}px)`;
+      if (pools[i]) {
+        const lift = Math.min(1, -y / (0.6 * w));
+        pools[i].style.opacity = y < 0 ? 1 - lift * 0.6 : 0;
+        pools[i].style.transform = `translateX(${x + w / 2}px) scale(${(w / 60) * (1 - lift * 0.45)}, 1)`;
+      }
+      x += w + GAP;
+    });
+    // the label rides on top of the icon it names, and hides while that icon bounces
+    if (tipFor >= 0) {
+      tip.style.transform = `translate(${centres[tipFor]}px, ${-(tops[tipFor] + 10)}px) translateX(-50%)`;
+      tip.classList.toggle('open', state[tipFor].bounceAt === null && tipShown);
+    }
+    if (moving && !frozen) raf = requestAnimationFrame(frame); else raf = 0;
+  }
+  let frozen = false, tipShown = false;
+  function kick() { if (!raf && !frozen) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+
+  // first label waits 160ms; once one is open, moving to the next is instant
+  function showTip(i) {
+    clearTimeout(coolTimer);
+    if (i === tipFor && tipShown) return;
+    tipFor = i; tipText.textContent = apps[i].getAttribute('aria-label');
+    if (tipWarm) { tip.classList.add('instant'); tipShown = true; }
+    else {
+      tip.classList.remove('instant'); clearTimeout(tipTimer);
+      tipTimer = setTimeout(() => { tipShown = tipWarm = true; kick(); }, 160);
+    }
+  }
+  function hideTip() {
+    clearTimeout(tipTimer); tipShown = false; tip.classList.remove('open', 'instant');
+    coolTimer = setTimeout(() => { tipWarm = false; tipFor = -1; }, 400);
+  }
+
+  function hover(x) {
+    pointer = x;
+    if (x === null) hideTip(); else showTip(nearest(x));
+    kick();
+  }
+
+  // launch: two decaying hops and a running dot; a second press quits (the dot fades)
+  function launch(i) {
+    const st = state[i];
+    if (st.bounceAt !== null) return;
+    if (apps[i].hasAttribute('data-stack')) {      // stacks have no app to open: a small hop says "heard you"
+      if (!reduce) { st.hops = NUDGE; st.bounceAt = performance.now(); kick(); }
+      return;
+    }
+    st.running = !st.running;
+    apps[i].setAttribute('aria-pressed', st.running);
+    dots[i].classList.toggle('on', st.running);
+    if (st.running && !reduce) { st.hops = BOUNCE; st.bounceAt = performance.now(); }
+    kick();
+  }
+
+  // mouse: hover magnifies while the pointer is over the shelf (a little more once it is open)
+  addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse' || demo) return;
+    const r = dock.getBoundingClientRect(), x = (e.clientX - r.left) / K, y = (r.bottom - e.clientY) / K;
+    const reach = pointer === null ? 56 : 56 + BASE * (MAX - 1) + 8;
+    const inside = y >= 0 && y <= reach && Math.abs(x - W / 2) <= restW / 2 + 40;
+    if (inside) { mode = 'pointer'; hover(x); }
+    else if (mode === 'pointer') { mode = null; hover(null); }
+  });
+  dock.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && mode === 'pointer') { mode = null; hover(null); } });
+
+  // touch and pen: press and slide along the dock, lift to open the icon under the finger
+  let touchId = null, skipClick = 0;
+  dock.addEventListener('pointerdown', e => {
+    const i = apps.indexOf(e.target.closest('.app'));
+    if (e.pointerType === 'mouse') { if (i >= 0) { state[i].pressed = true; kick(); } return; }
+    if (touchId !== null) return;            // a second finger is ignored
+    touchId = e.pointerId; dock.setPointerCapture(touchId); mode = 'touch';
+    hover((e.clientX - dock.getBoundingClientRect().left) / K);
+  });
+  dock.addEventListener('pointermove', e => {
+    if (e.pointerId === touchId) hover((e.clientX - dock.getBoundingClientRect().left) / K);
+  });
+  const lift = e => {
+    if (e.pointerType === 'mouse') { state.forEach(st => st.pressed = false); kick(); return; }
+    if (e.pointerId !== touchId) return;
+    touchId = null; skipClick = performance.now();
+    if (e.type === 'pointerup' && pointer !== null && Math.abs(pointer - W / 2) <= restW / 2) launch(nearest(pointer));
+    mode = null; hover(null);
+  };
+  dock.addEventListener('pointerup', lift);
+  dock.addEventListener('pointercancel', lift);
+  addEventListener('pointerup', e => { if (e.pointerType === 'mouse') lift(e); });
+
+  apps.forEach((b, i) => {
+    b.tabIndex = i === 0 ? 0 : -1;
+    b.addEventListener('click', () => { if (performance.now() - skipClick > 500) launch(i); });
+    // keyboard: magnification follows focus, arrows move it (roving tabindex)
+    b.addEventListener('focus', () => {
+      apps.forEach(o => o.tabIndex = o === b ? 0 : -1);
+      if (mode === 'pointer' || mode === 'touch') return;
+      if (!b.matches(':focus-visible')) return;
+      mode = 'focus'; hover(rest[i]);
+    });
+    b.addEventListener('keydown', e => {
+      const step = { ArrowRight: 1, ArrowLeft: -1, Home: -99, End: 99 }[e.key];
+      if (step === undefined) return;
+      e.preventDefault();
+      apps[Math.max(0, Math.min(apps.length - 1, i + step))].focus();
+    });
+  });
+  dock.addEventListener('focusout', e => {
+    if (mode === 'focus' && !dock.contains(e.relatedTarget)) { mode = null; hover(null); }
+  });
+
+  frame(performance.now());
+
+  // stills and the demo loop
+  const params = new URLSearchParams(location.search);
+  const still = params.get('still'), demo = params.has('demo');
+  const STEP = BASE + GAP;
+  function place(x, upPx) {
+    cursor.classList.add('on');
+    cursor.style.transform = `translate(${x - 5}px, ${-upPx}px)`;
+  }
+  function settle(x) {
+    pointer = x;
+    state.forEach((st, i) => { st.s = x === null ? 1 : 1 + (MAX - 1) * falloff(Math.abs(x - rest[i])); st.v = 0; });
+  }
+  if (still === 'hover') {
+    const x = rest[2] + STEP * 0.3;
+    settle(x);
+    state[3].running = true; dots[3].classList.add('on');
+    state[0].running = true; dots[0].classList.add('on');
+    tipFor = 2; tipText.textContent = apps[2].getAttribute('aria-label'); tipShown = tipWarm = true;
+    tip.classList.add('instant');
+    frozen = true; frame(performance.now());
+    place(x, 34);
+  }
+  if (still === 'launch') {
+    const x = rest[5] - STEP * 0.2;
+    settle(x);
+    state[1].running = true; dots[1].classList.add('on');
+    state[5].running = true; dots[5].classList.add('on');
+    const t = performance.now();
+    state[5].hops = BOUNCE; state[5].bounceAt = t - BOUNCE[0].ms / 2;     // caught at the top of the first hop
+    tipFor = 5; tipText.textContent = apps[5].getAttribute('aria-label'); tipShown = false;
+    frozen = true; frame(t);
+    place(x, 30);
+  }
+  if (demo) {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const ease = u => u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+    let cx = rest[0] - 60;
+    function glide(to, ms, up = 30) {
+      const from = cx, t0 = performance.now();
+      return new Promise(res => {
+        (function step(now) {
+          const u = Math.min(1, (now - t0) / ms); cx = from + (to - from) * ease(u);
+          mode = 'pointer'; hover(cx); place(cx, up);
+          u < 1 ? requestAnimationFrame(step) : res();
+        })(t0);
+      });
+    }
+    (async function loop() {
+      cx = rest[0] - 40; place(cx, 30);
+      await glide(rest[2], 900);
+      await wait(500);
+      await glide(rest[5], 1100);
+      await wait(250);
+      launch(5);
+      await wait(1300);
+      await glide(rest[3], 900);
+      await wait(200); launch(3);
+      await wait(1200);
+      await glide(rest[1], 800);
+      await wait(400);
+      mode = null; hover(null); cursor.classList.remove('on');
+      await wait(1100);
+      launch(5); launch(3);
+      await wait(600);
+      loop();
+    })();
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hold to delete</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --stage: oklch(0.78 0.012 250);
+    --stage-lift: oklch(0.86 0.01 250);
+    --panel: oklch(0.995 0.002 250);
+    --soft: oklch(0.955 0.005 250);
+    --ink: oklch(0.24 0.02 250);
+    --ink-2: oklch(0.52 0.015 250);
+    --danger: oklch(0.6 0.21 27);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --hold: 1600ms;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(60% 45% at 50% 45%, var(--stage-lift), var(--stage));
+    color: var(--ink);
+    display: grid; place-items: center;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  ::selection { background: var(--soft); color: var(--ink); }
+  em, i { font-style: normal; }
+
+  .panel {
+    position: relative; width: min(520px, 100vw - 24px); padding: 18px 12px 12px;
+    background: var(--panel); border-radius: 26px;
+    box-shadow: 0 1px 2px oklch(0.3 0.02 250 / 0.12), 0 40px 70px -30px oklch(0.3 0.03 250 / 0.45);
+  }
+  .head { display: flex; align-items: baseline; gap: 8px; padding: 0 12px 10px; }
+  .head h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+  .head h1:focus { outline: none; }
+  .head h1:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 4px; }
+  .empty { padding: 22px 12px 26px; font-size: 15px; color: var(--ink-2); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .count { position: relative; display: inline-block; overflow: hidden; height: 1.2em; min-width: 1ch; color: var(--ink-2); font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; vertical-align: bottom; }
+  .count span { display: block; line-height: 1.2em; }
+
+  .row {
+    position: relative; display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; align-items: center;
+    height: 80px; padding: 0 12px; border-radius: 18px; overflow: hidden;
+  }
+  .row + .row { margin-top: 2px; }
+  @media (hover: hover) and (pointer: fine) {
+    .row:not(.gone):hover { background: var(--soft); }
+    .row:hover .hold { background: oklch(0.925 0.007 250); }
+  }
+  .row > :not(.undo) { transition: opacity 200ms var(--ease-out); }
+  .row.gone > :not(.undo) { opacity: 0; visibility: hidden; transition: opacity 200ms var(--ease-out), visibility 0s 200ms; }
+  .name { min-width: 0; }
+  .name b, .name small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .name b { display: block; font-size: 15.5px; font-weight: 600; letter-spacing: -0.01em; }
+  .name small { display: block; margin-top: 3px; font-size: 13.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+  /* thumbnails, drawn in CSS */
+  .thumb { width: 56px; height: 56px; border-radius: 14px; position: relative; overflow: hidden; box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.06); }
+  .thumb.coffee { background: radial-gradient(circle at 50% 50%, oklch(0.93 0.03 80) 0 9px, oklch(0.5 0.07 55) 10px 15px, oklch(0.97 0.01 80) 16px 19px, oklch(0.72 0.06 60) 20px); }
+  .thumb.north { background: oklch(0.33 0.08 255); }
+  .thumb.north::before, .thumb.north::after { content: ""; position: absolute; left: 22px; width: 12px; height: 20px; }
+  .thumb.north::before { top: 8px; background: oklch(0.66 0.2 27); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .thumb.north::after { top: 28px; background: oklch(0.96 0.01 250); clip-path: polygon(0 0, 100% 0, 50% 100%); }
+  .thumb.look { background: oklch(0.9 0.05 150); }
+  .thumb.look::before, .thumb.look::after { content: ""; position: absolute; width: 26px; height: 34px; border-radius: 3px; top: 11px; }
+  .thumb.look::before { left: 10px; background: oklch(0.8 0.08 5); transform: rotate(-8deg); }
+  .thumb.look::after { left: 21px; background: oklch(0.99 0.005 90); box-shadow: 0 2px 6px oklch(0.3 0.04 150 / 0.25); transform: rotate(5deg); }
+
+  /* the button: a red copy of itself, revealed by clip-path. Slow while you decide, fast when you let go */
+  .hold {
+    position: relative; width: 156px; height: 42px; border: 0; border-radius: 13px; padding: 0;
+    background: var(--soft); color: var(--ink); font: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none;
+    transition: scale 160ms var(--ease-out), background 150ms ease;
+  }
+  .hold:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .hold.holding { scale: 0.97; }
+  .face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 7px; border-radius: inherit; }
+  .face svg { width: 16px; height: 16px; }
+  .face.fill {
+    background: var(--danger); color: oklch(0.99 0.01 27);
+    clip-path: inset(0 100% 0 0);
+    transition: clip-path 180ms var(--ease-out);
+  }
+  .hold.holding .face.fill { clip-path: inset(0 0 0 0); transition: clip-path var(--hold) linear; }
+  .label { transition: filter 160ms ease, opacity 160ms ease; }
+  .hold.swap .label { filter: blur(2px); opacity: 0; }
+  .hold.nudge { animation: nudge 340ms var(--ease-out); }
+  /* narrow screens: a shorter button, "Hold" with the icon */
+  @media (max-width: 480px) {
+    .row { grid-template-columns: 44px 1fr auto; gap: 12px; padding: 0 8px; }
+    .thumb { zoom: 0.786; }                       /* the CSS art is drawn for 56px */
+    .hold { width: 112px; }
+    .hold .more { display: none; }
+    .undo { padding-left: 12px; gap: 8px; }
+  }
+  @keyframes nudge { 20% { translate: -4px 0; } 45% { translate: 3.5px 0; } 70% { translate: -2px 0; } 90% { translate: 1px 0; } }
+
+  /* the undo line sits where the project was */
+  .undo {
+    position: absolute; inset: 0; display: flex; align-items: center; gap: 12px; padding: 0 12px 0 20px;
+    font-size: 14.5px; color: var(--ink-2); opacity: 0; visibility: hidden;
+    transition: opacity 200ms var(--ease-out), visibility 0s 200ms;
+  }
+  .undo b { color: var(--ink); font-weight: 600; }
+  .row.gone .undo { opacity: 1; visibility: visible; transition: opacity 200ms var(--ease-out) 60ms, visibility 0s; }
+  .row.gone.restoring .undo { opacity: 0; transition: opacity 120ms var(--ease-out); }
+  .undo .ring { margin-left: 2px; width: 18px; height: 18px; rotate: -90deg; }
+  .undo .ring circle { fill: none; stroke-width: 2.5; }
+  .undo .ring .track { stroke: var(--soft); }
+  .undo .ring .left { stroke: var(--ink-2); stroke-dasharray: 44; stroke-dashoffset: 0; }
+  .row.gone .undo .ring .left { animation: drain 5s linear forwards; }
+  @keyframes drain { to { stroke-dashoffset: 44; } }
+  .undo button {
+    height: 34px; padding: 0 14px; border: 0; border-radius: 11px; background: var(--ink); color: var(--panel);
+    font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: scale 160ms var(--ease-out);
+  }
+  .undo button:active { scale: 0.97; }
+  .undo button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  /* the shredder: the row slides down through a slot at its bottom edge.
+     Above the slot it is still paper; below it the strips splay into ribbons. */
+  .slot { position: absolute; z-index: 2; overflow: hidden; pointer-events: none; }
+  .slot.below { overflow: visible; clip-path: inset(0 -40px -400px -40px); }
+  .slot.below::before { content: ""; position: absolute; inset: 0 0 auto; height: 8px; z-index: 1; background: linear-gradient(oklch(0.3 0.02 250 / 0.12), transparent); }
+  .strip { position: absolute; left: 0; top: 0; }
+  .slot.below .strip { filter: drop-shadow(0 1px 1.5px oklch(0.25 0.03 250 / 0.12)); }
+  .strip .cut { position: relative; background: var(--panel); border-radius: 18px; }
+  .strip .cut::after { content: ""; position: absolute; top: 0; bottom: 0; left: var(--l); width: var(--w); background: linear-gradient(90deg, oklch(0.3 0.02 250 / 0.07), transparent 35% 65%, oklch(0.3 0.02 250 / 0.07)); }
+  .strip .row { overflow: visible; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hold.nudge { animation: none; }
+  }
+</style>
+</head>
+<body>
+<section class="panel" id="panel" aria-labelledby="title">
+  <div class="head"><h1 id="title" tabindex="-1">Projects</h1><span class="count" id="count"><span>3</span></span></div>
+  <div id="list">
+    <div class="row">
+      <div class="thumb coffee" role="img" aria-label="Halden coffee site cover"></div>
+      <div class="name"><b>Halden coffee site</b><small>64 files, 182 MB, edited today</small></div>
+      <button class="hold" type="button" aria-label="Hold to delete Halden coffee site">
+        <span class="face"><i data-lucide="trash-2"></i><span class="label">Hold<span class="more"> to delete</span></span></span>
+        <span class="face fill" aria-hidden="true"><i data-lucide="trash-2"></i><span class="label">Hold<span class="more"> to delete</span></span></span>
+      </button>
+    </div>
+    <div class="row">
+      <div class="thumb look" role="img" aria-label="Spring lookbook cover"></div>
+      <div class="name"><b>Spring lookbook</b><small>41 files, 96 MB, edited yesterday</small></div>
+      <button class="hold" type="button" aria-label="Hold to delete Spring lookbook">
+        <span class="face"><i data-lucide="trash-2"></i><span class="label">Hold<span class="more"> to delete</span></span></span>
+        <span class="face fill" aria-hidden="true"><i data-lucide="trash-2"></i><span class="label">Hold<span class="more"> to delete</span></span></span>
+      </button>
+    </div>
+    <div class="row">
+      <div class="thumb north" role="img" aria-label="Northwind rebrand cover"></div>
+      <div class="name"><b>Northwind rebrand</b><small>128 files, 1.2 GB, edited Oct 12</small></div>
+      <button class="hold" type="button" aria-label="Hold to delete Northwind rebrand">
+        <span class="face"><i data-lucide="trash-2"></i><span class="label">Hold<span class="more"> to delete</span></span></span>
+        <span class="face fill" aria-hidden="true"><i data-lucide="trash-2"></i><span class="label">Hold<span class="more"> to delete</span></span></span>
+      </button>
+    </div>
+  </div>
+  <div class="sr" id="live" aria-live="polite"></div>
+</section>
+
+<script>
+  lucide.createIcons({ attrs: { 'stroke-width': 2.2 } });
+  const panel = document.getElementById('panel');
+  const live = document.getElementById('live');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const STRIPS = 22, UNDO_MS = 5000, ROW_H = 80, LINE_H = 54;
+  const LABEL = 'Hold<span class="more"> to delete</span>';
+  let pending = null;            // { row, holders, anims, close, timer } while Undo is on offer
+  const say = text => { live.textContent = ''; setTimeout(() => live.textContent = text, 30); };
+
+  // hold: the CSS transition does the timing, transitionend means "held long enough"
+  function press(btn) {
+    if (btn.classList.contains('holding') || btn.closest('.gone')) return;
+    btn.classList.remove('nudge');
+    btn.classList.add('holding');
+  }
+  function letGo(btn) {
+    if (!btn.classList.contains('holding')) return;
+    btn.classList.remove('holding');          // fill snaps back in 180ms
+    if (!reduce) { btn.offsetWidth; btn.classList.add('nudge'); }
+    hint(btn);
+  }
+  // released early: a small shake and the label says what to do
+  function hint(btn) {
+    clearTimeout(btn.hintTimer);
+    swapLabel(btn, 'Keep holding');
+    say('Keep holding to delete');
+    btn.hintTimer = setTimeout(() => swapLabel(btn, LABEL), 1400);
+  }
+  function swapLabel(btn, html) {
+    btn.classList.add('swap');
+    setTimeout(() => {
+      btn.querySelectorAll('.label').forEach(l => l.innerHTML = html);
+      btn.classList.remove('swap');
+    }, 160);
+  }
+
+  panel.querySelectorAll('.hold').forEach(btn => {
+    // primary button only: a right-click or ctrl-click never starts a delete
+    btn.addEventListener('pointerdown', e => { if (e.isPrimary && e.button === 0 && !e.ctrlKey) press(btn); });
+    btn.addEventListener('pointerup', () => letGo(btn));
+    btn.addEventListener('pointerleave', () => letGo(btn));
+    btn.addEventListener('pointercancel', () => letGo(btn));
+    btn.addEventListener('contextmenu', e => e.preventDefault());
+    // keyboard: holding Space or Enter works the same
+    btn.addEventListener('keydown', e => {
+      if (e.key !== ' ' && e.key !== 'Enter') return;
+      e.preventDefault(); if (!e.repeat) press(btn);
+    });
+    btn.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') letGo(btn); });
+    btn.addEventListener('blur', () => letGo(btn));
+    btn.querySelector('.fill').addEventListener('transitionend', e => {
+      if (e.propertyName === 'clip-path' && btn.classList.contains('holding')) shred(btn.closest('.row'));
+    });
+  });
+
+  // the shredder: 22 inert clones of the row, each clipped to one vertical strip,
+  // twice over: once above the slot (the row's bottom edge) and once below it
+  function cutStrip(row, i, w) {
+    const l = (w / STRIPS) * i, r = w - l - w / STRIPS;
+    const strip = document.createElement('div');
+    strip.className = 'strip';
+    strip.style.width = w + 'px';
+    const cut = document.createElement('div');
+    cut.className = 'cut';
+    const copy = row.cloneNode(true);
+    copy.inert = true;
+    copy.querySelector('.undo')?.remove();
+    cut.style.clipPath = `inset(0 ${r}px 0 ${l}px)`;
+    cut.appendChild(copy);
+    strip.appendChild(cut);
+    return strip;
+  }
+  function holder(cls, top, left, w, h) {
+    const el = document.createElement('div');
+    el.className = 'slot ' + cls; el.inert = true;
+    el.style.cssText = `top:${top}px;left:${left}px;width:${w}px;height:${h}px`;
+    panel.appendChild(el);
+    return el;
+  }
+
+  function feed(row) {
+    const w = row.offsetWidth, h = row.offsetHeight, D = h * 1.7;
+    const up = holder('above', row.offsetTop, row.offsetLeft, w, h);
+    const down = holder('below', row.offsetTop + h, row.offsetLeft, w, D);
+    const anims = [];
+    for (let i = 0; i < STRIPS; i++) {
+      const cx = (w / STRIPS) * (i + 0.5);
+      const splay = (i - (STRIPS - 1) / 2) * 0.5;          // outer ribbons lean out a little
+      const timing = { duration: 900, delay: i * 13, fill: 'forwards' };   // a shredder feeds at a steady speed
+      const top = cutStrip(row, i, w), below = cutStrip(row, i, w);
+      below.style.top = -h + 'px';
+      up.appendChild(top); down.appendChild(below);
+      anims.push(top.animate([{ transform: 'none' }, { transform: `translateY(${D}px)` }], timing));
+      // below the slot: the same strip, splayed by a skew
+      // that pivots on the slot line as it feeds through
+      anims.push(below.animate([
+        { transform: 'none', transformOrigin: `${cx}px ${h}px` },
+        { transform: `translateY(${D}px) skewX(${splay}deg)`,
+          transformOrigin: `${cx}px ${h - D}px` },
+      ], timing));
+      anims.push(below.animate([{ opacity: 1 }, { opacity: 1, offset: 0.75 }, { opacity: 0 }], timing));
+    }
+    return { holders: [up, down], anims };
+  }
+
+  function shred(row) {
+    if (pending) finish();
+    const btn = row.querySelector('.hold');
+    const hadFocus = btn === document.activeElement;
+    // reduced motion: no strips, the row just crossfades to the Undo line
+    const { holders, anims } = reduce ? { holders: [], anims: [] } : feed(row);
+    btn.classList.remove('holding');               // after cloning, so the strips keep the red fill
+    row.classList.add('gone');
+    // the Undo line is uncovered as the strips go through; the row tightens once they are gone
+    const close = row.animate([{ height: ROW_H + 'px' }, { height: LINE_H + 'px' }],
+      { duration: reduce ? 1 : 380, delay: reduce ? 0 : 900, easing: 'cubic-bezier(0.77, 0, 0.175, 1)', fill: 'forwards' });
+    const name = row.querySelector('.name b').textContent;
+    row.querySelector('.undo b').textContent = name;
+    setCount(-1);
+    say(`${name} deleted. Undo available for 5 seconds.`);
+    pending = { row, name, holders, anims, close, timer: setTimeout(finish, UNDO_MS) };
+    if (hadFocus) row.querySelector('.undo button').focus();
+  }
+
+  // after 5s the line folds away for good
+  function finish() {
+    const { row, holders, timer } = pending; pending = null;
+    clearTimeout(timer);
+    holders.forEach(s => s.remove());
+    const fold = row.animate([{ height: LINE_H + 'px', opacity: 1 }, { height: '0px', opacity: 0 }],
+      { duration: reduce ? 1 : 300, easing: 'cubic-bezier(0.77, 0, 0.175, 1)', fill: 'forwards' });
+    fold.onfinish = () => {
+      const lost = row.contains(document.activeElement);
+      row.remove();
+      const next = panel.querySelector('.row .hold');
+      if (!next) {                                            // nothing left: say so, focus the heading
+        const empty = document.createElement('p');
+        empty.className = 'empty'; empty.textContent = 'No projects. Nothing to delete.';
+        document.getElementById('list').appendChild(empty);
+        document.getElementById('title').focus();
+      } else if (lost) next.focus();                          // focus never drops to the page
+    };
+  }
+
+  // undo: the row opens again and the strips come back up through the slot
+  function undo() {
+    if (!pending) return;
+    const { row, name, holders, anims, close, timer } = pending; pending = null;
+    clearTimeout(timer);
+    row.classList.add('restoring');
+    [close, ...anims].forEach(a => { a.updatePlaybackRate(-1.8); a.play(); });
+    setCount(+1);
+    say(`${name} restored`);
+    Promise.all([close, ...anims].map(a => a.finished)).then(() => {
+      const a = document.activeElement;
+      const refocus = a === document.body || row.contains(a);   // never steal focus from another row
+      row.classList.remove('gone', 'restoring');
+      holders.forEach(s => s.remove());
+      close.cancel();
+      if (refocus) row.querySelector('.hold').focus({ preventScroll: true });
+    });
+  }
+
+  // the project count rolls instead of swapping
+  let total = 3;
+  function setCount(d) {
+    const box = document.getElementById('count');
+    // a roll still running is finished first, so a fast Undo never leaves two numbers
+    box.getAnimations({ subtree: true }).forEach(a => a.cancel());
+    [...box.children].slice(0, -1).forEach(c => c.remove());
+    const old = box.firstElementChild, next = document.createElement('span');
+    old.style.position = '';
+    total += d; next.textContent = total;
+    box.appendChild(next);
+    next.style.position = 'absolute'; next.style.inset = '0';
+    const dir = d < 0 ? -1 : 1;
+    const t = { duration: reduce ? 1 : 320, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' };
+    old.animate([{ transform: 'none', opacity: 1 }, { transform: `translateY(${dir * -100}%)`, opacity: 0 }], t).onfinish = () => old.remove();
+    next.animate([{ transform: `translateY(${dir * 100}%)`, opacity: 0 }, { transform: 'none', opacity: 1 }], t).onfinish = () => { next.style.position = ''; };
+  }
+
+  // every row gets an undo line; the live region above does the talking
+  panel.querySelectorAll('.row').forEach(row => {
+    const u = document.createElement('div');
+    u.className = 'undo';
+    u.innerHTML = `<span><b></b> deleted</span>
+      <button type="button">Undo</button>
+      <svg class="ring" viewBox="0 0 18 18" aria-hidden="true"><circle class="track" cx="9" cy="9" r="7"/><circle class="left" cx="9" cy="9" r="7"/></svg>`;
+    u.querySelector('button').addEventListener('click', undo);
+    row.appendChild(u);
+  });
+
+  // stills and the demo loop
+  const params = new URLSearchParams(location.search);
+  const still = params.get('still');
+  const north = panel.querySelectorAll('.row')[2];
+  if (still === 'hold') {
+    const btn = north.querySelector('.hold'), fill = btn.querySelector('.fill');
+    btn.classList.add('holding');
+    fill.style.transition = 'none';
+    fill.style.clipPath = 'inset(0 35% 0 0)';      // 65% of the way there
+  }
+  if (still === 'shred') {
+    north.querySelector('.hold').classList.add('holding');
+    shred(north);
+    clearTimeout(pending.timer);
+    const t = Number(params.get('t') || 520);       // about 60% through the feed
+    [...pending.anims, pending.close].forEach(a => { a.pause(); a.currentTime = t; });
+    const ring = north.querySelector('.ring .left');
+    ring.style.animation = 'none'; ring.style.strokeDashoffset = 44 * 0.3;   // 30% drained
+  }
+  if (params.has('demo')) {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const btn = north.querySelector('.hold');
+    (async function loop() {
+      await wait(900);
+      press(btn); await wait(650); letGo(btn);
+      await wait(1500);
+      press(btn); await wait(2600);
+      await wait(1400); undo();
+      await wait(1800);
+      loop();
+    })();
+  }
+</script>
+</body>
+</html>
