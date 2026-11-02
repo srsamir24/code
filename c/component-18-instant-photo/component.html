@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instant photo</title>
+<script>
+  // before the first layout, so a phone never sees the scene at full size and zooms out
+  document.documentElement.style.setProperty('--u', Math.min(1, (document.documentElement.clientWidth - 20) / 400, (document.documentElement.clientHeight - 16) / 572).toFixed(4));
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --stage: oklch(0.71 0.155 12);
+    --stage-lift: oklch(0.8 0.125 15);
+    --body: oklch(0.235 0.008 20);
+    --body-hi: oklch(0.34 0.008 20);
+    --paper: oklch(0.985 0.003 100);
+    --ink: oklch(0.27 0.03 20);
+    --ink-2: oklch(0.5 0.02 20);
+    --red: oklch(0.6 0.22 27);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(62% 48% at 50% 40%, var(--stage-lift), var(--stage));
+    color: var(--ink);
+    overflow: hidden;
+    display: grid; place-items: center;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--stage); color: var(--paper); }
+  em, i { font-style: normal; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* a fixed 400 by 572 scene, scaled to fit, so the physics runs in one set of units */
+  .fit { position: relative; width: calc(400px * var(--u)); height: calc(572px * var(--u)); }
+  .scene { position: absolute; left: 0; top: 0; width: 400px; height: 572px; scale: var(--u); transform-origin: 0 0; perspective: 1000px; user-select: none; -webkit-user-select: none; }
+
+  .camera { position: absolute; left: 20px; top: 0; width: 360px; height: 214px; z-index: 2; }
+  .camera > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 1px 1px oklch(0.2 0.06 15 / 0.5)) drop-shadow(0 20px 26px oklch(0.25 0.1 15 / 0.45)); }
+  .shutter {
+    position: absolute; left: 22px; top: 116px; width: 54px; height: 54px; padding: 0; border: 0; border-radius: 50%;
+    background: radial-gradient(circle at 38% 30%, oklch(0.74 0.2 30), var(--red) 58%, oklch(0.47 0.19 27));
+    box-shadow: inset 0 1px 1px oklch(1 0 0 / 0.5), 0 0 0 4px oklch(0.17 0.008 20), 0 0 0 5px oklch(0.4 0.008 20), 0 3px 3px oklch(0.05 0 0 / 0.7);
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: scale 130ms var(--ease-out), translate 130ms var(--ease-out);
+  }
+  .shutter::after { content: ""; position: absolute; inset: -12px; border-radius: 50%; }   /* a target for thumbs when the scene is scaled down */
+  .shutter:active { scale: 0.94; translate: 0 1.5px; }
+  .shutter:focus-visible { outline: 3px solid var(--paper); outline-offset: 6px; }
+  .shutter[aria-disabled="true"] { cursor: default; }
+  .count { position: absolute; right: 26px; top: 128px; width: 42px; height: 30px; border-radius: 7px; background: oklch(0.13 0.006 20); color: oklch(0.93 0.01 90); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; display: grid; place-items: center; box-shadow: inset 0 1px 3px oklch(0 0 0), 0 1px 0 oklch(0.42 0.008 20); overflow: hidden; }
+  .count b { display: block; font-weight: inherit; }
+  .flash { position: fixed; inset: 0; background: oklch(1 0 0); opacity: 0; pointer-events: none; z-index: 5; }
+
+  /* the print: under the camera while it feeds, on top once it's free */
+  .photo {
+    position: absolute; left: 81px; top: 0; width: 238px; height: 292px; z-index: 1;
+    transform-origin: 50% 40%; will-change: transform; visibility: hidden;
+    touch-action: none; cursor: grab; outline: none; transform-style: flat;
+  }
+  .photo.free { z-index: 3; }
+  .photo:active { cursor: grabbing; }
+  .photo:focus-visible .paper { outline: 3px solid var(--ink); outline-offset: 3px; }
+  .lift { position: absolute; inset: 6px 4px -2px; border-radius: 6px; background: oklch(0.24 0.09 15 / 0.44); filter: blur(13px); }
+  .paper {
+    position: absolute; inset: 0; border-radius: 4px; padding: 15px 15px 0;
+    background: linear-gradient(170deg, var(--paper), oklch(0.955 0.005 90));
+    box-shadow: 0 0 1px oklch(0.3 0.03 20 / 0.6), inset 0 1px 0 oklch(1 0 0);
+  }
+  .window { position: relative; width: 208px; height: 208px; overflow: hidden; background: oklch(0.75 0.018 150); box-shadow: inset 0 0 0 1px oklch(0.4 0.02 150 / 0.25); }
+  .window canvas { display: block; width: 100%; height: 100%; }
+  /* gloss: slides as the print tilts */
+  .gloss { position: absolute; inset: -40%; pointer-events: none; background: linear-gradient(112deg, transparent 38%, oklch(1 0 0 / 0.1) 45%, oklch(1 0 0 / 0.26) 50%, oklch(1 0 0 / 0.1) 55%, transparent 62%); will-change: transform; }
+  .chin { display: grid; place-items: center; height: 54px; font-size: 15px; font-weight: 600; letter-spacing: -0.005em; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .chin span { transition: color 240ms ease; }
+  .done .chin span { color: var(--ink); }
+  .slotshade { position: absolute; inset: 0 0 auto; height: 100%; pointer-events: none; }
+
+  /* a fast shake leaves two pale copies behind */
+  .ghost { position: absolute; left: 81px; top: 0; width: 238px; height: 292px; border-radius: 4px; background: var(--paper); opacity: 0; z-index: 2; pointer-events: none; transform-origin: 50% 40%; will-change: transform, opacity; }
+
+  .hint { position: absolute; left: 0; right: 0; top: 300px; text-align: center; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; color: oklch(0.28 0.08 15); transition: opacity 200ms ease; }
+  .hint.gone { opacity: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shutter { transition: none; }
+    .flash { display: none; }
+    .ghost { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="fit" id="fit">
+<section class="scene" id="scene" aria-label="Instant camera">
+  <i class="ghost" id="g1"></i><i class="ghost" id="g2"></i>
+  <div class="photo" id="photo" role="button" aria-label="Instant print" aria-describedby="how">
+    <i class="lift" id="lift"></i>
+    <div class="paper" id="paper">
+      <div class="window"><canvas id="film" width="432" height="432"></canvas><i class="gloss" id="gloss"></i></div>
+      <p class="chin"><span id="chin">Pull it out</span></p>
+    </div>
+  </div>
+  <div class="camera" id="camera">
+    <svg viewBox="0 0 360 214" aria-hidden="true">
+      <defs>
+        <linearGradient id="shell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3e3b3b"/><stop offset=".08" stop-color="#2d2a2b"/><stop offset=".7" stop-color="#232021"/><stop offset="1" stop-color="#171516"/></linearGradient>
+        <linearGradient id="flash" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdfdfb"/><stop offset=".5" stop-color="#dcdcd8"/><stop offset="1" stop-color="#bdbdb8"/></linearGradient>
+        <pattern id="ridge" width="5" height="10" patternUnits="userSpaceOnUse"><rect width="5" height="10" fill="url(#flash)"/><rect width="1.4" height="10" fill="#8e8e8a" opacity=".5"/></pattern>
+        <radialGradient id="ringMetal" cx=".35" cy=".28" r=".85"><stop offset="0" stop-color="#f6f6f4"/><stop offset=".45" stop-color="#9c9c98"/><stop offset=".75" stop-color="#e0e0dc"/><stop offset="1" stop-color="#5d5d59"/></radialGradient>
+        <radialGradient id="barrel" cx=".5" cy=".45" r=".6"><stop offset=".55" stop-color="#050505"/><stop offset=".85" stop-color="#2b2b2c"/><stop offset="1" stop-color="#101010"/></radialGradient>
+        <radialGradient id="glass" cx=".42" cy=".38" r=".7"><stop offset="0" stop-color="#2c4e8a"/><stop offset=".42" stop-color="#16233f"/><stop offset=".8" stop-color="#0a0c17"/><stop offset="1" stop-color="#05060a"/></radialGradient>
+        <filter id="hide" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.15" numOctaves="2" seed="4"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .6 -.18"/><feComposite in2="SourceGraphic" operator="in"/></filter>
+      </defs>
+      <rect width="360" height="206" rx="24" fill="url(#shell)"/>
+      <rect width="360" height="206" rx="24" filter="url(#hide)" opacity=".5"/>
+      <rect x="1" y="1" width="358" height="204" rx="23" fill="none" stroke="#6f6c6b" stroke-opacity=".6"/>
+      <!-- colour band behind the lens -->
+      <rect x="0" y="86" width="360" height="17" fill="oklch(0.87 0.16 95)"/>
+      <rect x="0" y="86" width="360" height="1.5" fill="#fff" opacity=".4"/>
+      <rect x="0" y="101.5" width="360" height="1.5" fill="#000" opacity=".22"/>
+      <!-- flash bar and viewfinder -->
+      <rect x="34" y="17" width="172" height="40" rx="6" fill="#111011"/>
+      <rect x="38" y="21" width="164" height="32" rx="3" fill="url(#ridge)" id="flashBar"/>
+      <rect x="264" y="19" width="56" height="36" rx="8" fill="#111011"/>
+      <rect x="269" y="24" width="46" height="26" rx="5" fill="#1a2a42"/>
+      <path d="M269 44L304 24H315L269 50z" fill="#fff" opacity=".13"/>
+      <!-- lens -->
+      <circle cx="180" cy="104" r="75" fill="#0f0e0f"/>
+      <circle cx="180" cy="104" r="71" fill="url(#ringMetal)"/>
+      <circle cx="180" cy="104" r="62" fill="url(#barrel)"/>
+      <circle cx="180" cy="104" r="42" fill="url(#glass)"/>
+      <circle cx="180" cy="104" r="42" fill="none" stroke="#000" stroke-width="2"/>
+      <g id="glint">
+        <ellipse cx="164" cy="86" rx="15" ry="9" transform="rotate(-32 164 86)" fill="#fff" opacity=".82"/>
+        <circle cx="198" cy="123" r="5" fill="#9fc2ff" opacity=".55"/>
+        <circle cx="172" cy="112" r="16" fill="#6f90d8" opacity=".12"/>
+      </g>
+      <!-- the slot the print feeds through -->
+      <rect x="66" y="190" width="228" height="12" rx="5" fill="#050505"/>
+      <rect x="66" y="189" width="228" height="1.5" fill="#55524f" opacity=".55"/>
+    </svg>
+    <button class="shutter" id="shutter" type="button" aria-label="Take a picture"></button>
+    <div class="count" aria-hidden="true"><b id="count">8</b></div>
+  </div>
+  <p class="hint" id="hint">Press the red button</p>
+</section>
+</div>
+<div class="flash" id="flash"></div>
+<p class="sr" id="how">Press Enter to pull it out. Then press Space to shake it until it develops.</p>
+<p class="sr" id="live" aria-live="polite"></p>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const photo = $('photo'), camera = $('camera'), scene = $('scene');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const W = 432, SIZE = W * W;
+  const rand = i => { const t = Math.sin(i * 127.1 + 311.7) * 43758.5453; return t - Math.floor(t); };
+
+  // ---------- the pictures, painted once in code ----------
+  const paintFjord = c => {
+    const g = (y0, y1, ...st) => { const l = c.createLinearGradient(0, y0, 0, y1); st.forEach((s, i) => l.addColorStop(i / (st.length - 1), s)); return l; };
+    c.fillStyle = g(0, 210, '#a9cfe6', '#d7e6ea', '#f6e3c4'); c.fillRect(0, 0, W, 220);
+    // the far ridge, then a nearer peak with snow in its gullies
+    const ridge = (pts, fill) => { c.fillStyle = fill; c.beginPath(); c.moveTo(0, 222); pts.forEach(([x, y]) => c.lineTo(x, y)); c.lineTo(W, 222); c.closePath(); c.fill(); };
+    ridge([[0, 150], [52, 112], [96, 136], [150, 92], [214, 142], [270, 118], [332, 156], [432, 128]], '#8fa9c4');
+    ridge([[0, 196], [64, 158], [118, 84], [150, 58], [186, 98], [236, 146], [292, 176], [432, 206]], '#3f5d7a');
+    c.fillStyle = '#f4f6f8';
+    [[150, 58, 128, 92, 146, 84, 156, 104, 172, 84], [118, 96, 104, 120, 118, 112], [196, 112, 218, 136, 200, 128]].forEach(p => {
+      c.beginPath(); c.moveTo(p[0], p[1]); for (let i = 2; i < p.length; i += 2) c.lineTo(p[i], p[i + 1]); c.closePath(); c.fill();
+    });
+    c.fillStyle = '#2f4a48'; c.beginPath(); c.moveTo(0, 222); c.lineTo(0, 200); c.bezierCurveTo(90, 196, 180, 212, 300, 214); c.lineTo(432, 216); c.lineTo(432, 222); c.fill();
+    // the fjord, with the mountain lying upside down in it
+    c.fillStyle = g(220, W, '#5f8fa8', '#2c6f86', '#134f68'); c.fillRect(0, 220, W, W - 220);
+    c.fillStyle = 'rgba(30,50,76,.5)'; c.beginPath(); c.moveTo(40, 222); c.lineTo(150, 330); c.lineTo(250, 222); c.closePath(); c.fill();
+    c.lineCap = 'round';
+    for (let i = 0; i < 34; i++) {
+      const y = 228 + i * 6, x = rand(i + 7) * 400, len = 18 + rand(i + 30) * 70 * (0.5 + i / 34);
+      c.strokeStyle = i % 4 ? 'rgba(190,226,236,.34)' : 'rgba(255,240,214,.52)'; c.lineWidth = 1.4 + i * 0.05;
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x + len, y); c.stroke();
+    }
+    // red fishing cabins on stilts, and what they look like in the water
+    const cabin = (x, y, w, h) => {
+      c.strokeStyle = '#2a211c'; c.lineWidth = 3;
+      for (let k = 0; k < 4; k++) { const sx = x + 4 + k * (w - 8) / 3; c.beginPath(); c.moveTo(sx, y + h); c.lineTo(sx, y + h + 26); c.stroke(); }
+      c.fillStyle = 'rgba(150,34,28,.5)'; c.fillRect(x, y + h + 26, w, h * 0.9);
+      c.fillStyle = '#c4322a'; c.fillRect(x, y, w, h);
+      c.fillStyle = '#9d2520'; for (let k = 6; k < w; k += 8) c.fillRect(x + k, y, 1.6, h);
+      c.fillStyle = '#2d2a2b'; c.beginPath(); c.moveTo(x - 5, y); c.lineTo(x + w / 2, y - h * 0.62); c.lineTo(x + w + 5, y); c.closePath(); c.fill();
+      c.fillStyle = '#f5efe2'; c.fillRect(x + w * 0.16, y + h * 0.26, w * 0.2, h * 0.36); c.fillRect(x + w * 0.62, y + h * 0.26, w * 0.2, h * 0.36);
+      c.fillStyle = '#ecd9a8'; c.fillRect(x + w * 0.38, y + h * 0.42, w * 0.2, h * 0.58);
+    };
+    cabin(300, 190, 76, 42); cabin(232, 204, 58, 34); cabin(372, 198, 66, 40);
+    // one white boat, moored
+    c.fillStyle = 'rgba(240,244,246,.4)'; c.beginPath(); c.ellipse(112, 356, 42, 9, 0, 0, 7); c.fill();
+    c.fillStyle = '#f7f6f1'; c.beginPath(); c.moveTo(62, 330); c.lineTo(160, 326); c.lineTo(148, 350); c.lineTo(76, 350); c.closePath(); c.fill();
+    c.fillStyle = '#1f3f5c'; c.fillRect(70, 344, 74, 6);
+    c.fillStyle = '#e9e6dc'; c.fillRect(94, 312, 30, 18);
+    c.fillStyle = '#35566f'; c.fillRect(100, 316, 18, 8);
+  };
+  const paintBeach = c => {
+    const g = (y0, y1, ...st) => { const l = c.createLinearGradient(0, y0, 0, y1); st.forEach((s, i) => l.addColorStop(i / (st.length - 1), s)); return l; };
+    c.fillStyle = g(0, 190, '#f4a78f', '#f8cc9e', '#fbe7b9'); c.fillRect(0, 0, W, 196);
+    c.fillStyle = '#fff4cf'; c.beginPath(); c.arc(306, 138, 44, 0, 7); c.fill();
+    c.fillStyle = g(190, 262, '#2d7c9c', '#57b1b8'); c.fillRect(0, 190, W, 76);
+    c.strokeStyle = 'rgba(255,244,207,.7)'; c.lineCap = 'round';
+    for (let i = 0; i < 18; i++) { c.lineWidth = 2; const y = 196 + i * 3.6, w = 16 + i * 2.8, x = 306 - w / 2 + (rand(i) - 0.5) * 18; c.beginPath(); c.moveTo(x, y); c.lineTo(x + w, y); c.stroke(); }
+    c.fillStyle = '#f7f1e2'; c.beginPath(); c.moveTo(0, 258); c.bezierCurveTo(120, 276, 280, 246, W, 268); c.lineTo(W, 284); c.bezierCurveTo(280, 262, 120, 294, 0, 276); c.fill();
+    c.fillStyle = g(262, W, '#f0d9ae', '#dfb987'); c.beginPath(); c.moveTo(0, 276); c.bezierCurveTo(120, 294, 280, 262, W, 284); c.lineTo(W, W); c.lineTo(0, W); c.fill();
+    // the lifeguard hut, red and white, on stilts
+    c.strokeStyle = '#6b4a35'; c.lineWidth = 7; c.lineCap = 'butt';
+    [[72, 364], [150, 364]].forEach(([x, y]) => { c.beginPath(); c.moveTo(x, y); c.lineTo(x + 2, 262); c.stroke(); });
+    for (let i = 0; i < 7; i++) { c.fillStyle = i % 2 ? '#f7f2e6' : '#d8413a'; c.fillRect(58 + i * 16, 186, 16, 78); }
+    c.fillStyle = '#2d4f64'; c.fillRect(92, 208, 40, 30);
+    c.fillStyle = '#a93029'; c.beginPath(); c.moveTo(44, 190); c.lineTo(112, 150); c.lineTo(186, 190); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(60,40,20,.2)'; c.beginPath(); c.ellipse(116, 372, 72, 11, 0, 0, 7); c.fill();
+  };
+  const SCENES = [{ paint: paintFjord, name: 'Reine, Lofoten, July' }, { paint: paintBeach, name: 'Guincho at six, August' }];
+
+  // every picture leaves here as bytes, with faded blacks and grain, like film
+  const film = $('film'), fx = film.getContext('2d');
+  const src = new Uint8ClampedArray(SIZE * 4), lum = new Float32Array(SIZE), blot = new Float32Array(SIZE);
+  const out = fx.createImageData(W, W);
+  function loadScene(i) {
+    const c = document.createElement('canvas'); c.width = c.height = W;
+    const k = c.getContext('2d', { willReadFrequently: true });
+    SCENES[i].paint(k);
+    const d = k.getImageData(0, 0, W, W).data;
+    for (let p = 0, q = 0; p < SIZE; p++, q += 4) {
+      const n = (rand(p % 7919) - 0.5) * 9;
+      for (let ch = 0; ch < 3; ch++) src[q + ch] = 14 + d[q + ch] * 0.92 + n;
+      src[q + 3] = 255;
+      lum[p] = (0.3 * src[q] + 0.59 * src[q + 1] + 0.11 * src[q + 2]) / 255;
+    }
+  }
+  // blotches: chemistry never spreads evenly, and it reaches the edges a little late
+  (function buildBlot() {
+    const C = 13, grid = [];
+    for (let i = 0; i < C * C; i++) grid.push(rand(i * 3.7 + 11));
+    const smooth = t => t * t * (3 - 2 * t);
+    for (let y = 0, p = 0; y < W; y++) for (let x = 0; x < W; x++, p++) {
+      const fx = x / W * (C - 1), fy = y / W * (C - 1), ix = Math.floor(fx), iy = Math.floor(fy), tx = smooth(fx - ix), ty = smooth(fy - iy);
+      const a = grid[iy * C + ix], b = grid[iy * C + ix + 1], c = grid[(iy + 1) * C + ix] ?? a, d = grid[(iy + 1) * C + ix + 1] ?? b;
+      const n = (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty;
+      const e = Math.max(Math.abs(x / W - 0.5), Math.abs(y / W - 0.5)) * 2;
+      blot[p] = n * 0.72 + e ** 3 * 0.28;
+    }
+  })();
+
+  // Three dyes, three speeds: blue comes up first, in the shadows,
+  // then green, and the warm reds last.
+  const MILK = [186, 196, 182];
+  const ramp = (t, a, b) => { const x = Math.max(0, Math.min(1, (t - a) / (b - a))); return x * x * (3 - 2 * x); };
+  function develop(p) {
+    const o = out.data, spread = p * 1.62;
+    for (let i = 0, q = 0; i < SIZE; i++, q += 4) {
+      // each pixel's own clock: late where blotchy, early where dark
+      const t = spread - blot[i] * 0.62 + (0.5 - lum[i]) * 0.26 * (1 - p);
+      const b = ramp(t, 0.02, 0.62), g = ramp(t, 0.14, 0.8), r = ramp(t, 0.26, 1);
+      o[q] = MILK[0] + (src[q] - MILK[0]) * r;
+      o[q + 1] = MILK[1] + (src[q + 1] - MILK[1]) * g;
+      o[q + 2] = MILK[2] + (src[q + 2] - MILK[2]) * b;
+      o[q + 3] = 255;
+    }
+    fx.putImageData(out, 0, 0);
+  }
+
+  // ---------- state ----------
+  const CAM_H = 214, SLOT = 196, HANG_Y = 118, HOME = { x: 0, y: 248 }, REST_R = -3.2;
+  let mode = 'idle', sceneI = 0, left = 8;     // idle > feed > hang > free
+  let p = 0, shownP = -1, chinPct = -1, shownMode = '';
+  let x = 0, y = -292, vx = 0, vy = 0, r = 0, vr = 0, lastAx = 0, lastAy = 0;
+  let hand = null, loop = 0, last = 0;
+  const trail = [];
+  const say = t => { $('live').textContent = ''; setTimeout(() => { $('live').textContent = t; }, 30); };
+  function setU() {
+    const v = document.documentElement, u = Math.min(1, (v.clientWidth - 20) / 400, (v.clientHeight - 16) / 572);
+    document.documentElement.style.setProperty('--u', u.toFixed(4));
+    return u;
+  }
+  let U = setU();
+  addEventListener('resize', () => { U = setU(); });
+
+  function chin() {
+    const pct = p >= 1 ? 101 : Math.round(p * 100);
+    if (pct === chinPct && mode === shownMode) return;
+    chinPct = pct; shownMode = mode;
+    photo.classList.toggle('done', p >= 1);
+    $('chin').textContent = p >= 1 ? SCENES[sceneI].name
+      : mode === 'hang' ? 'Pull it out'
+      : pct < 3 ? 'Shake it' : `Developing ${pct}%`;
+    photo.setAttribute('aria-label', p >= 1 ? `Instant print: ${SCENES[sceneI].name}` : `Instant print, ${pct} percent developed`);
+  }
+  function draw() {
+    const speed = Math.hypot(vx, vy);
+    const ry = Math.max(-18, Math.min(18, vx * 0.0065)), rx = Math.max(-16, Math.min(16, -vy * 0.0065));
+    photo.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${r}deg) rotateX(${rx}deg) rotateY(${ry}deg)`;
+    const held = hand && mode === 'free' ? 1 : 0;
+    $('lift').style.transform = `translate(${6 + held * 12 + speed * 0.002}px, ${8 + held * 18 + speed * 0.003}px)`;
+    $('lift').style.opacity = mode === 'free' ? 1 : 0.55;
+    $('gloss').style.transform = `translate(${(r * 7 + ry * 3).toFixed(1)}%, ${(rx * 2).toFixed(1)}%)`;
+    // the part of the print still inside the camera is cut at the slot
+    photo.style.clipPath = mode === 'free' ? 'none' : `inset(${Math.max(0, SLOT - y)}px -40px -80px -40px)`;
+    trail.push([x, y, r]); if (trail.length > 10) trail.shift();
+    ghost($('g1'), trail[Math.max(0, trail.length - 4)], speed * 0.00011);
+    ghost($('g2'), trail[0], speed * 0.00006);
+    if (Math.abs(p - shownP) >= 0.003 || (p >= 1 && shownP < 1)) { develop(p); shownP = p; }
+    chin();
+  }
+  function ghost(el, t, op) {
+    if (reduce || mode !== 'free') { el.style.opacity = 0; return; }
+    el.style.opacity = Math.min(0.26, op);
+    el.style.transform = `translate3d(${t[0]}px, ${t[1]}px, 0) rotate(${t[2]}deg)`;
+  }
+
+  function kick() { if (!loop) { last = performance.now(); loop = requestAnimationFrame(tick); } }
+  function tick(now) {
+    const dt = Math.min(0.032, (now - last) / 1000); last = now;
+    if (mode === 'free') {
+      const tx = hand ? hand.tx : HOME.x, ty = hand ? hand.ty : HOME.y;
+      const k = hand ? 900 : 300, c = hand ? 52 : 26;
+      const ax = k * (tx - x) - c * vx, ay = k * (ty - y) - c * vy;
+      vx += ax * dt; vy += ay * dt; x += vx * dt; y += vy * dt;
+      // held off-centre the print hangs from your finger and swings when you move it
+      const gx = hand ? hand.gx : 0, gy = hand ? hand.gy : 0;
+      const hang = hand ? Math.max(-24, Math.min(24, -gx * 0.16)) : REST_R;
+      const torque = (ax * gy - ay * gx) * 0.00045;
+      vr += (-170 * (r - hang) - 13 * vr + torque) * dt;
+      r = Math.max(-34, Math.min(34, r + vr * dt));
+      // shake: every change of speed feeds the chemistry
+      const jerk = Math.hypot(ax - lastAx, ay - lastAy) * dt;
+      lastAx = ax; lastAy = ay;
+      if (hand && p < 1) p = Math.min(1, p + Math.min(jerk * 7.8e-6, dt * 0.55));
+    }
+    // film develops by itself too, only slowly
+    if (mode === 'free' && p < 1) p = Math.min(1, p + dt / (reduce ? 8 : 60));
+    if (p >= 1 && shownP < 1) say(`Developed: ${SCENES[sceneI].name}`);
+    draw();
+    const rest = mode === 'free' && !hand && Math.hypot(x - HOME.x, y - HOME.y) < 0.15 && Math.hypot(vx, vy) < 2 && Math.abs(r - REST_R) < 0.05 && Math.abs(vr) < 0.5;
+    if (rest && p >= 1) { x = HOME.x; y = HOME.y; r = REST_R; draw(); loop = 0; return; }
+    if (mode === 'idle' || mode === 'hang') { if (!hand) { loop = 0; return; } }
+    loop = requestAnimationFrame(tick);
+  }
+
+  // ---------- shutter: flash, motor, the print feeds out ----------
+  function shoot() {
+    if (mode === 'feed') return;
+    const old = mode !== 'idle' ? photo.cloneNode(true) : null;
+    if (old) {                                 // the last print drops off the table
+      old.removeAttribute('id'); old.inert = true; old.style.zIndex = 0;
+      old.querySelector('canvas').getContext('2d').drawImage(film, 0, 0);
+      old.style.transform = photo.style.transform; old.style.clipPath = 'none';
+      scene.append(old);
+      old.animate(reduce ? [{ opacity: 1 }, { opacity: 0 }]
+        : [{ transform: photo.style.transform, opacity: 1 }, { transform: `translate3d(${x}px, ${innerHeight / U}px, 0) rotate(14deg)`, opacity: 1 }],
+        { duration: reduce ? 200 : 320, easing: 'cubic-bezier(0.32, 0, 0.67, 0)' }).onfinish = () => old.remove();
+      sceneI = (sceneI + 1) % SCENES.length;
+    }
+    left = left > 1 ? left - 1 : 8;
+    $('count').textContent = left;
+    if (!reduce) $('flash').animate([{ opacity: 0.55 }, { opacity: 0 }], { duration: 260, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+    if (!reduce) $('flashBar').animate([{ filter: 'brightness(1.5)' }, { filter: 'brightness(1)' }], { duration: 320 });
+    $('hint').classList.add('gone');
+    p = 0; shownP = -1; chinPct = -1;
+    loadScene(sceneI); develop(0); shownP = 0;
+    x = 0; vx = vy = 0; r = 0; vr = 0; trail.length = 0;
+    photo.classList.remove('free', 'done');
+    photo.style.visibility = 'visible'; photo.tabIndex = 0;
+    mode = 'feed'; say('Picture taken. The print is coming out.');
+    $('shutter').setAttribute('aria-disabled', 'true');
+    const y0 = SLOT - 292, y1 = HANG_Y;
+    if (reduce) { y = y1; mode = 'hang'; draw(); $('shutter').setAttribute('aria-disabled', 'false'); kick(); return; }
+    const t0 = performance.now(), D = 1250;
+    const motor = now => {
+      const t = Math.min(1, (now - t0) / D);
+      // an uneven little motor: steps, with the camera shaking along
+      y = y0 + (y1 - y0) * (t + Math.sin(t * 68) * 0.006 * (1 - t));
+      camera.style.translate = t < 1 ? `${Math.sin(now * 0.11) * 0.5}px ${Math.cos(now * 0.14) * 0.6}px` : '';
+      draw();
+      if (t < 1) { requestAnimationFrame(motor); return; }
+      mode = 'hang'; $('shutter').setAttribute('aria-disabled', 'false'); draw();
+      say('Print is out. Pull it free.');
+    };
+    requestAnimationFrame(motor);
+  }
+  $('shutter').addEventListener('click', shoot);
+
+  // pulling it out: the rollers hold, then let go
+  function freeIt(v = 0) {
+    if (mode !== 'hang') return;
+    mode = 'free'; photo.classList.add('free');
+    vy = Math.max(v, reduce ? 0 : 500); vr = -60;
+    say('Free. Shake it to develop.');
+    kick();
+  }
+
+  // ---------- drag ----------
+  const toScene = e => {
+    const b = $('fit').getBoundingClientRect();
+    return [(e.clientX - b.left) / U, (e.clientY - b.top) / U];
+  };
+  photo.addEventListener('pointerdown', e => {
+    if (hand || !e.isPrimary || e.button > 0 || mode === 'feed' || mode === 'idle') return;
+    e.preventDefault(); photo.focus({ preventScroll: true });
+    const [sx, sy] = toScene(e);
+    hand = { id: e.pointerId, sx, sy, ox: sx - x, oy: sy - y, tx: x, ty: y, gx: sx - (81 + x + 119), gy: sy - (y + 117), t0: performance.now(), travel: 0, py: sy };
+    photo.setPointerCapture(e.pointerId);
+    kick();
+  });
+  photo.addEventListener('pointermove', e => {
+    if (!hand || e.pointerId !== hand.id) return;
+    const [sx, sy] = toScene(e);
+    hand.travel = Math.max(hand.travel, Math.hypot(sx - hand.sx, sy - hand.sy));
+    if (mode === 'hang') {
+      // only downwards, and with a resistance like rollers
+      const d = Math.max(0, sy - hand.sy);
+      y = HANG_Y + 20 * (1 - Math.exp(-d / 40));
+      draw();
+      if (d > 58) { const g = { id: hand.id, sx, sy }; hand = null; freeIt(); grabFree(g.id, sx, sy); }
+      return;
+    }
+    hand.tx = sx - hand.ox; hand.ty = sy - hand.oy;
+    kick();
+  });
+  function grabFree(id, sx, sy) {
+    hand = { id, sx, sy, ox: sx - x, oy: sy - y, tx: x, ty: y, gx: sx - (81 + x + 119), gy: sy - (y + 117), t0: performance.now(), travel: 99 };
+  }
+  function release(e) {
+    if (!hand || e.pointerId !== hand.id) return;
+    const { travel } = hand;
+    hand = null;
+    if (mode === 'hang') {
+      if (travel < 6) { freeIt(); return; }                // a tap pulls it for you
+      y = HANG_Y; draw(); return;                          // let go early: the rollers keep it
+    }
+    kick();
+  }
+  photo.addEventListener('pointerup', release);
+  photo.addEventListener('pointercancel', release);
+  photo.addEventListener('contextmenu', e => e.preventDefault());
+
+  // keyboard: Enter or Space pulls, then each press is one shake
+  photo.addEventListener('keydown', e => {
+    if (!['Enter', ' ', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+    e.preventDefault();
+    if (mode === 'hang') { freeIt(); return; }
+    if (mode !== 'free') return;
+    const dir = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : (shakeSide = -shakeSide);
+    vx += dir * (reduce ? 0 : 1000); vy += reduce ? 0 : -260; vr += dir * (reduce ? 0 : 150);
+    if (p < 1) p = Math.min(1, p + 0.07);
+    kick();
+  });
+  let shakeSide = 1;
+
+  // the glint in the lens leans with a fine pointer
+  if (matchMedia('(hover: hover) and (pointer: fine)').matches && !reduce) {
+    const gl = $('glint');
+    addEventListener('pointermove', e => {
+      gl.setAttribute('transform', `translate(${((e.clientX / innerWidth - 0.5) * 12).toFixed(1)} ${((e.clientY / innerHeight - 0.5) * 12).toFixed(1)})`);
+    });
+  }
+
+  // ---------- stills and demo ----------
+  const params = new URLSearchParams(location.search);
+  document.fonts.ready.then(() => {
+    const still = params.get('still');
+    $('hint').classList.toggle('gone', Boolean(still));
+    if (!still) { loadScene(0); develop(0); }
+    if (still) {
+      loadScene(0); photo.style.visibility = 'visible'; photo.tabIndex = 0; $('count').textContent = left = 7;
+    }
+    if (still === 'shake') {
+      mode = 'free'; photo.classList.add('free');
+      p = +(params.get('p') || 0.43); x = 12; y = 166; r = -13; vx = 950; vy = -420;
+      hand = { tx: x, ty: y, gx: 0, gy: 0 };
+      draw(); hand = null;
+      $('g1').style.opacity = 0.2; $('g1').style.transform = 'translate3d(36px, 188px, 0) rotate(-15deg)';
+      $('g2').style.opacity = 0.11; $('g2').style.transform = 'translate3d(56px, 204px, 0) rotate(-17deg)';
+    }
+    if (still === 'done') {
+      mode = 'free'; photo.classList.add('free');
+      p = 1; x = HOME.x; y = HOME.y - 18; r = REST_R; draw();
+    }
+    if (still === 'feed') {
+      mode = 'hang'; p = 0; y = HANG_Y; draw();
+    }
+    if (params.has('demo')) {
+      const wait = ms => new Promise(res => setTimeout(res, ms));
+      (async function run() {
+        await wait(900); shoot();
+        await wait(1800); freeIt();
+        await wait(600);
+        for (let i = 0; i < 22; i++) { vx += (i % 2 ? -1 : 1) * 1100; vy -= 200; vr += (i % 2 ? -1 : 1) * 180; p = Math.min(1, p + 0.05); kick(); await wait(170); }
+        await wait(2600);
+        run();
+      })();
+    }
+  });
+</script>
+</body>
+</html>

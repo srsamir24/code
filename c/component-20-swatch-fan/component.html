@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swatch fan</title>
+<script>
+  // before the first layout, so a phone never sees the scene at full size and zooms out
+  document.documentElement.style.setProperty('--u', Math.min(1, (document.documentElement.clientWidth - 12) / 460, (document.documentElement.clientHeight - 86) / 518).toFixed(4));
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --stage: oklch(0.255 0.055 325);
+    --stage-lift: oklch(0.36 0.075 325);
+    --paper: oklch(0.975 0.004 325);
+    --paper-2: oklch(0.915 0.008 325);
+    --ink: oklch(0.24 0.04 325);
+    --ink-2: oklch(0.47 0.03 325);
+    --on-stage: oklch(0.97 0.008 325);
+    --on-stage-2: oklch(0.82 0.03 325);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(70% 52% at 42% 44%, var(--stage-lift), var(--stage));
+    color: var(--on-stage);
+    display: grid; place-items: center;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--paper); color: var(--ink); }
+  em, i { font-style: normal; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  .stack { display: grid; justify-items: center; gap: 6px; }
+  .fit { position: relative; width: calc(460px * var(--u)); height: calc(518px * var(--u)); }
+  .scene { position: absolute; left: 0; top: 0; width: 460px; height: 518px; scale: var(--u); transform-origin: 0 0; user-select: none; -webkit-user-select: none; }
+
+  .deck { position: absolute; inset: 0; touch-action: none; cursor: grab; outline: none; }
+  .deck.dragging { cursor: grabbing; }
+
+  /* one leaf: card stock, turned around the rivet hole, five tones towards the tip */
+  .leaf {
+    position: absolute; left: 24px; top: 88px; width: 64px; height: 414px;
+    transform-origin: 32px 382px;           /* the rivet */
+    border-radius: 11px 11px 32px 32px;     /* the ends all lie on one circle around it */
+    background: linear-gradient(90deg, var(--paper), var(--paper-2));
+    box-shadow:
+      -0.5px 0 0 oklch(1 0 0 / 0.6),
+      1px 1px 2px oklch(0.14 0.05 325 / 0.5),
+      3px 2px 9px oklch(0.14 0.05 325 / 0.26);
+    overflow: hidden; will-change: transform;
+  }
+  .chip { display: block; height: 47px; position: relative; }
+  .chip:first-child { border-radius: 11px 11px 0 0; }
+  .leaf.on .chip.pick::after {
+    content: ""; position: absolute; inset: 5px; border-radius: 7px;
+    box-shadow: 0 0 0 2.5px var(--paper), 0 0 0 3.5px oklch(0.2 0.03 325 / 0.35);
+  }
+  .tag {
+    position: absolute; left: 0; right: 0; top: 237px; height: 118px;
+    writing-mode: vertical-rl; rotate: 180deg;
+    display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 8px 8px;
+    color: var(--ink); white-space: nowrap; opacity: 0;
+  }
+  .leaf.on .tag { opacity: 1; }
+  .tag b { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+  .tag small { font-size: 13px; font-weight: 500; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .hole { position: absolute; left: 22px; top: 372px; width: 20px; height: 20px; border-radius: 50%; background: var(--stage); box-shadow: inset 0 1px 2px oklch(0.1 0.03 325 / 0.8); }
+
+  /* the rivet is a real button: it opens and closes the deck */
+  .rivet {
+    position: absolute; left: 34px; top: 448px; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%;
+    cursor: pointer; z-index: 200; -webkit-tap-highlight-color: transparent;
+    background: var(--spec, conic-gradient(from 210deg, #ffeeb5, #b98a35 18%, #f4d07b 36%, #8d6523 52%, #e7bf6a 70%, #a67a2c 86%, #ffeeb5));
+    box-shadow: inset 0 0 0 1.5px oklch(0.92 0.09 90 / 0.7), 0 1px 2px oklch(0.1 0.03 325 / 0.7), 0 5px 9px oklch(0.1 0.03 325 / 0.45);
+    transition: scale 130ms var(--ease-out);
+  }
+  .rivet::before { content: ""; position: absolute; inset: 11px; border-radius: 50%; background: radial-gradient(circle at 38% 32%, #fff3c8, #caa04f 58%, #8d6523); box-shadow: 0 0 0 1px oklch(0.4 0.08 75 / 0.6); }
+  .rivet::after { content: ""; position: absolute; inset: -12px; border-radius: 50%; }   /* a thumb-sized target when the deck is scaled down */
+  .rivet:active { scale: 0.94; }
+  .rivet:focus-visible { outline: 3px solid var(--on-stage); outline-offset: 3px; }
+
+  .read { width: min(436px, 100vw - 24px); height: 62px; display: flex; align-items: center; gap: 14px; }
+  .sample { flex: none; width: 54px; height: 54px; border-radius: 14px; background: var(--c, #888); box-shadow: inset 0 0 0 1.5px oklch(1 0 0 / 0.14), 0 2px 5px oklch(0.1 0.03 325 / 0.5); transition: background-color 130ms ease; }
+  .what { min-width: 0; flex: 1; }
+  .what b { display: block; font-size: 21px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .what small { display: block; font-size: 15px; font-weight: 500; color: var(--on-stage-2); font-variant-numeric: tabular-nums; letter-spacing: 0.005em; }
+  .copy {
+    flex: none; position: relative; height: 48px; min-width: 104px; padding: 0 18px; border: 0; border-radius: 14px; background: var(--paper); color: var(--ink);
+    font: inherit; font-size: 15.5px; font-weight: 600; letter-spacing: -0.01em; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    transition: scale 130ms var(--ease-out), background-color 160ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .copy svg { width: 16px; height: 16px; }
+  .copy:active { scale: 0.97; }
+  .copy:focus-visible { outline: 3px solid var(--on-stage); outline-offset: 2px; }
+  @media (hover: hover) and (pointer: fine) { .copy:hover { background: var(--paper-2); } }
+  @media (prefers-reduced-motion: reduce) {
+    .rivet, .copy, .sample { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="stack">
+<div class="fit" id="fit">
+<section class="scene" id="scene" aria-labelledby="pickLabel">
+  <p class="sr" id="pickLabel">Colour fan deck</p>
+  <div class="deck" id="deck" role="listbox" tabindex="0" aria-labelledby="pickLabel" aria-describedby="how"></div>
+  <button class="rivet" id="rivet" type="button" aria-label="Open the fan" aria-expanded="false"></button>
+</section>
+</div>
+<div class="read" id="read">
+  <div class="sample" id="sample"></div>
+  <div class="what"><b id="name"></b><small id="hex"></small></div>
+  <button class="copy" id="copy" type="button"><i data-lucide="copy"></i><span id="copyText">Copy</span></button>
+</div>
+</div>
+<p class="sr" id="how">Left and right arrows choose a colour, up and down choose a tone. Enter copies it. Escape closes the fan.</p>
+<p class="sr" id="live" aria-live="polite"></p>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const deck = $('deck');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const COLOURS = [
+    ['Peony', 350], ['Rose', 5], ['Coral', 20], ['Poppy', 32], ['Persimmon', 45], ['Apricot', 60],
+    ['Marigold', 75], ['Saffron', 90], ['Pollen', 104], ['Pear', 118], ['Moss', 132], ['Fern', 146],
+    ['Spruce', 160], ['Jade', 174], ['Lagoon', 192], ['Harbour', 210], ['Fjord', 228], ['Denim', 246],
+    ['Cobalt', 264], ['Iris', 282], ['Plum', 300], ['Orchid', 316], ['Fuchsia', 330], ['Mulberry', 342],
+  ];
+  const N = COLOURS.length, TONES = 5;
+  const TONE_L = [0.9, 0.79, 0.67, 0.54, 0.41], TONE_C = [0.055, 0.105, 0.15, 0.16, 0.125];
+
+  // oklch to sRGB hex, clipped: the swatch and the code it shows are the same number
+  function hexOf(L, C, H) {
+    const h = H * Math.PI / 180, a = C * Math.cos(h), b = C * Math.sin(h);
+    const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3, m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3, s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+    const lin = [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s];
+    return '#' + lin.map(v => {
+      const c = Math.min(1, Math.max(0, v)), g = c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
+      return Math.round(g * 255).toString(16).padStart(2, '0');
+    }).join('').toUpperCase();
+  }
+  const hexes = COLOURS.map(([, h]) => TONE_L.map((L, t) => hexOf(L, TONE_C[t], h)));
+
+  // the leaves
+  const leaves = COLOURS.map(([name, hue], i) => {
+    const el = document.createElement('div');
+    el.className = 'leaf'; el.id = `leaf-${i}`; el.setAttribute('role', 'option'); el.setAttribute('aria-selected', 'false');
+    // deepest tone at the tip
+    const chips = [...hexes[i]].reverse().map((c, k) => `<i class="chip" data-t="${TONES - 1 - k}" style="background:${c}"></i>`).join('');
+    el.innerHTML = `${chips}<div class="tag" aria-hidden="true"><b>${name}</b><small>hue ${hue}</small></div><i class="hole"></i>`;
+    deck.append(el);
+    return { el, a: 0, v: 0, pop: 0, vp: 0, chips: [...el.querySelectorAll('.chip')] };
+  });
+
+  // geometry: the rivet, the sweep, and where the tones sit along a leaf
+  const RX = 56, RY = 470, A0 = -3, SWEEP = 90, TIP = 382, CHIP = 47;
+  let S = 0, Sv = 0, aimS = 0, sel = 15, selF = 15, selV = 0, tone = 2, drag = null, loop = 0, last = 0;
+
+  // Where each leaf wants to be: spread evenly by S, parted around the
+  // chosen leaf. Each leaf has its own spring, softer towards the bottom
+  // of the stack, so the card stock follows in a wave and not as a block.
+  const fanAngle = i => A0 + i * 0.16 + S * (i / (N - 1)) * (SWEEP - (N - 1) * 0.16);
+  const part = i => {
+    const d = i - selF, side = d === 0 ? 0 : Math.sign(d);
+    return S * side * 7.5 * Math.exp(-Math.abs(d) / 2.3) * (1 - Math.exp(-Math.abs(d) * 1.6));
+  };
+  const stiff = i => 170 + 300 * (i / (N - 1));
+  function physics(dt) {
+    if (!drag || drag.kind !== 'fan') {
+      Sv += (-140 * (S - aimS) - 19 * Sv) * dt;
+      S += Sv * dt;
+    }
+    selV += (-340 * (selF - sel) - 30 * selV) * dt;
+    selF += selV * dt;
+    let moving = Math.abs(S - aimS) > 0.0006 || Math.abs(Sv) > 0.004 || Math.abs(selF - sel) > 0.002;
+    leaves.forEach((l, i) => {
+      const k = stiff(i), c = 2 * Math.sqrt(k) * 0.72;
+      const target = fanAngle(i) + part(i);
+      l.v += (-k * (l.a - target) - c * l.v) * dt;
+      l.a += l.v * dt;
+      const popTo = i === sel && S > 0.12 ? 1 : 0;
+      l.vp += (-420 * (l.pop - popTo) - 30 * l.vp) * dt;
+      l.pop += l.vp * dt;
+      if (Math.abs(l.a - target) > 0.01 || Math.abs(l.v) > 0.05 || Math.abs(l.pop - popTo) > 0.002) moving = true;
+    });
+    return moving;
+  }
+  function paint() {
+    leaves.forEach((l, i) => {
+      // pulled out along its own length, not simply up
+      l.el.style.transform = `rotate(${l.a.toFixed(3)}deg) translateY(${(-l.pop * 30).toFixed(2)}px)`;
+    });
+  }
+  function kick() { if (!loop) { last = performance.now(); loop = requestAnimationFrame(tick); } }
+  function tick(now) {
+    const dt = Math.min(0.032, (now - last) / 1000); last = now;
+    let moving;
+    if (reduce && !drag) {
+      S = aimS; Sv = 0; selF = sel;
+      leaves.forEach((l, i) => { l.a = fanAngle(i) + part(i); l.v = 0; l.pop = i === sel && S > 0.12 ? 1 : 0; });
+      moving = false;
+    } else moving = physics(dt);
+    paint();
+    if (!moving && !drag) { loop = 0; return; }
+    loop = requestAnimationFrame(tick);
+  }
+
+  // what is chosen
+  const say = t => { $('live').textContent = ''; setTimeout(() => { $('live').textContent = t; }, 30); };
+  let copied = 0;
+  function show(announce) {
+    const [name] = COLOURS[sel], hex = hexes[sel][tone];
+    $('name').textContent = `${name} ${tone + 1}`;
+    $('hex').textContent = hex;
+    $('sample').style.setProperty('--c', hex);
+    leaves.forEach((l, i) => {
+      l.el.classList.toggle('on', i === sel);
+      l.el.style.zIndex = i === sel ? 100 : i;
+      l.el.setAttribute('aria-selected', String(i === sel));
+      l.el.setAttribute('aria-label', `${COLOURS[i][0]} ${(i === sel ? tone : 2) + 1}, ${hexes[i][i === sel ? tone : 2]}`);
+      if (i === sel) l.chips.forEach(c => c.classList.toggle('pick', +c.dataset.t === tone));
+    });
+    deck.setAttribute('aria-activedescendant', leaves[sel].el.id);
+    if (copied) { clearTimeout(copied); copied = 0; $('copyText').textContent = 'Copy'; }
+    if (announce) say(`${name} ${tone + 1}, ${hex}`);
+  }
+  function choose(i, t, announce) {
+    i = Math.max(0, Math.min(N - 1, i)); t = Math.max(0, Math.min(TONES - 1, t));
+    if (i === sel && t === tone) return;
+    sel = i; tone = t; show(announce); kick();
+  }
+  function setOpen(open, announce = true) {
+    aimS = open ? 1 : 0;
+    $('rivet').setAttribute('aria-expanded', String(open));
+    $('rivet').setAttribute('aria-label', open ? 'Close the fan' : 'Open the fan');
+    if (announce) say(open ? 'Fan open' : 'Fan closed');
+    kick();
+  }
+
+  // the pointer, in scene units and polar around the rivet
+  function polar(e) {
+    const b = $('fit').getBoundingClientRect(), u = b.width / 460;
+    const x = (e.clientX - b.left) / u - RX, y = (e.clientY - b.top) / u - RY;
+    return { a: Math.atan2(x, -y) * 180 / Math.PI, r: Math.hypot(x, y) };
+  }
+  // which leaf is nearest that angle, on the way they are really lying now
+  const leafAt = a => {
+    let best = 0, d = 1e9;
+    leaves.forEach((l, i) => { const m = Math.abs(l.a - a); if (m < d) { d = m; best = i; } });
+    return best;
+  };
+  const toneAt = r => {
+    const out = TIP + 30 - r;                         // measured from the tip, the leaf lifted
+    return Math.max(0, Math.min(TONES - 1, TONES - 1 - Math.floor(out / CHIP)));
+  };
+
+  // drag: on a closed deck, or on the outermost leaf, you pull the fan itself.
+  // Anywhere else on an open fan, you move across the leaves to choose.
+  deck.addEventListener('pointerdown', e => {
+    if (drag || !e.isPrimary || e.button > 0) return;
+    const { a, r } = polar(e);
+    if (r > TIP + 46) return;
+    e.preventDefault(); deck.focus({ preventScroll: true });
+    const open = aimS > 0.5;
+    const tipLeaf = leaves[N - 1].a;
+    const fan = !open || (a > tipLeaf - 2 && a < tipLeaf + 12 && r > 60);
+    drag = { id: e.pointerId, kind: fan ? 'fan' : 'pick', start: S, a0: a, moved: 0, t0: performance.now(), trail: [] };
+    deck.classList.add('dragging');
+    deck.setPointerCapture(e.pointerId);
+    if (!fan) choose(leafAt(a), toneAt(r), false);
+    kick();
+  });
+  deck.addEventListener('pointermove', e => {
+    const { a, r } = polar(e);
+    if (!drag) {
+      // a fine pointer browses an open fan by hovering, nothing to press
+      if (aimS > 0.5 && fineHover.matches && r < TIP + 46 && a > A0 - 6 && a < A0 + SWEEP + 8 && r > 30) choose(leafAt(a), toneAt(r), false);
+      return;
+    }
+    if (e.pointerId !== drag.id) return;
+    drag.moved = Math.max(drag.moved, Math.abs(a - drag.a0));
+    if (drag.kind === 'pick') { choose(leafAt(a), toneAt(r), false); return; }
+    // the fan follows the hand from where it was taken, with rubber past both ends
+    const want = drag.start + (a - drag.a0) / SWEEP;
+    S = want > 1 ? 1 + 0.05 * (1 - Math.exp(-(want - 1) * 7)) : want < 0 ? -0.03 * (1 - Math.exp(want * 9)) : want;
+    const now = performance.now();
+    drag.trail.push([now, S]);
+    while (drag.trail.length > 2 && now - drag.trail[0][0] > 90) drag.trail.shift();
+    kick();
+  });
+  const fineHover = matchMedia('(hover: hover) and (pointer: fine)');
+  function release(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { kind, moved, trail, t0, start } = drag;
+    drag = null; deck.classList.remove('dragging');
+    if (kind === 'fan') {
+      let v = 0;                                          // spread per second
+      if (trail.length > 1 && performance.now() - trail[trail.length - 1][0] < 60) {
+        const [t, s0] = trail[0], [t1, s1] = trail[trail.length - 1];
+        if (t1 > t) v = (s1 - s0) / (t1 - t) * 1000;
+      }
+      Sv = v;
+      const tap = moved < 2 && performance.now() - t0 < 320;
+      if (tap) setOpen(aimS < 0.5);                       // a tap on the closed deck opens it
+      // past a third of the way, or a flick that gets there: it finishes the move
+      else setOpen(S + v * 0.12 > (start < 0.5 ? 0.33 : 0.67));
+    }
+    kick();
+  }
+  deck.addEventListener('pointerup', release);
+  deck.addEventListener('pointercancel', release);
+  deck.addEventListener('contextmenu', e => e.preventDefault());
+
+  $('rivet').addEventListener('click', () => setOpen(aimS < 0.5));
+
+  // the brass catches the light as the pointer moves
+  if (fineHover.matches && !reduce) {
+    addEventListener('pointermove', e => {
+      const b = $('rivet').getBoundingClientRect(), d = Math.atan2(e.clientY - b.top - b.height / 2, e.clientX - b.left - b.width / 2) * 57.3;
+      $('rivet').style.setProperty('--spec', `conic-gradient(from ${(d / 3 + 196).toFixed(1)}deg, #ffeeb5, #b98a35 18%, #f4d07b 36%, #8d6523 52%, #e7bf6a 70%, #a67a2c 86%, #ffeeb5)`);
+    });
+  }
+
+  // keyboard: same deck, no travel to wait for
+  deck.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') { e.preventDefault(); if (aimS < 0.5) setOpen(true, false); choose(sel + 1, tone, true); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); if (aimS < 0.5) setOpen(true, false); choose(sel - 1, tone, true); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); choose(sel, tone + 1, true); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); choose(sel, tone - 1, true); }
+    else if (e.key === 'Home') { e.preventDefault(); choose(0, tone, true); }
+    else if (e.key === 'End') { e.preventDefault(); choose(N - 1, tone, true); }
+    else if (e.key === 'Escape') { if (aimS > 0.5) { e.preventDefault(); setOpen(false); } }
+    else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (aimS < 0.5) setOpen(true); else copyNow();
+    }
+  });
+
+  // copy: Clipboard API, with the old way for pages without a secure context
+  async function copyNow() {
+    const hex = hexes[sel][tone];
+    let done = false;
+    try { await navigator.clipboard.writeText(hex); done = true; } catch {
+      const t = document.createElement('textarea');
+      t.value = hex; t.style.cssText = 'position:fixed;opacity:0';
+      document.body.append(t); t.select();
+      try { done = document.execCommand('copy'); } catch { done = false; }
+      t.remove();
+      deck.focus({ preventScroll: true });
+    }
+    $('copyText').textContent = done ? 'Copied' : 'Press Ctrl+C';
+    say(done ? `${hex} copied` : `Copy failed. The code is ${hex}.`);
+    clearTimeout(copied);
+    copied = setTimeout(() => { copied = 0; $('copyText').textContent = 'Copy'; }, 1600);
+  }
+  $('copy').addEventListener('click', copyNow);
+
+  const params = new URLSearchParams(location.search);
+  document.fonts.ready.then(() => {
+    lucide.createIcons({ attrs: { 'stroke-width': 2.2 } });
+    const still = params.get('still');
+    if (still === 'fan') {
+      // a real frame: the deck let go from closed, stepped through its own springs
+      sel = 15; tone = 2; selF = 15; show();
+      leaves.forEach((l, i) => { l.a = fanAngle(i) + part(i); });
+      aimS = 1; $('rivet').setAttribute('aria-expanded', 'true');
+      for (let n = 0; n < +(params.get('n') || 13); n++) physics(1 / 60);
+      leaves[sel].pop = 1;
+    } else if (still === 'open') {
+      S = aimS = 1; sel = 3; tone = 3; selF = 3; show();
+      leaves.forEach((l, i) => { l.a = fanAngle(i) + part(i); });
+      leaves[sel].pop = 1;
+      $('rivet').setAttribute('aria-expanded', 'true');
+      $('copyText').textContent = 'Copied';
+    } else {
+      show();
+      leaves.forEach((l, i) => { l.a = fanAngle(i) + part(i); });
+      if (params.has('open')) { S = aimS = 1; leaves.forEach((l, i) => { l.a = fanAngle(i) + part(i); }); leaves[sel].pop = 1; $('rivet').setAttribute('aria-expanded', 'true'); }
+    }
+    paint();
+    if (params.has('demo')) {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      (async function run() {
+        await wait(700); setOpen(true, false);
+        await wait(1300);
+        for (const i of [4, 7, 10, 13, 16, 19, 16, 11]) { choose(i, (i % 4) + 1, false); await wait(380); }
+        await wait(900); setOpen(false, false);
+        await wait(1300); run();
+      })();
+    }
+  });
+</script>
+</body>
+</html>

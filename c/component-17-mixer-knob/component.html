@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mixer knob</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --stage: oklch(0.83 0.16 90);
+    --stage-lift: oklch(0.91 0.125 98);
+    --print: oklch(0.2 0.03 80);
+    --print-2: oklch(0.32 0.05 80);
+    --led-off: oklch(0.17 0.012 70);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(62% 48% at 50% 42%, var(--stage-lift), var(--stage));
+    color: var(--print);
+    display: grid; place-items: center;
+    min-height: 100dvh; padding: 12px;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--print); color: var(--stage); }
+  em, i { font-style: normal; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* no card: the page itself is the anodised plate, the knob is mounted straight on it */
+  .deck { position: relative; width: min(520px, 100%); user-select: none; -webkit-user-select: none; }
+
+  .ring { position: relative; aspect-ratio: 1; margin-top: 2px; }
+  .scale { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .scale text { font-family: "Inter Tight", system-ui, sans-serif; font-size: 19px; font-weight: 700; fill: var(--print-2); text-anchor: middle; dominant-baseline: central; font-variant-numeric: tabular-nums; transition: fill 160ms ease; }
+  .scale text.on { fill: var(--print); }
+  .led-off { fill: var(--led-off); stroke: oklch(0.96 0.09 95 / 0.65); stroke-width: 1; }
+  /* lit LEDs snap on and fade out slowly */
+  .led { opacity: 0; transition: opacity 260ms var(--ease-out); }
+  .led.on { opacity: 1; transition: opacity 40ms linear; }
+  .bypass .led.on { opacity: 0.13; transition: opacity 220ms ease; }
+
+  .well { position: absolute; left: 50%; top: 50%; width: 76%; height: 76%; translate: -50% -50%; border-radius: 50%; background: radial-gradient(closest-side, oklch(0.09 0.008 85) 92%, oklch(0.25 0.03 85) 97%, oklch(0.96 0.1 95)); }
+  .drop { position: absolute; left: 50%; top: 50%; width: 72%; height: 72%; margin: -36% 0 0 -36%; border-radius: 50%; pointer-events: none; background: oklch(0.34 0.07 72 / 0.72); filter: blur(15px); }
+  .knob {
+    position: absolute; left: 50%; top: 50%; width: 72%; height: 72%; margin: -36% 0 0 -36%; border-radius: 50%;
+    cursor: grab; touch-action: none; outline: none;
+    transition: scale 130ms var(--ease-out);
+  }
+  .knob:active { cursor: grabbing; }
+  .knob.pressed { scale: 0.975; }
+  .bypass .knob { scale: 0.985; }
+  .bypass .knob.pressed { scale: 0.965; }
+  .knob:focus-visible::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; outline: 3px solid var(--print); }
+  canvas { display: block; width: 100%; height: 100%; border-radius: 50%; pointer-events: none; }
+
+  .read { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 6px 14px 0; }
+  .read h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.015em; text-align: right; line-height: 1.2; }
+  .value { font-size: 40px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; display: flex; transition: color 200ms ease, opacity 200ms ease; }
+  .value span { display: inline-block; overflow: hidden; height: 1em; }
+  .value b { display: block; font-weight: inherit; }
+  .bypass .value { opacity: 0.5; }
+  .note { font-size: 15px; font-weight: 500; color: var(--print-2); text-align: right; line-height: 1.25; display: grid; }
+  .note > span { grid-area: 1 / 1; align-self: end; transition: opacity 200ms ease, filter 200ms ease; }
+  .note .off { opacity: 0; filter: blur(2px); color: var(--print); font-weight: 700; }
+  .bypass .note .off { opacity: 1; filter: none; }
+  .bypass .note .on { opacity: 0; filter: blur(2px); }
+  @media (max-width: 360px) {
+    .value { font-size: 34px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .knob, .note > span { transition: none; }
+    .note > span { filter: none !important; }
+  }
+</style>
+</head>
+<body>
+<article class="deck" id="deck" aria-labelledby="title">
+  <div class="ring" id="ring">
+    <svg class="scale" id="scale" viewBox="0 0 440 440" aria-hidden="true"></svg>
+    <div class="well"></div>
+    <div class="drop" id="drop"></div>
+    <div class="knob" id="knob" tabindex="0" role="slider"
+      aria-labelledby="title" aria-valuemin="0" aria-valuemax="11"
+      aria-valuenow="0" aria-describedby="how">
+      <canvas id="face"></canvas>
+    </div>
+  </div>
+  <div class="read">
+    <div class="value" id="value" aria-hidden="true"></div>
+    <div><h1 id="title">Tape drive</h1><div class="note"><span class="on">Push the knob to bypass</span><span class="off">Bypassed. Push to return</span></div></div>
+  </div>
+  <p class="sr" id="how">Turn it, or use the arrow keys. Page keys move a full number. Enter pushes it to bypass.</p>
+  <p class="sr" id="live" aria-live="polite"></p>
+</article>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const deck = $('deck'), knob = $('knob'), face = $('face'), scale = $('scale'), drop = $('drop');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const rad = d => d * Math.PI / 180;
+
+  // 45 detents across 270 degrees: 0 to 11 in quarters
+  const STEPS = 44, MIN = -135, MAX = 135, STEP = (MAX - MIN) / STEPS;
+  const angleOf = v => MIN + v * STEP;
+
+  // the printed scale and one LED per detent
+  const leds = [], marks = [];
+  (function buildScale() {
+    let off = '', on = '', text = '';
+    for (let i = 0; i <= STEPS; i++) {
+      const a = rad(angleOf(i)), x = 220 + 180 * Math.sin(a), y = 220 - 180 * Math.cos(a);
+      const big = i % 4 === 0, r = big ? 5 : 3.7;
+      off += `<circle class="led-off" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r + 1.5}"/>`;
+      const c = i >= 41 ? 'oklch(0.58 0.24 27)' : 'oklch(0.72 0.19 48)';
+      const core = i >= 41 ? 'oklch(0.8 0.13 35)' : 'oklch(0.94 0.09 75)';
+      on += `<g class="led"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${c}"/><circle cx="${(x - 0.7).toFixed(1)}" cy="${(y - 0.8).toFixed(1)}" r="${(r * 0.46).toFixed(1)}" fill="${core}"/></g>`;
+      if (big) {
+        const tx = 220 + 206 * Math.sin(a), ty = 220 - 206 * Math.cos(a);
+        text += `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}">${i / 4}</text>`;
+      }
+    }
+    scale.innerHTML = off + on + text;
+    leds.push(...scale.querySelectorAll('.led'));
+    marks.push(...scale.querySelectorAll('text'));
+  })();
+
+  // Knurled edge, drawn face by face: every ridge has two slopes and each slope
+  // is lit from its own angle to the light, so the highlight stays put and the
+  // ridges run through it as the knob turns.
+  const ctx = face.getContext('2d');
+  const RIDGES = 132, TILT = rad(56);
+  let S = 0, theta = MIN, light = rad(-128), lightAim = light, value = 0;
+  const cap = document.createElement('canvas'); let capLight = null;
+
+  function fit() {
+    const px = Math.round(knob.offsetWidth * (devicePixelRatio || 1));
+    if (px && px !== face.width) { face.width = face.height = px; cap.width = cap.height = px; capLight = null; }
+    S = face.width / 2;
+  }
+  const seg = (a, b, r0, r1) => {
+    ctx.beginPath(); ctx.arc(0, 0, r1, a, b); ctx.arc(0, 0, r0, b, a, true); ctx.closePath();
+  };
+  function paintCap() {
+    // spun metal: a conic highlight turned to the light, not to the knob
+    const c = cap.getContext('2d'), R = S * 0.7;
+    c.setTransform(1, 0, 0, 1, S, S); c.clearRect(-S, -S, 2 * S, 2 * S);
+    const g = c.createConicGradient(light, 0, 0);
+    [[0, '#fafaf6'], [0.07, '#a7a7a2'], [0.21, '#6a6a66'], [0.36, '#b5b5af'], [0.5, '#f1f1ec'], [0.58, '#a3a39e'], [0.72, '#62625e'], [0.88, '#ababa6'], [1, '#fafaf6']].forEach(s => g.addColorStop(...s));
+    c.beginPath(); c.arc(0, 0, R, 0, 7); c.fillStyle = g; c.fill();
+    for (let r = R * 0.1; r < R; r += Math.max(1.5, S * 0.012)) {
+      c.beginPath(); c.arc(0, 0, r, 0, 7);
+      c.strokeStyle = (r / (S * 0.012)) % 2 < 1 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.035)';
+      c.lineWidth = Math.max(0.6, S * 0.005); c.stroke();
+    }
+    const dish = c.createRadialGradient(-S * 0.2, -S * 0.22, R * 0.2, 0, 0, R);
+    dish.addColorStop(0, 'rgba(255,255,255,.1)'); dish.addColorStop(1, 'rgba(0,0,0,.2)');
+    c.beginPath(); c.arc(0, 0, R, 0, 7); c.fillStyle = dish; c.fill();
+    capLight = light;
+  }
+  function paint() {
+    if (!S) return;
+    ctx.setTransform(1, 0, 0, 1, S, S); ctx.clearRect(-S, -S, 2 * S, 2 * S);
+    const k = rad(theta), w = 2 * Math.PI / RIDGES, r0 = S * 0.735, r1 = S * 0.998;
+    // how far the lit LEDs reach, for their colour in the ridges beside them
+    const litTo = rad(angleOf(value)), litFrom = rad(MIN);
+    const dim = deck.classList.contains('bypass') ? 0.12 : 1;
+    ctx.beginPath(); ctx.arc(0, 0, r1, 0, 7); ctx.fillStyle = '#0d0d0c'; ctx.fill();
+    for (let i = 0; i < RIDGES; i++) {
+      const a = i * w + k;
+      // the world position of this ridge, 0 at 12 o'clock, to find the LED beside it
+      let up = (a % (2 * Math.PI)); if (up > Math.PI) up -= 2 * Math.PI; if (up < -Math.PI) up += 2 * Math.PI;
+      const near = value > 0 && up >= litFrom && up <= litTo ? dim : 0;
+      for (let s = 0; s < 2; s++) {
+        const mid = a + w * (s ? 0.75 : 0.25) - Math.PI / 2;
+        const d = Math.max(0, Math.cos(mid + (s ? TILT : -TILT) - light));
+        const back = Math.max(0, Math.cos(mid + (s ? TILT : -TILT) - light - Math.PI));   // a weak fill from behind
+        const L = 0.05 + 0.13 * d + 0.82 * d ** 16 + 0.11 * back ** 6;
+        const glow = near * (s ? 0.085 : 0.03);           // the lit LEDs tint one slope of the ridges beside them
+        const g = Math.min(255, 255 * L);
+        ctx.fillStyle = `rgb(${Math.min(255, g + 255 * glow)},${Math.min(255, g + 170 * glow)},${Math.min(255, g + 30 * glow)})`;
+        seg(mid - w * 0.25 - 0.002, mid + w * 0.25 + 0.002, r0, r1); ctx.fill();
+      }
+    }
+    // chamfer between edge and cap, top lit by the same light
+    const ch = ctx.createConicGradient(light, 0, 0);
+    [[0, '#dcdcd6'], [0.12, '#55554f'], [0.5, '#23231f'], [0.88, '#55554f'], [1, '#dcdcd6']].forEach(s => ch.addColorStop(...s));
+    seg(0, 2 * Math.PI, S * 0.695, S * 0.74); ctx.fillStyle = ch; ctx.fill();
+    if (capLight === null || Math.abs(capLight - light) > 0.004) paintCap();
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(cap, 0, 0);
+    ctx.setTransform(1, 0, 0, 1, S, S);
+    // the pointer turns, cut through the cap and across the edge
+    ctx.rotate(k);
+    ctx.lineCap = 'round';
+    ctx.lineWidth = S * 0.05; ctx.strokeStyle = '#17171490';
+    ctx.beginPath(); ctx.moveTo(0, -S * 0.36); ctx.lineTo(0, -S * 0.685); ctx.stroke();
+    ctx.lineWidth = S * 0.036; ctx.strokeStyle = '#f7f6ee';
+    ctx.beginPath(); ctx.moveTo(0, -S * 0.37); ctx.lineTo(0, -S * 0.975); ctx.stroke();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // the cast shadow moves against the light
+    drop.style.translate = `${-Math.cos(light) * 26}px ${-Math.sin(light) * 26 + 8}px`;
+  }
+
+  // Sticky detents: between two notches the knob hangs back, then gets pulled in.
+  const sharp = p => p < 0.5 ? 0.5 * (2 * p) ** 4 : 1 - 0.5 * (2 * (1 - p)) ** 4;
+  const detented = raw => {
+    const s = (raw - MIN) / STEP, i = Math.floor(s);
+    return MIN + (i + sharp(s - i)) * STEP;
+  };
+  const nearest = raw => Math.max(0, Math.min(STEPS, Math.round((raw - MIN) / STEP)));
+
+  // value, LEDs and the rolling readout
+  const box = $('value');
+  function setValue(i, quiet) {
+    const dir = Math.sign(i - value) || 1;
+    value = i;
+    leds.forEach((l, n) => l.classList.toggle('on', i > 0 && n <= i));
+    marks.forEach((m, n) => m.classList.toggle('on', n * 4 <= i));
+    showValue(dir, quiet);
+    const v = i / 4;
+    knob.setAttribute('aria-valuenow', v);
+    knob.setAttribute('aria-valuetext', deck.classList.contains('bypass') ? `${v}, bypassed` : `${v} of 11`);
+  }
+  function showValue(dir, quiet) {
+    const t = (value / 4).toFixed(2);
+    while (box.children.length < t.length) box.prepend(Object.assign(document.createElement('span'), { innerHTML: '<b></b>' }));
+    while (box.children.length > t.length) box.firstChild.remove();
+    [...box.children].forEach((sp, i) => {
+      const b = sp.firstChild;
+      if (b.textContent === t[i]) return;
+      b.textContent = t[i];
+      if (!quiet && !reduce) b.animate([{ transform: `translateY(${dir * 50}%)`, opacity: 0.3 }, { transform: 'none', opacity: 1 }], { duration: 90, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+    });
+  }
+
+  // the one loop: raw is where the hand or the coast says, theta chases it on a stiff spring
+  let raw = MIN, vel = 0, spin = 0, loop = 0, last = 0, hand = null, settled = true;
+  function kick() { if (!loop) { last = performance.now(); loop = requestAnimationFrame(tick); } }
+  function tick(now) {
+    const dt = Math.min(0.032, (now - last) / 1000); last = now;
+    // coast: a flick keeps turning and loses speed through the notches
+    if (!hand && spin) {
+      raw += spin * dt; spin *= Math.exp(-3.4 * dt);
+      if (raw <= MIN || raw >= MAX) {                  // hits the end stop and gives up
+        raw = Math.max(MIN, Math.min(MAX, raw)); vel += spin * 0.5; spin = 0;
+      }
+      if (Math.abs(spin) < 45) { spin = 0; raw = angleOf(nearest(raw)); }
+    }
+    const i = nearest(raw);
+    if (i !== value) setValue(i);
+    const aim = !hand && !spin ? angleOf(i) : raw <= MIN || raw >= MAX ? raw : detented(raw);
+    if (reduce) { theta = hand ? aim : angleOf(i); vel = 0; }
+    else {
+      vel += (-1400 * (theta - aim) - 62 * vel) * dt;
+      theta += vel * dt;
+    }
+    // the light drifts to where the pointer is
+    light += (lightAim - light) * 0.14;
+    paint();
+    const still = !hand && !spin && Math.abs(theta - aim) < 0.02 && Math.abs(vel) < 0.5 && Math.abs(lightAim - light) < 0.001;
+    if (still) { theta = aim; paint(); loop = 0; return; }
+    loop = requestAnimationFrame(tick);
+  }
+
+  // drag: pointer capture, first finger only, rotation from the grab point; Shift for fine moves
+  const angleAt = e => {
+    const r = knob.getBoundingClientRect();
+    const x = e.clientX - r.left - r.width / 2, y = e.clientY - r.top - r.height / 2;
+    return { a: Math.atan2(x, -y) * 180 / Math.PI, dist: Math.hypot(x, y) / r.width };
+  };
+  knob.addEventListener('pointerdown', e => {
+    if (hand || !e.isPrimary || e.button > 0) return;
+    e.preventDefault(); knob.focus({ preventScroll: true });
+    spin = 0;
+    hand = { id: e.pointerId, last: angleAt(e).a, moved: 0, t0: performance.now(), base: raw, trail: [] };
+    knob.classList.add('pressed');
+    knob.setPointerCapture(e.pointerId);
+    kick();
+  });
+  knob.addEventListener('pointermove', e => {
+    if (!hand || e.pointerId !== hand.id) return;
+    const { a, dist } = angleAt(e);
+    if (dist < 0.08) { hand.last = a; return; }
+    let d = a - hand.last; d = ((d + 540) % 360) - 180;
+    hand.last = a; hand.moved += Math.abs(d);
+    if (hand.moved > 3) knob.classList.remove('pressed');
+    const gain = e.shiftKey ? 0.25 : 1;
+    hand.base = Math.max(MIN - 40, Math.min(MAX + 40, hand.base + d * gain));
+    // rubber past the end stops
+    raw = hand.base < MIN ? MIN - 5 * (1 - Math.exp((hand.base - MIN) / 16))
+        : hand.base > MAX ? MAX + 5 * (1 - Math.exp((MAX - hand.base) / 16)) : hand.base;
+    const now = performance.now();
+    hand.trail.push([now, hand.base]);
+    while (hand.trail.length > 2 && now - hand.trail[0][0] > 80) hand.trail.shift();
+    kick();
+  });
+  function release(e) {
+    if (!hand || e.pointerId !== hand.id) return;
+    knob.classList.remove('pressed');
+    const { moved, t0, trail } = hand;
+    let v = 0;
+    if (trail.length > 1 && performance.now() - trail[trail.length - 1][0] < 60) {
+      const [ta, a0] = trail[0], [tb, a1] = trail[trail.length - 1];
+      if (tb > ta) v = (a1 - a0) / (tb - ta) * 1000;       // deg per second
+    }
+    hand = null;
+    raw = Math.max(MIN, Math.min(MAX, raw));
+    if (moved < 3 && performance.now() - t0 < 320) { toggleBypass(); kick(); return; }
+    if (Math.abs(v) > 260 && !reduce) spin = Math.max(-1500, Math.min(1500, v));
+    else raw = angleOf(nearest(raw));
+    kick();
+  }
+  knob.addEventListener('pointerup', release);
+  knob.addEventListener('pointercancel', release);
+  knob.addEventListener('contextmenu', e => e.preventDefault());
+
+  // the scroll wheel moves one notch a click
+  knob.addEventListener('wheel', e => {
+    e.preventDefault(); spin = 0;
+    raw = angleOf(Math.max(0, Math.min(STEPS, nearest(raw) - Math.sign(e.deltaY))));
+    kick();
+  }, { passive: false });
+
+  // keyboard: the same notches, same spring
+  const say = t => { $('live').textContent = ''; setTimeout(() => { $('live').textContent = t; }, 30); };
+  function toggleBypass() {
+    const on = deck.classList.toggle('bypass');
+    knob.setAttribute('aria-valuetext', on ? `${value / 4}, bypassed` : `${value / 4} of 11`);
+    say(on ? 'Bypassed' : 'Back in');
+    capLight = null; paint();
+  }
+  knob.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (e.repeat) return;
+      knob.classList.add('pressed'); toggleBypass();
+      return;
+    }
+    const by = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 4, PageDown: -4 }[e.key];
+    let i = nearest(raw);
+    if (by) i += by;
+    else if (e.key === 'Home') i = 0;
+    else if (e.key === 'End') i = STEPS;
+    else return;
+    e.preventDefault(); spin = 0;
+    raw = angleOf(Math.max(0, Math.min(STEPS, i)));
+    kick();
+  });
+  knob.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') knob.classList.remove('pressed'); });
+
+  // the light leans towards a fine pointer
+  const fine = matchMedia('(hover: hover) and (pointer: fine)');
+  addEventListener('pointermove', e => {
+    if (!fine.matches || reduce) return;
+    const r = knob.getBoundingClientRect();
+    const dir = Math.atan2(e.clientY - r.top - r.height / 2, e.clientX - r.left - r.width / 2);
+    let d = dir - rad(-128); d = Math.atan2(Math.sin(d), Math.cos(d));
+    lightAim = rad(-128) + d * 0.22;
+    kick();
+  });
+
+  const params = new URLSearchParams(location.search);
+  document.fonts.ready.then(() => {
+    fit();
+    addEventListener('resize', () => { fit(); paint(); });
+    const still = params.get('still');
+    let start = 18;
+    if (params.has('v')) start = Math.max(0, Math.min(STEPS, Math.round(+params.get('v') * 4)));
+    if (still === 'hot') { start = 43; light = lightAim = rad(-118); }
+    if (still === 'bypass') { start = 26; deck.classList.add('bypass'); light = lightAim = rad(-140); }
+    raw = angleOf(start); theta = raw;
+    setValue(start, true);
+    if (still === 'hot') { theta = angleOf(43) - STEP * 0.32; }   // caught on its way into the notch
+    paint();
+    if (params.has('demo')) {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      (async function run() {
+        await wait(900); spin = 700; kick();
+        await wait(1500); spin = -900; kick();
+        await wait(1500); toggleBypass();
+        await wait(1200); toggleBypass();
+        await wait(1200); run();
+      })();
+    }
+  });
+</script>
+</body>
+</html>

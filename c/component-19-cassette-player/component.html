@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cassette player</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --stage: oklch(0.45 0.175 262);
+    --stage-lift: oklch(0.57 0.17 258);
+    --bone: oklch(0.955 0.008 95);
+    --bone-2: oklch(0.86 0.012 95);
+    --ink: oklch(0.2 0.03 262);
+    --ink-2: oklch(0.46 0.03 262);
+    --on-stage: oklch(0.97 0.012 250);
+    --on-stage-2: oklch(0.97 0.012 250);
+    --sun: oklch(0.86 0.165 92);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(62% 48% at 50% 40%, var(--stage-lift), var(--stage));
+    color: var(--on-stage);
+    display: grid; place-items: center;
+    min-height: 100dvh; padding: 12px;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--sun); color: var(--ink); }
+  em, i { font-style: normal; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  .player { width: min(440px, 100%); display: grid; user-select: none; -webkit-user-select: none; }
+  .cassette { position: relative; aspect-ratio: 400 / 256; cursor: grab; touch-action: none; border-radius: 3.5%; outline: none; }
+  .cassette:active { cursor: grabbing; }
+  .cassette:focus-visible { outline: 3px solid var(--sun); outline-offset: 5px; }
+  .under { position: absolute; inset: 1%; border-radius: 3.5%; box-shadow: 0 2px 3px oklch(0.15 0.1 262 / 0.5), 0 24px 34px -8px oklch(0.15 0.12 262 / 0.62); }
+  .cassette svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; display: block; }
+  .cassette text { font-family: "Inter Tight", system-ui, sans-serif; }
+
+  .deck { margin-top: clamp(56px, 18vw, 80px); display: grid; gap: 12px; }
+  .info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .counter {
+    display: flex; flex: none; height: 38px; padding: 3px 4px; gap: 2px; border-radius: 9px;
+    background: oklch(0.15 0.02 262);
+    box-shadow: inset 0 1.5px 3px oklch(0.05 0.02 262), 0 1px 0 oklch(0.6 0.12 258 / 0.5);
+  }
+  .wheel { position: relative; width: 19px; overflow: hidden; border-radius: 3px; background: linear-gradient(oklch(0.72 0.01 95), var(--bone) 34%, var(--bone) 66%, oklch(0.72 0.01 95)); color: var(--ink); font-size: 20px; line-height: 32px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: center; }
+  .wheel b { display: block; font-weight: inherit; will-change: transform; }
+  .wheel span { display: block; height: 32px; }
+  .now { min-width: 0; flex: 1; }
+  .now b { display: block; font-size: 19px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .now small { display: block; font-size: 14.5px; font-weight: 500; color: var(--on-stage-2); font-variant-numeric: tabular-nums; }
+
+  /* piano keys: down and latched until another key lifts them */
+  .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 5px; border-radius: 15px; background: oklch(0.18 0.03 262); box-shadow: inset 0 2px 4px oklch(0.06 0.02 262), 0 1px 0 oklch(0.62 0.12 258 / 0.5); }
+  .key {
+    position: relative; height: 62px; border: 0; padding: 0; border-radius: 10px; cursor: pointer;
+    background: linear-gradient(var(--bone), var(--bone-2));
+    color: var(--ink);
+    display: grid; place-items: center;
+    box-shadow: inset 0 1.5px 0 oklch(1 0 0), 0 7px 0 -1px oklch(0.66 0.02 95), 0 9px 8px oklch(0.04 0.02 262 / 0.7);
+    translate: 0 -5px;
+    transition: translate 110ms var(--ease-out), box-shadow 110ms var(--ease-out);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .key svg { width: 23px; height: 23px; fill: currentColor; }
+  .key.stop svg { width: 19px; height: 19px; }
+  .key:active, .key[aria-pressed="true"] { translate: 0 1px; box-shadow: inset 0 1.5px 0 oklch(1 0 0), 0 1px 0 oklch(0.66 0.02 95), 0 1px 2px oklch(0.04 0.02 262 / 0.7); }
+  .key[aria-pressed="true"] { background: linear-gradient(var(--sun), oklch(0.78 0.16 88)); }
+  .key:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+  @media (hover: hover) and (pointer: fine) {
+    .key:not([aria-pressed="true"]):hover { background: linear-gradient(oklch(0.985 0.005 95), var(--bone-2)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .key { transition: none; }
+  }
+</style>
+</head>
+<body>
+<article class="player" id="player" aria-label="Cassette player">
+  <div class="cassette" id="cassette" tabindex="0" role="slider" aria-label="Tape position"
+    aria-valuemin="0" aria-valuemax="768" aria-valuenow="0" aria-describedby="how">
+    <i class="under"></i>
+    <svg viewBox="0 0 400 256" aria-hidden="true">
+      <defs>
+        <radialGradient id="pack" cx=".5" cy=".5" r=".5">
+          <stop offset=".3" stop-color="#6b3517"/><stop offset=".46" stop-color="#8c4a22"/><stop offset=".5" stop-color="#7a3f1c"/><stop offset=".68" stop-color="#a35a2b"/><stop offset=".72" stop-color="#8c4a22"/><stop offset=".9" stop-color="#b5683a"/><stop offset=".95" stop-color="#975327"/><stop offset="1" stop-color="#6e3a1b"/>
+        </radialGradient>
+        <linearGradient id="smoke" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#2a3560" stop-opacity=".3"/><stop offset=".55" stop-color="#101530" stop-opacity=".42"/><stop offset="1" stop-color="#070a1c" stop-opacity=".62"/>
+        </linearGradient>
+        <linearGradient id="bridge" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#1b2140" stop-opacity=".82"/><stop offset="1" stop-color="#0a0d20" stop-opacity=".94"/>
+        </linearGradient>
+        <linearGradient id="glossBand" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".13"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+        </linearGradient>
+        <radialGradient id="screw" cx=".36" cy=".3" r=".8"><stop offset="0" stop-color="#e9ebef"/><stop offset=".6" stop-color="#8a8e98"/><stop offset="1" stop-color="#4c4f58"/></radialGradient>
+        <clipPath id="shellClip"><rect width="400" height="256" rx="13"/></clipPath>
+        <clipPath id="clipL"><circle id="clipLc" cx="115" cy="124" r="40"/></clipPath>
+        <clipPath id="clipR"><circle id="clipRc" cx="285" cy="124" r="40"/></clipPath>
+      </defs>
+
+      <!-- the back of the shell and its slip sheet -->
+      <rect width="400" height="256" rx="13" fill="#d9e0f2" fill-opacity=".1"/>
+
+      <!-- the tape packs: the radii trade as the tape moves -->
+      <g id="packs"></g>
+
+      <!-- the shell over them, smoke-clear -->
+      <rect width="400" height="256" rx="13" fill="url(#smoke)"/>
+      <path d="M58 256L82 206Q84 202 89 202H311Q316 202 318 206L342 256z" fill="url(#bridge)"/>
+      <g fill="#04050e">
+        <circle cx="134" cy="230" r="8"/><circle cx="266" cy="230" r="8"/>
+        <rect x="170" y="224" width="14" height="14" rx="2.5"/><rect x="216" y="224" width="14" height="14" rx="2.5"/>
+      </g>
+      <g id="ribs" fill="#fff" opacity=".05"></g>
+      <g id="hubs"></g>
+
+      <!-- the tape, over the edge rollers and across the opening -->
+      <g fill="#c6ccdb"><circle cx="30" cy="243" r="6.5"/><circle cx="370" cy="243" r="6.5"/></g>
+      <g fill="#50566a"><circle cx="30" cy="243" r="2.5"/><circle cx="370" cy="243" r="2.5"/></g>
+      <path id="tape" fill="none" stroke="#4a2613" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/>
+      <path id="tapeShine" fill="none" stroke="#c98a58" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>
+
+      <!-- the paper label -->
+      <rect x="15" y="11" width="370" height="50" rx="6" fill="#f7f5ee"/>
+      <rect x="15" y="44" width="370" height="6" fill="#e2452f"/>
+      <rect x="15" y="50" width="370" height="6" fill="#f3c62f"/>
+      <text x="29" y="35" font-size="23" font-weight="800" fill="#1a1f3a">A</text>
+      <text x="56" y="34.5" font-size="17" font-weight="700" fill="#1a1f3a" letter-spacing="-.2">Night drive</text>
+      <text x="371" y="34" font-size="14" font-weight="600" fill="#4b5272" text-anchor="end">C-26</text>
+      <text id="labelSide" x="200" y="34" font-size="14" font-weight="500" fill="#4b5272" text-anchor="middle">Halden Radio</text>
+
+      <!-- light on the shell, leaning towards the pointer -->
+      <g clip-path="url(#shellClip)" pointer-events="none">
+        <rect id="gloss" x="60" y="-60" width="74" height="400" fill="url(#glossBand)" transform="rotate(24 200 128)"/>
+      </g>
+      <rect x=".75" y=".75" width="398.5" height="254.5" rx="12.5" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="1.5"/>
+      <g id="screws"></g>
+    </svg>
+  </div>
+  <div class="deck">
+    <div class="info">
+      <div class="counter" aria-hidden="true" title="Tape counter">
+        <div class="wheel"><b id="c2"></b></div><div class="wheel"><b id="c1"></b></div><div class="wheel"><b id="c0"></b></div>
+      </div>
+      <div class="now"><b id="song">Slow lane</b><small id="clock">00:00 of 12:48</small></div>
+    </div>
+    <div class="keys" role="group" aria-label="Transport">
+      <button class="key" id="kRew" type="button" aria-label="Rewind" aria-pressed="false"><i data-lucide="rewind"></i></button>
+      <button class="key" id="kPlay" type="button" aria-label="Play" aria-pressed="false"><i data-lucide="play"></i></button>
+      <button class="key" id="kFf" type="button" aria-label="Fast forward" aria-pressed="false"><i data-lucide="fast-forward"></i></button>
+      <button class="key stop" id="kStop" type="button" aria-label="Stop"><i data-lucide="square"></i></button>
+    </div>
+  </div>
+  <p class="sr" id="how">Drag across the tape to scrub, or turn a reel. Arrow keys move ten seconds, Page keys a minute, Space plays or stops.</p>
+  <p class="sr" id="live" aria-live="polite"></p>
+</article>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const cassette = $('cassette');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const TRACKS = [['Slow lane', 168], ['Ferry lights', 142], ['Two-stroke', 197], ['Kiosk at noon', 121], ['Late bus home', 140]];
+  const T = TRACKS.reduce((n, t) => n + t[1], 0);      // 12:48
+
+  // Tape is a fixed length wound on two hubs, so the two pack AREAS always
+  // add up. Radius follows the root of the area, and a reel's speed is
+  // tape speed over radius: the thin pack spins fast, the fat one slow.
+  const R_MIN = 23, R_MAX = 66, TAPE_SPEED = 14, LEN = TAPE_SPEED * T;
+  const B = R_MAX ** 2 - R_MIN ** 2;
+  const rLeft = s => Math.sqrt(R_MAX ** 2 - B * s);
+  const rRight = s => Math.sqrt(R_MIN ** 2 + B * s);
+  // the angle each reel has turned, by integrating ds / r exactly
+  const turnL = s => 2 * LEN / B * (R_MAX - rLeft(s));
+  const turnR = s => 2 * LEN / B * (rRight(s) - R_MIN);
+
+  const LX = 115, RX = 285, CY = 124;
+  // build the reels
+  (function build() {
+    const pack = (id, cx, clip) => `<circle id="${id}" cx="${cx}" cy="${CY}" r="40" fill="url(#pack)"/>
+      <g clip-path="url(#${clip})" pointer-events="none">
+        <path d="M${cx} ${CY}L${cx - 72} ${CY - 44}L${cx - 44} ${CY - 72}z" fill="#ffe2c8" opacity=".34"/>
+        <path d="M${cx} ${CY}L${cx + 72} ${CY + 44}L${cx + 44} ${CY + 72}z" fill="#ffe2c8" opacity=".16"/>
+      </g>`;
+    $('packs').innerHTML = pack('packL', LX, 'clipL') + pack('packR', RX, 'clipR');
+    const hub = (id, cx) => {
+      let teeth = '';
+      for (let i = 0; i < 6; i++) teeth += `<rect x="-2.6" y="-13.2" width="5.2" height="6.4" rx="1" fill="#f1f2f4" transform="rotate(${i * 60})"/>`;
+      return `<g transform="translate(${cx} ${CY})"><circle r="21" fill="#e6e8ee"/><circle r="21" fill="none" stroke="#fff" stroke-opacity=".8"/>
+        <circle r="13" fill="#04050e"/><g id="${id}">${teeth}<rect x="-1.2" y="14.6" width="2.4" height="4.6" rx="1" fill="#9196a6"/><rect x="-1.2" y="-19.2" width="2.4" height="4.6" rx="1" fill="#9196a6"/></g></g>`;
+    };
+    $('hubs').innerHTML = hub('hubL', LX) + hub('hubR', RX);
+    let ribs = '';
+    for (let i = 0; i < 11; i++) ribs += `<rect x="${93 + i * 20}" y="207" width="2.2" height="11" rx="1"/>`;
+    $('ribs').innerHTML = ribs;
+    let scr = '';
+    [[20, 74], [380, 74], [14, 238], [386, 238], [200, 244]].forEach(([x, y], i) => {
+      scr += `<g transform="translate(${x} ${y}) rotate(${[20, 75, -30, 44, 8][i]})"><circle r="5.4" fill="url(#screw)"/><rect x="-4" y="-.8" width="8" height="1.6" fill="#33353d"/><rect x="-.8" y="-4" width="1.6" height="8" fill="#33353d"/></g>`;
+    });
+    $('screws').innerHTML = scr;
+    // odometer wheels
+    ['c0', 'c1', 'c2'].forEach(id => { let h = ''; for (let d = 0; d <= 10; d++) h += `<span>${d % 10}</span>`; $(id).innerHTML = h; });
+  })();
+  const packL = $('packL'), packR = $('packR'), hubL = $('hubL'), hubR = $('hubR'), tape = $('tape'), shine = $('tapeShine'), clipLc = $('clipLc'), clipRc = $('clipRc');
+
+  // the line from an edge roller to the outside of a pack
+  function tangent(px, py, cx, cy, r, side) {
+    const d = Math.hypot(px - cx, py - cy), base = Math.atan2(py - cy, px - cx), a = Math.acos(Math.min(1, r / d));
+    const t = base + side * a;
+    return [cx + r * Math.cos(t), cy + r * Math.sin(t)];
+  }
+
+  let pos = 0, v = 0, loop = 0, last = 0, mode = 'stop', hand = null;
+  let D = 0, dv = 0, lean = 0, shownSong = -1, shownSec = -1;
+  const SPEEDS = { stop: 0, play: 1, ff: 26, rew: -26 };
+
+  function paint() {
+    const s = pos / T, rl = rLeft(s), rr = rRight(s);
+    packL.setAttribute('r', rl); packR.setAttribute('r', rr);
+    clipLc.setAttribute('r', rl); clipRc.setAttribute('r', rr);
+    // tape moving right turns both hubs anticlockwise
+    hubL.setAttribute('transform', `rotate(${-turnL(s) * 57.2958})`);
+    hubR.setAttribute('transform', `rotate(${-turnR(s) * 57.2958})`);
+    // slack: a loop of tape falls out of the opening and curls over itself
+    const [ax, ay] = tangent(30, 243, LX, CY, rl, 1), [bx, by] = tangent(370, 243, RX, CY, rr, -1);
+    const y = 251, l = lean;
+    const d = `M${ax} ${ay}L24 247L96 ${y}`
+      + `C${120 + l} ${y + D * 0.96} ${216 + l * 2} ${y + D * 1.16} ${252 + l} ${y + D * 0.62}`
+      + `C${276 + l} ${y + D * 0.24} ${212 + l} ${y + D * 0.1} ${203 + l} ${y + D * 0.56}`
+      + `C${196 + l} ${y + D * 0.98} ${286 + l * 0.4} ${y + D * 0.86} 304 ${y}`
+      + `L376 247L${bx} ${by}`;
+    tape.setAttribute('d', d); shine.setAttribute('d', d);
+    // the counter counts turns of the take-up reel, so it never runs even with time
+    const turns = turnR(s) / (2 * Math.PI) * 8;
+    const u = turns % 10, t = Math.floor(turns / 10) % 10, h = Math.floor(turns / 100) % 10;
+    const roll = 32;
+    $('c0').style.transform = `translateY(${-u * roll}px)`;
+    const carry = u > 9 ? u - 9 : 0;
+    $('c1').style.transform = `translateY(${-(t + carry) * roll}px)`;
+    $('c2').style.transform = `translateY(${-(h + (t === 9 ? carry : 0)) * roll}px)`;
+    readout();
+  }
+  const mmss = n => `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(Math.floor(n % 60)).padStart(2, '0')}`;
+  function readout() {
+    const sec = Math.floor(pos);
+    if (sec === shownSec) return;
+    shownSec = sec;
+    let at = 0, i = 0;
+    while (i < TRACKS.length - 1 && pos >= at + TRACKS[i][1]) at += TRACKS[i++][1];
+    $('clock').textContent = `${mmss(pos)} of ${mmss(T)}`;
+    if (i !== shownSong) { shownSong = i; $('song').textContent = TRACKS[i][0]; }
+    cassette.setAttribute('aria-valuenow', sec);
+    cassette.setAttribute('aria-valuetext', `${TRACKS[i][0]}, ${Math.floor(pos / 60)} minutes ${sec % 60} seconds`);
+  }
+
+  function kick() { if (!loop) { last = performance.now(); loop = requestAnimationFrame(tick); } }
+  function tick(now) {
+    const dt = Math.min(0.032, (now - last) / 1000); last = now;
+    if (!hand) {
+      // the motor pulls towards its speed; a flick has to run down first
+      const aim = SPEEDS[mode];
+      const rate = Math.abs(v) > Math.abs(aim) + 2 ? 2.8 : 6;
+      v += (aim - v) * Math.min(1, dt * rate);
+      if (Math.abs(v - aim) < 0.02) v = aim;
+      pos += v * dt;
+      if (pos <= 0 || pos >= T) {                       // end of the tape: the leader pulls tight
+        pos = Math.max(0, Math.min(T, pos));
+        if (mode !== 'stop') setMode('stop', pos >= T ? 'End of side A' : 'Start of side A');
+        v = 0;
+      }
+    }
+    // slack follows speed, and wobbles on a soft spring
+    const speed = hand ? hand.v : v;
+    const want = reduce ? 0 : (Math.abs(speed) > 30 ? 76 * (1 - Math.exp(-(Math.abs(speed) - 30) / 300)) : 0);
+    dv += (-(hand ? 150 : 95) * (D - want) - 7 * dv) * dt;
+    D = Math.max(0, D + dv * dt);
+    if (D === 0 && dv < 0) dv = 0;
+    lean += ((speed > 0 ? 1 : -1) * Math.min(26, D * 0.5) - lean) * Math.min(1, dt * 7);
+    if (hand) hand.v *= Math.exp(-dt * 9);               // a hand that stopped has no speed left
+    paint();
+    const idle = !hand && mode === 'stop' && v === 0 && D < 0.05 && Math.abs(dv) < 0.5;
+    if (idle) { D = 0; paint(); loop = 0; return; }
+    loop = requestAnimationFrame(tick);
+  }
+
+  // piano keys: one down at a time, stop lifts them all
+  const say = t => { $('live').textContent = ''; setTimeout(() => { $('live').textContent = t; }, 30); };
+  const KEYS = { rew: $('kRew'), play: $('kPlay'), ff: $('kFf') };
+  function setMode(m, msg) {
+    mode = m;
+    Object.entries(KEYS).forEach(([k, el]) => el.setAttribute('aria-pressed', String(k === m)));
+    if (msg) say(msg);
+    kick();
+  }
+  const tap = (m, msg) => () => {
+    if (mode === m) { setMode('stop', 'Stopped'); return; }
+    if ((m === 'ff' || m === 'play') && pos >= T) { say('End of side A. Rewind first.'); return; }
+    if (m === 'rew' && pos <= 0) { say('Already at the start.'); return; }
+    setMode(m, msg);
+  };
+  $('kRew').addEventListener('click', tap('rew', 'Rewinding'));
+  $('kPlay').addEventListener('click', tap('play', 'Playing'));
+  $('kFf').addEventListener('click', tap('ff', 'Fast forward'));
+  $('kStop').addEventListener('click', () => setMode('stop', 'Stopped'));
+
+  // drag: across the shell scrubs fast; on a reel you turn that reel by hand
+  const local = e => {
+    const r = cassette.getBoundingClientRect(), k = 400 / r.width;
+    return [(e.clientX - r.left) * k, (e.clientY - r.top) * k];
+  };
+  cassette.addEventListener('pointerdown', e => {
+    if (hand || !e.isPrimary || e.button > 0) return;
+    e.preventDefault(); cassette.focus({ preventScroll: true });
+    const [x, y] = local(e), s = pos / T;
+    const onL = Math.hypot(x - LX, y - CY) < rLeft(s) + 4, onR = Math.hypot(x - RX, y - CY) < rRight(s) + 4;
+    hand = { id: e.pointerId, x, y, reel: onL ? 'L' : onR ? 'R' : null, a: 0, v: 0, t: performance.now(), trail: [], was: mode };
+    if (hand.reel) hand.a = Math.atan2(y - CY, x - (hand.reel === 'L' ? LX : RX));
+    setModeQuiet('stop');
+    v = 0;
+    cassette.setPointerCapture(e.pointerId);
+    kick();
+  });
+  function setModeQuiet(m) { mode = m; Object.entries(KEYS).forEach(([k, el]) => el.setAttribute('aria-pressed', String(k === m))); }
+  cassette.addEventListener('pointermove', e => {
+    if (!hand || e.pointerId !== hand.id) return;
+    const [x, y] = local(e), now = performance.now();
+    let dPos;
+    if (hand.reel) {
+      // a hand on a reel: anticlockwise winds the tape on, by that pack's radius
+      const cx = hand.reel === 'L' ? LX : RX, a = Math.atan2(y - CY, x - cx);
+      let da = a - hand.a; da = Math.atan2(Math.sin(da), Math.cos(da));
+      hand.a = a;
+      const r = hand.reel === 'L' ? rLeft(pos / T) : rRight(pos / T);
+      dPos = -da * r / LEN * T;
+    } else {
+      dPos = (x - hand.x) * 2.4;                  // across the shell: 2.4 s of tape per unit
+    }
+    hand.x = x;
+    pos = Math.max(0, Math.min(T, pos + dPos));
+    const dt = Math.max(1, now - hand.t); hand.t = now;
+    hand.v = dPos / dt * 1000;
+    hand.trail.push([now, pos]);
+    while (hand.trail.length > 2 && now - hand.trail[0][0] > 90) hand.trail.shift();
+    kick();
+  });
+  function release(e) {
+    if (!hand || e.pointerId !== hand.id) return;
+    const tr = hand.trail, was = hand.was;
+    let flick = 0;
+    if (tr.length > 1 && performance.now() - tr[tr.length - 1][0] < 60) {
+      const [t0, p0] = tr[0], [t1, p1] = tr[tr.length - 1];
+      if (t1 > t0) flick = (p1 - p0) / (t1 - t0) * 1000;   // tape seconds per second
+    }
+    hand = null;
+    if (!reduce) v = Math.max(-500, Math.min(500, flick));   // keeps turning, then runs down
+    if (was === 'play') setModeQuiet('play');              // the key was never lifted
+    kick();
+  }
+  cassette.addEventListener('pointerup', release);
+  cassette.addEventListener('pointercancel', release);
+  cassette.addEventListener('contextmenu', e => e.preventDefault());
+
+  // keyboard
+  cassette.addEventListener('keydown', e => {
+    const by = { ArrowRight: 10, ArrowUp: 10, ArrowLeft: -10, ArrowDown: -10, PageUp: 60, PageDown: -60 }[e.key];
+    if (by) { e.preventDefault(); pos = Math.max(0, Math.min(T, pos + by)); dv += reduce ? 0 : 60; kick(); paint(); return; }
+    if (e.key === 'Home') { e.preventDefault(); pos = 0; paint(); return; }
+    if (e.key === 'End') { e.preventDefault(); pos = T; if (mode !== 'stop') setMode('stop'); paint(); return; }
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); $('kPlay').click(); }
+  });
+
+  // the shine on the shell leans towards a fine pointer
+  if (matchMedia('(hover: hover) and (pointer: fine)').matches && !reduce) {
+    const g = $('gloss');
+    addEventListener('pointermove', e => {
+      const x = 60 + (e.clientX / innerWidth) * 220;
+      g.setAttribute('x', x.toFixed(1));
+    });
+  }
+
+  const params = new URLSearchParams(location.search);
+  document.fonts.ready.then(() => {
+    lucide.createIcons({ attrs: { 'stroke-width': 2.2 } });
+    const still = params.get('still');
+    if (params.has('t')) pos = Math.max(0, Math.min(T, +params.get('t')));
+    if (still === 'scrub') { pos = 523; D = 76; lean = 22; $('gloss').setAttribute('x', 96); }
+    if (still === 'play') { pos = 128.35; setModeQuiet('play'); $('gloss').setAttribute('x', 190); }
+    paint();
+    if (params.has('demo')) {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      (async function run() {
+        setMode('play'); await wait(2400);
+        setMode('ff'); await wait(1600);
+        setMode('rew'); await wait(1400);
+        setMode('stop'); v = -400; kick(); await wait(2000);
+        pos = 40; run();
+      })();
+    }
+  });
+</script>
+</body>
+</html>

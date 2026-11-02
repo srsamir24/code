@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rotary dial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --stage: oklch(0.57 0.125 150);
+    --stage-lift: oklch(0.7 0.125 146);
+    --enamel: oklch(0.975 0.004 130);
+    --enamel-2: oklch(0.925 0.006 130);
+    --ink: oklch(0.23 0.03 160);
+    --ink-2: oklch(0.47 0.02 160);
+    --signal: oklch(0.62 0.215 33);
+    --signal-deep: oklch(0.46 0.17 30);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(62% 48% at 50% 44%, var(--stage-lift), var(--stage));
+    color: var(--ink);
+    display: grid; place-items: center;
+    min-height: 100dvh; padding: 12px;
+    caret-color: var(--signal);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--signal); color: var(--enamel); }
+  em, i { font-style: normal; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  .phone {
+    width: min(440px, 100%);
+    padding: clamp(14px, 5%, 24px);
+    background:
+      radial-gradient(120% 70% at 28% 0%, oklch(1 0 0 / 0.9), transparent 62%),
+      linear-gradient(170deg, var(--enamel), var(--enamel-2));
+    border-radius: 13% / 10.5%;
+    box-shadow:
+      inset 0 1.5px 0 oklch(1 0 0),
+      inset 0 -3px 5px oklch(0.5 0.02 150 / 0.22),
+      0 2px 3px oklch(0.24 0.06 155 / 0.34),
+      0 30px 40px -14px oklch(0.24 0.07 155 / 0.6);
+    display: grid; gap: clamp(10px, 3.4vw, 16px);
+    user-select: none; -webkit-user-select: none;
+  }
+  .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 2px 8px 0; }
+  .head h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+  .head p { font-size: 14px; font-weight: 500; color: var(--ink-2); }
+
+  .dial { position: relative; aspect-ratio: 1; touch-action: none; container-type: inline-size; }
+  .plate, .holes, .stop, .paper { position: absolute; }
+  .plate, .holes, .stop { inset: 0; width: 100%; height: 100%; }
+  /* the wheel really has holes: the digits live on the plate below it */
+  .wheel { position: absolute; inset: 2.5%; border-radius: 50%; overflow: hidden; }
+  .metal {
+    position: absolute; inset: 0;
+    background:
+      repeating-radial-gradient(circle,
+        oklch(1 0 0 / 0.1) 0 1px, oklch(0 0 0 / 0.025) 1px 2px),
+      conic-gradient(from 18deg, #e4e6ea, #fbfcfc 7%, #b3b7bf 17%,
+        #e9ebee 29%, #a4a8b1 41%, #f4f5f6 52%, #b9bdc4 63%,
+        #eff0f2 74%, #a9adb6 86%, #e4e6ea);
+  }
+  .well { position: absolute; inset: 0; border-radius: 50%;
+    box-shadow: inset 0 3px 7px oklch(0.2 0.03 40 / 0.55), inset 0 0 0 1.5px oklch(0.2 0.03 40 / 0.14), 0 1.5px 0 oklch(1 0 0 / 0.9); pointer-events: none; }
+  .plate text { font-family: "Inter Tight", system-ui, sans-serif; font-weight: 700; font-size: 31px; fill: oklch(0.985 0.012 60); text-anchor: middle; dominant-baseline: central; font-variant-numeric: tabular-nums; }
+  /* the shadow belongs to the room, so it sits on a wrapper that never rotates */
+  .cast { position: absolute; inset: 0; pointer-events: none;
+    filter: drop-shadow(0 2px 1.5px oklch(0.2 0.05 30 / 0.62)) drop-shadow(0 7px 7px oklch(0.2 0.05 30 / 0.36)); }
+
+  .holes { border-radius: 50%; }
+  .hole {
+    position: absolute; width: 15%; height: 15%; padding: 0; border: 0; background: none;
+    border-radius: 50%; cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent;
+    translate: -50% -50%;
+  }
+  .hole:active { cursor: grabbing; }
+  .hit { position: absolute; inset: -9%; border-radius: 50%; }   /* 44px+ target on small phones */
+  .rim {
+    position: absolute; inset: -1.5%; border-radius: 50%; display: block;
+    background: linear-gradient(145deg, #70747d, #d9dbe0 34%, #fdfdfe 62%, #ffffff);
+    mask: radial-gradient(closest-side, #0000 91%, #000 92.5%);
+    transition: scale 140ms var(--ease-out);
+  }
+  .hole:active .rim, .hole.held .rim { scale: 0.97; }
+  .hole.held::before { content: ""; position: absolute; inset: 3%; border-radius: 50%; background: radial-gradient(circle at 50% 40%, oklch(0.25 0.09 30 / 0.5), oklch(0.25 0.09 30 / 0.16)); }
+  .hole:focus-visible { outline: 2.5px solid var(--ink); outline-offset: 1px; }
+  @media (hover: hover) and (pointer: fine) {
+    .hole:hover::after { content: ""; position: absolute; inset: 3%; border-radius: 50%; background: oklch(1 0 0 / 0.14); }
+  }
+
+  .stop { pointer-events: none; filter: drop-shadow(0 2px 1.5px oklch(0.2 0.03 40 / 0.5)) drop-shadow(0 6px 8px oklch(0.2 0.03 40 / 0.32)); }
+
+  /* only in the cover still: the touch point, since a screenshot has no finger */
+  .grabber { position: absolute; width: 11%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle at 42% 36%, oklch(1 0 0), oklch(0.93 0.01 60));
+    box-shadow: 0 1px 2px oklch(0.2 0.08 30 / 0.5), 0 5px 9px oklch(0.2 0.08 30 / 0.42); }
+  .grabber[hidden] { display: none; }
+
+  /* the paper number card in the middle, like on the real thing */
+  .paper {
+    inset: 26.5%; border-radius: 50%; isolation: isolate;
+    display: grid; place-content: center; justify-items: center; gap: 3px;
+    pointer-events: none;
+    container-type: inline-size;
+  }
+  .paper::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+    background: radial-gradient(circle at 35% 24%, oklch(1 0 0), var(--enamel-2) 78%);
+    box-shadow:
+      inset 0 0 0 1.5px oklch(0.75 0.01 240),
+      inset 0 2px 3px oklch(0.4 0.02 240 / 0.28),
+      0 1.5px 2px oklch(0.25 0.02 240 / 0.45),
+      0 -1px 0 oklch(1 0 0 / 0.7);
+  }
+  .paper small { font-size: max(12px, 7.1cqw); font-weight: 600; color: var(--ink-2); }
+  .number { display: flex; align-items: baseline; font-size: max(15px, 12.2cqw); font-weight: 700; letter-spacing: -0.015em; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.25; }
+  .number .gap { width: 0.26em; }
+  .slot { position: relative; display: inline-block; width: 0.57em; height: 1.25em; overflow: hidden; text-align: center; }
+  .slot b { display: block; font-weight: inherit; }
+  .slot.empty b { color: oklch(0.75 0.01 240); }
+  .slot.live b { color: var(--signal-deep); }
+  .punct { color: var(--ink-2); font-weight: 600; }
+
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 10px; padding: 0 4px 2px; }
+  .key {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 50px; border: 0; border-radius: 16px; padding: 0 18px;
+    font: inherit; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; cursor: pointer;
+    transition: scale 140ms var(--ease-out), translate 140ms var(--ease-out), background-color 180ms ease, color 180ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .key svg { width: 18px; height: 18px; }
+  .key:active:not([aria-disabled="true"]) { scale: 0.97; translate: 0 1px; }
+  .key:focus-visible { outline: 2.5px solid var(--ink); outline-offset: 2px; }
+  .key.del { background: var(--enamel-2); color: var(--ink); box-shadow: inset 0 1px 0 oklch(1 0 0), 0 1px 2px oklch(0.3 0.02 150 / 0.4), 0 3px 5px oklch(0.3 0.02 150 / 0.12); }
+  .key.go { background: var(--signal); color: oklch(0.99 0.008 60); box-shadow: inset 0 1px 0 oklch(0.8 0.15 45 / 0.75), 0 1px 2px oklch(0.3 0.12 30 / 0.55), 0 4px 7px oklch(0.3 0.12 30 / 0.22); }
+  .key[aria-disabled="true"] { cursor: default; }
+  .key.go[aria-disabled="true"] { background: var(--enamel-2); color: var(--ink-2); box-shadow: inset 0 1px 0 oklch(1 0 0), 0 1px 2px oklch(0.3 0.02 150 / 0.28); }
+  .key.del[aria-disabled="true"] { color: oklch(0.56 0.01 150); }
+  @media (hover: hover) and (pointer: fine) {
+    .key.del:not([aria-disabled="true"]):hover { background: oklch(0.895 0.007 130); }
+    .key.go:not([aria-disabled="true"]):hover { background: oklch(0.59 0.215 33); }
+  }
+  @media (max-width: 360px) {
+    .head p { display: none; }
+    .key { height: 46px; padding: 0 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rim, .key { transition: none; }
+  }
+</style>
+</head>
+<body>
+<article class="phone" id="phone" aria-labelledby="title">
+  <div class="head"><h1 id="title">Dial your number</h1><p>We text you a code</p></div>
+  <div class="dial" id="dial" role="group"
+    aria-label="Rotary dial. Type a digit, or use the arrow keys and Enter.">
+    <svg class="plate" id="plate" viewBox="0 0 400 400" aria-hidden="true"></svg>
+    <span class="well"></span>
+    <div class="cast"><div class="wheel" id="wheel"><div class="metal" id="metal"></div></div></div>
+    <div class="holes" id="holes"></div>
+    <svg class="stop" id="stop" viewBox="0 0 400 400" aria-hidden="true"></svg>
+    <span class="grabber" id="grabber" hidden></span>
+    <div class="paper" id="card">
+      <small id="cardLabel">Your number</small>
+      <div class="number" id="number" role="img"></div>
+    </div>
+  </div>
+  <div class="keys">
+    <button class="key del" id="del" type="button" aria-disabled="true"><i data-lucide="delete"></i>Delete</button>
+    <button class="key go" id="send" type="button" aria-disabled="true">Send code</button>
+  </div>
+  <p class="sr" id="live" aria-live="polite"></p>
+</article>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const dial = $('dial'), wheel = $('wheel'), metal = $('metal'), holesEl = $('holes'), stopEl = $('stop');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const R_RING = 138, R_HOLE = 30, MAX_LEN = 10;
+  const ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+  const rad = d => d * Math.PI / 180;
+  const pos = (a, r = R_RING) => [200 + r * Math.sin(rad(a)), 200 - r * Math.cos(rad(a))];
+
+  // 12 o'clock = 0deg. Digit 1 rests at 60deg, each next digit
+  // 30deg further back. A hole lands on the stop at 88deg.
+  const rest = n => 60 - 30 * ((n || 10) - 1);
+  const travel = n => 88 - rest(n);
+
+  // the plate with its digits, the punched wheel, one real button per hole
+  const hole = {};
+  (function build() {
+    let digits = '<circle cx="200" cy="200" r="197" fill="var(--signal)"/>', cuts = 'M200 5a195 195 0 1 0 .01 0z';
+    ORDER.forEach(n => {
+      const [x, y] = pos(rest(n));
+      digits += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}">${n}</text>`;
+      const hx = (x - 10) / 380 * 400, hy = (y - 10) / 380 * 400, hr = R_HOLE / 380 * 400;
+      cuts += `M${hx.toFixed(2)} ${(hy - hr).toFixed(2)}a${hr.toFixed(2)} ${hr.toFixed(2)} 0 1 0 .01 0z`;
+      const b = document.createElement('button');
+      b.className = 'hole'; b.type = 'button'; b.dataset.n = n; b.tabIndex = n === 1 ? 0 : -1;
+      b.setAttribute('aria-label', `Dial ${n}`);
+      b.style.left = x / 4 + '%'; b.style.top = y / 4 + '%';
+      b.innerHTML = '<span class="rim"></span><span class="hit"></span>';
+      holesEl.append(b);
+      hole[n] = b;
+    });
+    $('plate').innerHTML = digits + '<path id="arc" fill="none" stroke="oklch(0.985 0.012 60)" stroke-width="5.5" stroke-linecap="round"/>';
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'><path fill-rule='evenodd' d='${cuts}'/></svg>`;
+    const url = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+    wheel.style.webkitMaskImage = url; wheel.style.maskImage = url;
+    wheel.style.webkitMaskSize = wheel.style.maskSize = '100% 100%';
+    // the finger stop: a chrome hook over the wheel, between 1 and 0
+    const a = 106, [tx, ty] = pos(a, 192), [bx, by] = pos(a, 112);
+    stopEl.innerHTML = `<defs><linearGradient id="chrome" gradientUnits="userSpaceOnUse" x1="${tx}" y1="${ty - 8}" x2="${bx}" y2="${by + 18}"><stop offset="0" stop-color="#3b3f48"/><stop offset=".3" stop-color="#f7f8fa"/><stop offset=".52" stop-color="#8e929c"/><stop offset=".72" stop-color="#fdfdfe"/><stop offset="1" stop-color="#5c6069"/></linearGradient></defs>
+      <path d="M${tx} ${ty}L${bx} ${by}" stroke="url(#chrome)" stroke-width="19" stroke-linecap="round" fill="none"/>
+      <circle cx="${tx}" cy="${ty}" r="4.5" fill="#2c2f36"/>`;
+  })();
+
+  // one fixed light: the wheel and its holes turn, the highlight on the metal doesn't
+  let theta = 0, light = 0, lightAim = 0, track = null;
+  const arc = $('arc');
+  const rims = Object.values(hole).map(b => b.firstElementChild);
+  function paint() {
+    wheel.style.rotate = theta + 'deg';
+    holesEl.style.rotate = theta + 'deg';
+    metal.style.rotate = light - theta + 'deg';
+    rims.forEach(r => { r.style.rotate = -theta + 'deg'; });
+    // the bright arc on the plate ring: how far this digit has come
+    if (track === null || theta < 0.5) { arc.removeAttribute('d'); return; }
+    const a0 = rest(track), a1 = a0 + theta, [x0, y0] = pos(a0, 193.5), [x1, y1] = pos(a1, 193.5);
+    arc.setAttribute('d', `M${x0} ${y0}A193.5 193.5 0 ${theta > 180 ? 1 : 0} 1 ${x1} ${y1}`);
+  }
+  let lightRaf = 0;
+  function lightLoop() {
+    light += (lightAim - light) * 0.14;
+    paint();
+    lightRaf = Math.abs(lightAim - light) > 0.05 ? requestAnimationFrame(lightLoop) : 0;
+  }
+  const fine = matchMedia('(hover: hover) and (pointer: fine)');
+  addEventListener('pointermove', e => {
+    if (!fine.matches || reduce) return;
+    lightAim = (e.clientX / innerWidth - 0.5) * 34 + (e.clientY / innerHeight - 0.5) * 12;
+    if (!lightRaf) lightRaf = requestAnimationFrame(lightLoop);
+  });
+
+  // the number
+  let digits = [], rolling = null, sent = false, active = null;
+  const say = t => { $('live').textContent = ''; setTimeout(() => { $('live').textContent = t; }, 30); };
+  const fmt = a => { const s = a.join(''); return s.length < 4 ? s : s.length < 7 ? `(${s.slice(0, 3)}) ${s.slice(3)}` : `(${s.slice(0, 3)}) ${s.slice(3, 6)}-${s.slice(6)}`; };
+  const slots = [];
+  (function buildNumber() {
+    const box = $('number');
+    const add = (cls, t) => { const s = document.createElement('span'); s.className = cls; s.textContent = t; box.append(s); };
+    for (let i = 0; i < MAX_LEN; i++) {
+      if (i === 0) add('punct', '(');
+      if (i === 3) { add('punct', ')'); add('gap', ''); }
+      if (i === 6) add('punct', '-');
+      const s = document.createElement('span');
+      s.className = 'slot empty'; s.innerHTML = '<b>0</b>';
+      box.append(s); slots.push(s);
+    }
+  })();
+  function showNumber() {
+    slots.forEach((s, i) => {
+      const live = rolling !== null && i === digits.length;
+      const v = live ? rolling : digits[i];
+      s.classList.toggle('empty', v === undefined || v === null);
+      s.classList.toggle('live', live);
+      s.firstElementChild.textContent = v ?? 0;
+    });
+    const full = digits.length >= MAX_LEN;
+    $('number').setAttribute('aria-label', digits.length ? `Number so far: ${digits.join(' ')}` : 'No digits yet');
+    $('del').setAttribute('aria-disabled', String(!digits.length));
+    $('send').setAttribute('aria-disabled', String(!full || sent));
+    $('send').textContent = sent ? 'Code sent' : 'Send code';
+    $('cardLabel').textContent = sent ? 'Code on its way' : 'Your number';
+  }
+  // one pulse: the open slot counts up by one
+  function pulse(count) {
+    rolling = count % 10;
+    showNumber();
+    if (reduce) return;
+    slots[digits.length].firstElementChild.animate(
+      [{ transform: 'translateY(46%)', opacity: 0.25 }, { transform: 'none', opacity: 1 }],
+      { duration: 64, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+  }
+  function commit(n) {
+    rolling = null; active = null; digits.push(n); sent = false; showNumber();
+    say(digits.length >= MAX_LEN ? `Number complete: ${fmt(digits)}. Send code is ready.` : `${n}. ${fmt(digits)}`);
+  }
+
+  // motion: one loop at a time
+  let raf = 0, pending = null, turning = false;
+  const stopLoop = () => { cancelAnimationFrame(raf); raf = 0; };
+  function spring(target, v, k, c, done) {     // v in deg/s; the velocity survives the hand-off
+    stopLoop();
+    let last = performance.now();
+    const step = now => {
+      const dt = Math.min(0.032, (now - last) / 1000); last = now;
+      v += (-k * (theta - target) - c * v) * dt;
+      theta += v * dt; paint();
+      if (Math.abs(theta - target) < 0.04 && Math.abs(v) < 2) { theta = target; paint(); raf = 0; done && done(); return; }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+  const thunk = () => { if (!reduce) stopEl.animate([{ rotate: '0deg' }, { rotate: '0.7deg' }, { rotate: '0deg' }], { duration: 130, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }); };
+
+  // The governor: after a drag or flick the way back runs at one fixed
+  // speed, 300deg/s, ten pulses a second, so a 9 takes longer than a 2.
+  // A tap or key passes a faster speed.
+  // Each 30deg of the way back is a pulse that counts the digit up.
+  function runHome(n, speed = 300) {
+    const count = n || 10, from = travel(n);
+    let fired = 0, v = 0, last = performance.now();
+    pending = n;
+    const tick = due => {
+      if (pending === null) return;           // settled early by a grab or a delete
+      while (fired < due) pulse(++fired);
+      if (fired >= count) { pending = null; commit(n); }
+    };
+    if (reduce) { tick(count); theta = 0; paint(); requestAnimationFrame(nextInQueue); return; }
+    const step = now => {
+      const dt = Math.min(0.032, (now - last) / 1000); last = now;
+      v = Math.min(speed, v + speed * dt / 0.07);
+      theta -= v * dt; paint();
+      tick(Math.min(count, Math.floor((from - theta) / 30) + 1));
+      if (theta > 6) { raf = requestAnimationFrame(step); return; }
+      spring(0, -v * 0.8, 700, 34, nextInQueue);
+    };
+    tick(1);
+    raf = requestAnimationFrame(step);
+  }
+  // cuts short whatever the wheel is doing for you; the digit already on its way back still counts
+  function settle() {
+    queue.length = 0;
+    if (pending !== null) { const n = pending; pending = null; commit(n); }
+    else if (turning) { stopLoop(); active = null; turning = false; spring(0, 0, 520, 38); }
+  }
+
+  // drag: pointer capture, first finger only, rotation measured from the grab point
+  let drag = null;
+  const angleAt = e => {
+    const r = dial.getBoundingClientRect();
+    const x = e.clientX - r.left - r.width / 2, y = e.clientY - r.top - r.height / 2;
+    return { a: Math.atan2(x, -y) * 180 / Math.PI, dist: Math.hypot(x, y) / r.width };
+  };
+  holesEl.addEventListener('pointerdown', e => {
+    const b = e.target.closest('.hole');
+    if (!b || drag || !e.isPrimary || e.button > 0) return;
+    e.preventDefault();
+    b.focus({ preventScroll: true });
+    roving(b);
+    settle(); stopLoop(); turning = false; active = null;
+    const n = +b.dataset.n;
+    track = n;
+    drag = { id: e.pointerId, n, b, last: angleAt(e).a, raw: theta, max: travel(n), moved: 0, t0: performance.now(), trail: [], hit: false, full: digits.length >= MAX_LEN };
+    b.classList.add('held');
+    holesEl.setPointerCapture(e.pointerId);
+  });
+  holesEl.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { a, dist } = angleAt(e);
+    if (dist < 0.08) { drag.last = a; return; }          // near the centre the angle jumps about
+    let d = a - drag.last; d = ((d + 540) % 360) - 180;
+    drag.last = a; drag.moved += Math.abs(d);
+    const lim = drag.full ? 0 : drag.max;                // number full: the wheel won't turn
+    drag.raw = Math.min(lim + 30, Math.max(-16, drag.raw + d));
+    // rubber past both ends
+    theta = drag.raw > lim ? lim + 3.2 * (1 - Math.exp(-(drag.raw - lim) / 14))
+          : drag.raw < 0 ? -2.4 * (1 - Math.exp(drag.raw / 9)) : drag.raw;
+    paint();
+    if (!drag.full && !drag.hit && theta >= drag.max) { drag.hit = true; thunk(); }
+    if (theta < drag.max - 6) drag.hit = false;
+    const now = performance.now();
+    drag.trail.push([now, drag.raw]);
+    while (drag.trail.length > 2 && now - drag.trail[0][0] > 80) drag.trail.shift();
+  });
+  const speedNow = () => {
+    const t = drag.trail; if (t.length < 2) return 0;
+    const [t0, a0] = t[0], [t1, a1] = t[t.length - 1];
+    return performance.now() - t1 > 60 || t1 === t0 ? 0 : (a1 - a0) / (t1 - t0);   // deg per ms
+  };
+  function carry(n, v) {                  // a flick keeps its speed until the stop
+    const max = travel(n);
+    let last = performance.now();
+    const step = now => {
+      const dt = now - last; last = now;
+      theta += v * dt; paint();
+      if (theta < max) { raf = requestAnimationFrame(step); return; }
+      theta = max; paint(); thunk(); runHome(n);
+    };
+    raf = requestAnimationFrame(step);
+  }
+  function release(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { n, b, max, moved, t0, full } = drag;
+    const v = speedNow();
+    b.classList.remove('held');
+    drag = null;
+    if (moved < 4 && performance.now() - t0 < 350) {       // a tap dials the digit for you
+      theta = Math.max(0, theta);
+      if (full) { refuse(); spring(0, 0, 520, 38); } else dialDigit(n);
+      return;
+    }
+    if (full) { refuse(); spring(0, v * 1000, 520, 38); return; }
+    if (theta >= max - 2.5) { theta = Math.min(theta, max); runHome(n); return; }   // at the stop
+    if (v > 0.25 && theta > max * 0.3) { carry(n, v); return; }                     // flicked
+    say('Turn it all the way to the stop.');
+    spring(0, v * 1000, 520, 38);                          // let go early: no digit, fast home
+  }
+  holesEl.addEventListener('pointerup', release);
+  holesEl.addEventListener('pointercancel', release);
+  holesEl.addEventListener('contextmenu', e => e.preventDefault());
+
+  // a digit by key or tap: the wheel goes round for you, faster if more are waiting
+  const queue = [];
+  const busy = () => turning || raf !== 0 || drag !== null;
+  function dialDigit(n) {
+    if (digits.length + queue.length + (active !== null ? 1 : 0) >= MAX_LEN) { refuse(); return; }
+    queue.push(n);
+    if (!busy()) nextInQueue();
+  }
+  function nextInQueue() {
+    turning = false;
+    if (!queue.length) return;
+    const n = queue.shift(), max = travel(n);
+    active = n; track = n;
+    if (reduce) { runHome(n); return; }                    // no travel: the digit just arrives
+    turning = true;
+    const hurry = queue.length ? 2.6 : 1.5;
+    const dur = (130 + max * 1.1) / hurry, from = theta, t0 = performance.now();
+    const step = now => {
+      const t = Math.min(1, (now - t0) / dur);
+      theta = from + (max - from) * (1 - (1 - t) ** 3); paint();
+      if (t < 1) { raf = requestAnimationFrame(step); return; }
+      thunk();
+      runHome(n, queue.length ? 900 : 480);
+    };
+    raf = requestAnimationFrame(step);
+  }
+
+  function refuse() {
+    say('Number is full. Delete a digit to change it.');
+    if (!reduce) $('number').animate([{ translate: '0 0' }, { translate: '-3px 0' }, { translate: '2.5px 0' }, { translate: '-1px 0' }, { translate: '0 0' }], { duration: 240, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+  }
+  function removeLast() {
+    if (!digits.length) return;
+    digits.pop(); sent = false; showNumber(); say(digits.length ? `Deleted. ${fmt(digits)}` : 'Number cleared.');
+  }
+
+  // keyboard: any digit dials; arrows walk the holes
+  function roving(b) { Object.values(hole).forEach(h => { h.tabIndex = h === b ? 0 : -1; }); }
+  holesEl.addEventListener('click', e => {
+    const b = e.target.closest('.hole');
+    if (b && e.detail === 0) dialDigit(+b.dataset.n);    // Enter or Space on a focused hole
+  });
+  holesEl.addEventListener('keydown', e => {
+    const i = ORDER.indexOf(+document.activeElement.dataset.n);
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (step && i >= 0) {
+      e.preventDefault();
+      const b = hole[ORDER[(i + step + 10) % 10]];
+      roving(b); b.focus();
+    }
+  });
+  addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^[0-9]$/.test(e.key)) { e.preventDefault(); dialDigit(+e.key); }
+    if (e.key === 'Backspace') { e.preventDefault(); settle(); removeLast(); }
+    if (e.key === 'Escape') { settle(); digits = []; sent = false; showNumber(); say('Number cleared.'); }
+  });
+  $('del').addEventListener('click', () => { settle(); removeLast(); });
+  $('send').addEventListener('click', () => {
+    if (digits.length < MAX_LEN || sent) return;
+    sent = true; showNumber(); say(`Code sent to ${fmt(digits)}.`);
+  });
+
+  // stills and the demo loop
+  const params = new URLSearchParams(location.search);
+  document.fonts.ready.then(() => {
+    lucide.createIcons({ attrs: { 'stroke-width': 2.2 } });
+    const still = params.get('still');
+    if (still === 'dial') {
+      digits = [4, 1, 5, 5, 5, 5, 0, 1];
+      light = lightAim = -6;
+      theta = 210; track = 8; hole[8].classList.add('held');
+      const g = $('grabber'), [gx, gy] = pos(rest(8) + theta);
+      g.hidden = false; g.style.left = gx / 4 + '%'; g.style.top = gy / 4 + '%';
+    }
+    if (still === 'done') { digits = [4, 1, 5, 5, 5, 5, 0, 1, 8, 9]; light = lightAim = 10; }
+    showNumber(); paint();
+    if (params.has('demo')) {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      (async function loop() {
+        for (const n of [4, 1, 5, 5, 5, 5, 0, 1, 8, 9]) {
+          dialDigit(n);
+          while (busy()) await wait(60);
+          await wait(240);
+        }
+        await wait(2200); digits = []; sent = false; showNumber();
+        await wait(900); loop();
+      })();
+    }
+  });
+</script>
+</body>
+</html>
