@@ -212,7 +212,7 @@
       b.g.setAttribute('transform', `translate(${px.toFixed(3)} ${py.toFixed(3)}) rotate(${heading.toFixed(3)})`);
       // fixed light from the upper left: each blade catches it by its own angle
       const c = Math.cos((heading + 60) * Math.PI / 180);
-      b.sheen.setAttribute('opacity', (Math.max(0, c) ** 3 * 0.17).toFixed(3));
+      b.sheen.setAttribute('opacity', (Math.max(0, c) ** 3 * 0.04).toFixed(3));
     }
   }
 
@@ -311,7 +311,6 @@
     lens.setPointerCapture(e.pointerId);
     drag = { id: e.pointerId, a: angleOf(e), raw: S.v, t: e.timeStamp, sp: 0 };
     S.speed = 0; S.lock = null;
-    lens.focus({ preventScroll: true });
     wake();
   });
   lens.addEventListener('pointermove', e => {

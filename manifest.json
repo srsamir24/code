@@ -1246,7 +1246,7 @@
       "file": "c/component-24-pull-cord/component.html",
       "download": "pull-cord.html",
       "source": "nytt/components/24-pull-cord/index.html",
-      "bytes": 20838
+      "bytes": 21154
     },
     {
       "id": "component-25-aperture-iris",
@@ -1261,7 +1261,7 @@
       "file": "c/component-25-aperture-iris/component.html",
       "download": "aperture-iris.html",
       "source": "nytt/components/25-aperture-iris/index.html",
-      "bytes": 20595
+      "bytes": 20554
     },
     {
       "id": "game-cancel",
