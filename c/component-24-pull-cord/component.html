@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pull cord</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* registered, so the whole room can transition them */
+  @property --wall { syntax: "<color>"; inherits: true; initial-value: #000; }
+  @property --wall-lift { syntax: "<color>"; inherits: true; initial-value: #000; }
+  @property --surface { syntax: "<color>"; inherits: true; initial-value: #000; }
+  @property --soft { syntax: "<color>"; inherits: true; initial-value: #000; }
+  @property --text { syntax: "<color>"; inherits: true; initial-value: #000; }
+  @property --text-2 { syntax: "<color>"; inherits: true; initial-value: #000; }
+  @property --accent { syntax: "<color>"; inherits: true; initial-value: #000; }
+  @property --rope { syntax: "<color>"; inherits: true; initial-value: #000; }
+  @property --twist { syntax: "<color>"; inherits: true; initial-value: #000; }
+
+  :root {
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    color-scheme: light;
+    --wall: oklch(0.76 0.105 305);
+    --wall-lift: oklch(0.87 0.085 300);
+    --surface: oklch(0.985 0.006 300);
+    --soft: oklch(0.93 0.018 300);
+    --text: oklch(0.24 0.04 300);
+    --text-2: oklch(0.47 0.03 300);
+    --accent: oklch(0.5 0.17 305);
+    --rope: oklch(0.93 0.02 90);
+    --twist: oklch(0.72 0.04 80);
+    /* lights on takes longer than lights off */
+    transition: --wall 420ms var(--ease-out), --wall-lift 420ms var(--ease-out), --surface 420ms var(--ease-out), --soft 420ms var(--ease-out), --text 420ms var(--ease-out), --text-2 420ms var(--ease-out), --accent 420ms var(--ease-out), --rope 420ms var(--ease-out), --twist 420ms var(--ease-out);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --wall: oklch(0.2 0.05 285);
+    --wall-lift: oklch(0.26 0.06 285);
+    --surface: oklch(0.285 0.04 285);
+    --soft: oklch(0.355 0.04 285);
+    --text: oklch(0.95 0.012 285);
+    --text-2: oklch(0.76 0.025 285);
+    --accent: oklch(0.8 0.11 300);
+    --rope: oklch(0.6 0.02 285);
+    --twist: oklch(0.46 0.03 285);
+    transition-duration: 140ms;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(70% 62% at var(--lx, 46%) 22%, var(--wall-lift), var(--wall));
+    background-color: var(--wall);
+    color: var(--text);
+    display: grid; justify-items: center; align-items: start;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  ::selection { background: var(--accent); color: var(--surface); }
+  em, i { font-style: normal; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* a fixed 520 x 730 room, hung from the top edge of the screen and scaled as one piece */
+  .room { position: relative; width: 520px; height: 730px; flex: none; transform-origin: 50% 0; }
+
+  /* cable, shade and bulb swing as one, from the ceiling point */
+  .lamp { position: absolute; left: 150px; top: 0; width: 200px; height: 220px; transform-origin: 100px 0; will-change: transform; }
+  .lamp svg { display: block; overflow: visible; }
+  .lit { transition: opacity 90ms linear; }
+  [data-theme="dark"] .lit { opacity: 0; transition: opacity 340ms var(--ease-out); }  /* the filament fades, it doesn't cut */
+  .room.flicker .lit { animation: flicker 320ms steps(1) both; }
+  @keyframes flicker { 0% { opacity: 0.2; } 18% { opacity: 1; } 34% { opacity: 0.1; } 56% { opacity: 0.9; } 68% { opacity: 0.35; } 82% { opacity: 1; } }
+
+  /* the light itself: a soft pool on the wall, moved by the lamp */
+  .pool { position: absolute; left: 0; top: -256px; width: 520px; height: 900px; pointer-events: none; transform-origin: 260px 256px;
+    background: radial-gradient(closest-side, oklch(0.99 0.05 95 / 0.55), oklch(0.99 0.05 95 / 0));
+    /* the shade blocks everything above the rim */
+    -webkit-mask: linear-gradient(transparent 46%, #000 60%); mask: linear-gradient(transparent 46%, #000 60%);
+    will-change: transform; }
+  .room.flicker .pool { animation: flicker 320ms steps(1) both; }
+  [data-theme="dark"] .pool { opacity: 0; transition: opacity 240ms var(--ease-out); }
+
+  /* the cord lives in one SVG the size of the room */
+  .rope { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+  .bead {
+    position: absolute; left: 0; top: 0; width: 56px; height: 56px; margin: -28px 0 0 -28px; padding: 0;
+    border: 0; border-radius: 50%; background: none; cursor: grab; touch-action: none;
+    display: grid; place-items: center; will-change: transform;
+  }
+  .bead:active { cursor: grabbing; }
+  .bead:focus-visible { outline: none; }
+  .bead:focus-visible svg { outline: 3px solid var(--accent); outline-offset: 5px; border-radius: 50%; }
+  .bead svg { display: block; pointer-events: none; transition: filter 300ms var(--ease-out); }
+  [data-theme="dark"] .bead svg { filter: brightness(0.62); }
+
+  /* a real bit of UI on the wall: everything is colour tokens, so it flips with the room */
+  .card {
+    position: absolute; left: 36px; top: 424px; width: 384px; padding: 22px 24px 20px; border-radius: 24px;
+    background: var(--surface);
+    box-shadow: var(--sx, 0) 26px 44px -22px oklch(0.2 0.08 300 / 0.55), 0 1px 2px oklch(0.2 0.05 300 / 0.18);
+  }
+  .card::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: radial-gradient(80% 60% at var(--lc, 40%) 0, oklch(1 0.03 95 / 0.55), transparent 70%);
+    transition: opacity 240ms var(--ease-out);
+  }
+  [data-theme="dark"] .card::before { opacity: 0; }
+  .card > * { position: relative; }
+  .byline { font-size: 14px; font-weight: 500; color: var(--text-2); }
+  .card h1 { margin-top: 4px; font-size: 29px; font-weight: 800; line-height: 1.06; letter-spacing: -0.03em; text-wrap: balance; }
+  .card p { margin-top: 10px; font-size: 16px; font-weight: 400; line-height: 1.42; color: var(--text-2); }
+  .row { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+  .prog { flex: 1; height: 8px; border-radius: 4px; background: var(--soft); overflow: hidden; }
+  .prog i { display: block; width: 38%; height: 100%; border-radius: inherit; background: var(--accent); }
+  .row small { font-size: 13.5px; font-weight: 600; color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .state { margin-top: 14px; font-size: 14px; font-weight: 600; color: var(--text); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .room.flicker .lit, .room.flicker .pool { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="room" id="room">
+  <div class="pool" id="pool" aria-hidden="true"></div>
+
+  <div class="lamp" id="lamp" aria-hidden="true">
+    <svg width="200" height="220" viewBox="0 0 200 220">
+      <defs>
+        <linearGradient id="shade" x1="0" x2="1"><stop offset="0" stop-color="oklch(0.2 0.03 300)"/><stop offset="0.38" stop-color="oklch(0.38 0.03 300)"/><stop offset="1" stop-color="oklch(0.17 0.03 300)"/></linearGradient>
+        <radialGradient id="bulb" cx="0.5" cy="0.35"><stop offset="0" stop-color="oklch(1 0.03 95)"/><stop offset="0.6" stop-color="oklch(0.96 0.11 95)"/><stop offset="1" stop-color="oklch(0.86 0.15 85)"/></radialGradient>
+      </defs>
+      <rect x="98.5" y="0" width="3" height="94" fill="oklch(0.17 0.02 300)"/>
+      <rect x="90" y="90" width="20" height="24" rx="4" fill="oklch(0.2 0.03 300)"/>
+      <!-- the bulb sits under the rim, seen from just below -->
+      <ellipse cx="100" cy="192" rx="72" ry="13" fill="oklch(0.14 0.02 300)"/>
+      <circle cx="100" cy="194" r="24" fill="oklch(0.62 0.01 300)"/>
+      <circle class="lit" cx="100" cy="194" r="24" fill="url(#bulb)"/>
+      <ellipse class="lit" cx="100" cy="192" rx="64" ry="9.5" fill="oklch(0.97 0.08 92 / 0.55)"/>
+      <path fill="url(#shade)" d="M84 112 H116 C126 118 170 156 178 190 C150 201 50 201 22 190 C30 156 74 118 84 112 Z"/>
+      <path fill="none" stroke="oklch(1 0 0 / 0.14)" stroke-width="1.5" d="M84 113 H116"/>
+      <!-- the eyelet the cord hangs from -->
+      <circle cx="168" cy="176" r="4.5" fill="oklch(0.78 0.01 300)"/>
+      <circle cx="168" cy="176" r="1.8" fill="oklch(0.2 0.02 300)"/>
+    </svg>
+  </div>
+
+  <article class="card" id="card">
+    <div class="byline">Ida Lund, 12 min read</div>
+    <h1>The last lamplighter on Storgata</h1>
+    <p>He still walks the route at dusk, though the lamps have lit themselves since 1962.</p>
+    <div class="row"><div class="prog"><i></i></div><small>38%</small></div>
+    <div class="state" id="state">Lights on. Pull the cord for dark mode.</div>
+  </article>
+
+  <svg class="rope" id="ropeSvg" width="520" height="730" viewBox="0 0 520 730" aria-hidden="true">
+    <path id="ropeShade" fill="none" stroke="oklch(0.2 0.05 300)" stroke-width="5.4" stroke-linecap="round"/>
+    <path id="ropeBase" fill="none" stroke="var(--rope)" stroke-width="3.8" stroke-linecap="round"/>
+    <!-- the twist: a short dash along the same path -->
+    <path id="ropeTwist" fill="none" stroke="var(--twist)" stroke-width="3.8" stroke-dasharray="1.4 3.4"/>
+  </svg>
+
+  <button class="bead" id="bead" type="button" role="switch" aria-checked="true" aria-label="Lights. Pull the cord, or press Space.">
+    <svg width="34" height="46" viewBox="0 0 34 46" aria-hidden="true">
+      <defs><radialGradient id="wood" cx="0.36" cy="0.3" r="0.8"><stop offset="0" stop-color="oklch(0.74 0.11 68)"/><stop offset="0.55" stop-color="oklch(0.56 0.11 58)"/><stop offset="1" stop-color="oklch(0.38 0.08 50)"/></radialGradient></defs>
+      <rect x="12.5" y="0" width="9" height="8" rx="2.5" fill="oklch(0.38 0.08 50)"/>
+      <path fill="url(#wood)" d="M17 5 C26 5 31 15 31 25 C31 37 24 45 17 45 C10 45 3 37 3 25 C3 15 8 5 17 5 Z"/>
+      <path fill="none" stroke="oklch(0.34 0.07 50 / 0.4)" stroke-width="1.2" d="M4 21 C12 24 22 24 30 21 M4 31 C12 34 22 34 30 31"/>
+    </svg>
+  </button>
+</div>
+<div class="sr" id="live" aria-live="polite"></div>
+
+<script>
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = id => document.getElementById(id);
+  const root = document.documentElement, room = $('room'), lamp = $('lamp'), pool = $('pool'), bead = $('bead'), live = $('live');
+  const say = t => { live.textContent = ''; setTimeout(() => live.textContent = t, 30); };
+
+  let scale = 1;
+  function resize() {
+    scale = Math.min(1, innerWidth / 520, innerHeight / 730);
+    room.style.transform = `scale(${scale})`;
+    room.style.margin = `0 ${(520 * scale - 520) / 2}px ${(730 * scale - 730)}px`;
+  }
+  addEventListener('resize', resize); resize();
+
+  /* the rope: a verlet chain. The top end hangs off the lamp, the bottom end is the bead. */
+  const N = 18, SEG = 11.5;                       // rest length 195px
+  const ANCHOR = { x: 318, y: 176 };              // the eyelet on the shade, at rest
+  const CLICK_AT = 62, REARM_AT = 18, MAX_PULL = 96;
+  const pts = Array.from({ length: N }, (_, i) => ({ x: ANCHOR.x, y: ANCHOR.y + i * SEG, ox: ANCHOR.x, oy: ANCHOR.y + i * SEG }));
+  const REST = ANCHOR.y + (N - 1) * SEG;
+
+  // the lamp is a pendulum. A tug on the cord kicks it, and all the light moves with it.
+  const L = { a: 0, v: 0 };
+  let armed = true, lightsOn = true;
+  let hold = null;                                // where the bead is being held, or null
+  let drag = null;
+
+  function anchor() {
+    const r = L.a * Math.PI / 180, dx = ANCHOR.x - 250, dy = ANCHOR.y;
+    return { x: 250 + dx * Math.cos(r) - dy * Math.sin(r), y: dx * Math.sin(r) + dy * Math.cos(r) };
+  }
+
+  function step(h) {
+    // lamp: pendulum with a little damping
+    L.v += (-34 * L.a - 1.3 * L.v) * h; L.a += L.v * h;
+    const a = anchor();
+    const damp = 0.992, g = 2100 * h * h;
+    for (let i = 1; i < N; i++) {
+      const p = pts[i];
+      const vx = (p.x - p.ox) * damp, vy = (p.y - p.oy) * damp;
+      p.ox = p.x; p.oy = p.y;
+      // the bead weighs more than the rope, so it falls harder
+      p.x += vx; p.y += vy + g * (i === N - 1 ? 1.5 : 1);
+    }
+    pts[0].x = a.x; pts[0].y = a.y;
+    if (hold) { pts[N - 1].x = hold.x; pts[N - 1].y = hold.y; }
+    for (let k = 0; k < 14; k++) {
+      for (let i = 0; i < N - 1; i++) {
+        const p = pts[i], q = pts[i + 1];
+        const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
+        const diff = (d - SEG) / d;
+        if (i === 0) { q.x -= dx * diff; q.y -= dy * diff; }
+        else if (i === N - 2 && hold) { p.x += dx * diff; p.y += dy * diff; }
+        else { p.x += dx * diff / 2; p.y += dy * diff / 2; q.x -= dx * diff / 2; q.y -= dy * diff / 2; }
+      }
+    }
+    pts[0].x = a.x; pts[0].y = a.y;
+    if (hold) { pts[N - 1].x = hold.x; pts[N - 1].y = hold.y; }
+  }
+
+  // a smooth line through the points, not a polygon
+  function ropePath() {
+    let d = `M${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+    for (let i = 1; i < N - 1; i++) {
+      const mx = (pts[i].x + pts[i + 1].x) / 2, my = (pts[i].y + pts[i + 1].y) / 2;
+      d += `Q${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)}`;
+    }
+    return d + `L${pts[N - 1].x.toFixed(1)} ${pts[N - 1].y.toFixed(1)}`;
+  }
+  const ropeEls = ['ropeShade', 'ropeBase', 'ropeTwist'].map($);
+  function paint() {
+    const d = ropePath();
+    ropeEls.forEach(el => el.setAttribute('d', d));
+    const end = pts[N - 1], prev = pts[N - 3];
+    const ang = Math.atan2(end.x - prev.x, end.y - prev.y) * -180 / Math.PI;
+    bead.style.transform = `translate(${end.x.toFixed(1)}px, ${(end.y + 22).toFixed(1)}px) rotate(${ang.toFixed(2)}deg)`;
+    bead.style.transformOrigin = '50% 6px';
+    lamp.style.transform = `rotate(${L.a.toFixed(3)}deg)`;
+    pool.style.transform = `rotate(${(L.a * 1.2).toFixed(3)}deg)`;
+    // the card's shadow leans away from the light, the highlight on it follows
+    const card = $('card');
+    // (a positive angle swings the bulb left)
+    card.style.setProperty('--sx', `${(L.a * 3).toFixed(2)}px`);
+    card.style.setProperty('--lc', `${(40 - L.a * 3.2).toFixed(1)}%`);
+    document.body.style.setProperty('--lx', `${(46 - L.a * 1.6).toFixed(1)}%`);
+  }
+
+  // the switch sits at the end of the pull: it clicks on the way down, not on release
+  function checkSwitch() {
+    const pull = pts[N - 1].y - REST;
+    if (armed && pull >= CLICK_AT) {
+      armed = false;
+      toggle();
+      if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(12);
+      // the catch gives: a jolt down the rope and a kick to the lamp
+      pts[N - 1].oy -= 4;
+      if (!reduce) L.v += (pts[N - 1].x - ANCHOR.x > 0 ? -1 : 1) * 20;
+    }
+    if (!armed && pull < REARM_AT) armed = true;
+  }
+
+  function setTheme(on, announce = true) {
+    lightsOn = on;
+    root.dataset.theme = on ? 'light' : 'dark';
+    bead.setAttribute('aria-checked', on);
+    $('state').textContent = on ? 'Lights on. Pull the cord for dark mode.' : 'Lights off. Pull the cord for light.';
+    if (announce) say(on ? 'Lights on' : 'Lights off');
+  }
+  function toggle() {
+    const on = !lightsOn;
+    setTheme(on);
+    // only a real pull counts as a choice, so an untouched page keeps following the system
+    try { localStorage.setItem('pull-cord-theme', on ? 'light' : 'dark'); } catch (e) {}
+    if (on && !reduce) {                         // an old bulb catches, it doesn't just appear
+      room.classList.remove('flicker'); room.offsetWidth; room.classList.add('flicker');
+      setTimeout(() => room.classList.remove('flicker'), 340);
+    }
+  }
+
+  // physics clock: fixed 120Hz steps, sleeps when everything hangs still
+  let raf = 0, last = 0, acc = 0;
+  function frame(now) {
+    raf = 0;
+    acc += Math.max(0, Math.min(40, now - last)) / 1000; last = now;
+    const h = 1 / 120;
+    let steps = 0;
+    while (acc >= h && steps < 8) { step(h); acc -= h; steps++; }
+    checkSwitch();
+    paint();
+    const end = pts[N - 1];
+    const speed = Math.abs(end.x - end.ox) + Math.abs(end.y - end.oy) + Math.abs(L.v) / 60;
+    if (hold || tug || speed > 0.012 || Math.abs(L.a) > 0.02) raf = requestAnimationFrame(frame);
+  }
+  function wake() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+
+  // drag: the rope only gives so far; past that the pull is damped
+  function roomPoint(e) {
+    const b = room.getBoundingClientRect();
+    return { x: (e.clientX - b.left) / scale, y: (e.clientY - b.top) / scale };
+  }
+  function clampHold(x, y) {
+    const a = anchor();
+    let dx = x - a.x, dy = y - a.y, d = Math.hypot(dx, dy);
+    const free = (N - 1) * SEG;
+    if (d > free) {
+      // past straight: a rubber band up to MAX_PULL
+      const over = d - free;
+      const eased = MAX_PULL * (1 - Math.exp(-over / (MAX_PULL * 0.9)));
+      const k = (free + eased) / d;
+      x = a.x + dx * k; y = a.y + dy * k;
+    }
+    return { x, y };
+  }
+  bead.addEventListener('pointerdown', e => {
+    if (!e.isPrimary || e.button !== 0 || drag) return;
+    bead.setPointerCapture(e.pointerId);
+    const p = roomPoint(e), end = pts[N - 1];
+    drag = { id: e.pointerId, ox: p.x - end.x, oy: p.y - end.y, sx: e.clientX, sy: e.clientY, moved: 0 };
+    hold = { x: end.x, y: end.y };
+    wake();
+  });
+  bead.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const p = roomPoint(e);
+    drag.moved = Math.max(drag.moved, Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy));
+    hold = clampHold(p.x - drag.ox, p.y - drag.oy);
+    wake();
+  });
+  const letGo = e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const tapped = drag.moved < 4 && e.type === 'pointerup';
+    drag = null; hold = null; wake();            // verlet keeps the bead's speed by itself
+    lastPointer = e.timeStamp;
+    if (tapped) pullOnce();                      // a tap on the bead is a tug
+  };
+  bead.addEventListener('pointerup', letGo);
+  bead.addEventListener('pointercancel', letGo);
+
+  // keyboard: Space or Enter plays the same tug, through the same switch
+  let tug = 0, lastPointer = -1e9;
+  function pullOnce() {
+    if (reduce) { toggle(); return; }
+    if (tug) return;
+    const start = performance.now();
+    tug = 1;
+    (function down(now) {
+      const u = Math.min(1, Math.max(0, now - start) / 170);
+      const y = REST + (CLICK_AT + 56) * u * u * (3 - 2 * u);     // through the rubber band, past the click
+      hold = clampHold(ANCHOR.x, y);
+      wake();
+      // it holds at the bottom until the switch has gone, however slow the frames are
+      if ((armed || u < 1) && now - start < 900) requestAnimationFrame(down);
+      else { hold = null; tug = 0; wake(); }
+    })(start);
+  }
+  // screen readers fire click with no pointer: the pointer path already handled its own
+  bead.addEventListener('click', e => { if (e.timeStamp - lastPointer > 500) pullOnce(); });
+  bead.addEventListener('keydown', e => {
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (!e.repeat) pullOnce(); }
+  });
+
+  // start from what the visitor chose before, else from their system
+  const params = new URLSearchParams(location.search);
+  const still = params.get('still');
+  let saved = null;
+  try { saved = localStorage.getItem('pull-cord-theme'); } catch (e) {}
+  if (!still) {
+    const startOn = saved ? saved === 'light' : !matchMedia('(prefers-color-scheme: dark)').matches;
+    root.style.transition = 'none';
+    setTheme(startOn, false);
+    root.offsetWidth; root.style.transition = '';
+  }
+  // settle the rope before the first paint
+  for (let i = 0; i < 240; i++) step(1 / 120);
+  paint();
+
+  // stills and the demo loop
+  if (still === 'pull') {
+    // caught at the click: rope taut and leaning, the lamp kicked off centre
+    L.a = -3.4;
+    // a fast pull out to the side, caught as the hand arrives: the rope is still catching up, so it bows
+    const STEPS = 22;
+    for (let i = 1; i <= STEPS; i++) {
+      const u = i / STEPS, e = u * u * (3 - 2 * u);
+      hold = clampHold(ANCHOR.x + 146 * e, REST + 96 * e);
+      step(1 / 120); L.a = -3.4 * u; L.v = 0;
+    }
+    armed = false; paint();
+  }
+  if (still === 'off') {
+    root.style.transition = 'none';
+    setTheme(false, false);
+    L.a = -2.2;
+    for (let i = 0; i < 60; i++) { hold = clampHold(ANCHOR.x - 26, REST - 16); step(1 / 120); L.a = -2.2; L.v = 0; }
+    hold = null; for (let i = 0; i < 40; i++) { step(1 / 120); L.a = -2.2; L.v = 0; }
+    paint();
+  }
+  if (params.has('demo')) {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    (async function loop() { await wait(2600); pullOnce(); loop(); })();
+  }
+</script>
+</body>
+</html>

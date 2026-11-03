@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aperture iris</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --stage: oklch(0.82 0.06 228);
+    --stage-lift: oklch(0.9 0.04 225);
+    --ink: oklch(0.22 0.04 250);
+    --ink-2: oklch(0.41 0.04 245);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(70% 60% at 62% 34%, var(--stage-lift), var(--stage));
+    background-color: var(--stage);
+    color: var(--ink);
+    display: grid; place-items: center;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  ::selection { background: var(--ink); color: var(--stage-lift); }
+  em, i { font-style: normal; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* a fixed 540 x 680 layout, scaled as one piece. The print and the lens overlap on purpose */
+  .fit { position: relative; width: 540px; height: 680px; flex: none; }
+
+  /* the picture, reacting to the aperture */
+  .print {
+    position: absolute; right: 0; top: 0; width: 448px; height: 440px; border-radius: 6px; overflow: hidden;
+    background: oklch(0.13 0.03 280);
+    box-shadow: 0 1px 2px oklch(0.2 0.05 245 / 0.4), 0 34px 48px -22px oklch(0.2 0.07 245 / 0.65);
+  }
+  .print svg { display: block; width: 100%; height: 100%; }
+
+  .readout { position: absolute; right: 4px; top: 462px; width: 160px; text-align: right; }
+  .fnum { display: block; font-size: 64px; font-weight: 800; letter-spacing: -0.045em; line-height: 0.95; font-variant-numeric: tabular-nums; }
+  .readout p { margin-top: 6px; font-size: 15.5px; font-weight: 600; line-height: 1.3; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .readout p b { display: block; font-weight: 700; color: var(--ink); }
+
+  /* the lens: a real slider you turn */
+  .lens {
+    position: absolute; left: 0; bottom: 0; width: 372px; height: 372px; border-radius: 50%;
+    cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+    filter: drop-shadow(0 2px 2px oklch(0.15 0.04 245 / 0.5)) drop-shadow(0 24px 26px oklch(0.17 0.06 245 / 0.55));
+    outline: none;
+  }
+  .lens:active { cursor: grabbing; }
+  .lens:focus-visible .focus { opacity: 1; }
+  .focus { opacity: 0; }
+  .lens svg { display: block; overflow: visible; }
+  .lens text { font-family: "Inter Tight", sans-serif; font-weight: 700; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="fit" id="fit">
+  <div class="print" aria-hidden="true">
+    <svg viewBox="0 0 448 440" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="room" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="oklch(0.2 0.05 275)"/><stop offset="1" stop-color="oklch(0.14 0.05 300)"/></linearGradient>
+        <linearGradient id="table" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="oklch(0.44 0.07 50)"/><stop offset="1" stop-color="oklch(0.27 0.05 45)"/></linearGradient>
+        <radialGradient id="pear" cx="0.36" cy="0.42" r="0.78"><stop offset="0" stop-color="oklch(0.9 0.15 108)"/><stop offset="0.52" stop-color="oklch(0.78 0.16 112)"/><stop offset="1" stop-color="oklch(0.44 0.11 118)"/></radialGradient>
+        <filter id="soft2" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5"/></filter>
+        <radialGradient id="contact"><stop offset="0" stop-color="oklch(0.12 0.03 40 / 0.8)"/><stop offset="1" stop-color="oklch(0.12 0.03 40 / 0)"/></radialGradient>
+      </defs>
+      <g id="exposed">
+        <rect width="448" height="440" fill="url(#room)"/>
+        <g id="bokeh" filter="url(#lens-soft)"></g>
+        <rect y="318" width="448" height="122" fill="url(#table)"/>
+        <rect y="318" width="448" height="2" fill="oklch(0.62 0.07 60 / 0.6)"/>
+        <!-- in focus at every setting -->
+        <ellipse cx="238" cy="372" rx="92" ry="17" fill="url(#contact)"/>
+        <path fill="url(#pear)" d="M226 178 C242 176 250 192 254 212 C258 234 298 262 298 310 C298 348 268 374 232 374 C196 374 166 348 166 310 C166 262 204 236 208 212 C211 194 212 180 226 178 Z"/>
+        <path filter="url(#soft2)" fill="oklch(1 0.03 100 / 0.42)" d="M204 268 C190 280 180 298 182 318 C184 328 192 326 194 316 C197 298 204 286 212 274 C216 266 210 262 204 268 Z"/>
+        <path fill="none" stroke="oklch(0.32 0.06 60)" stroke-width="5.5" stroke-linecap="round" d="M229 180 C230 168 234 158 243 150"/>
+        <path fill="oklch(0.6 0.15 140)" d="M236 168 C250 150 276 150 288 160 C276 176 250 180 236 168 Z"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="readout">
+    <span class="fnum" id="fnum" aria-hidden="true">f/2.8</span>
+    <p><b id="light">2 stops under f/1.4</b><span id="blur">Background far out of focus</span></p>
+  </div>
+
+  <div class="lens" id="lens" role="slider" tabindex="0" aria-label="Aperture" aria-valuemin="0" aria-valuemax="7" aria-valuenow="2" aria-valuetext="f/2.8">
+    <svg width="372" height="372" viewBox="-186 -186 372 372" aria-hidden="true">
+      <defs>
+        <radialGradient id="barrel"><stop offset="0.72" stop-color="oklch(0.2 0.006 260)"/><stop offset="0.86" stop-color="oklch(0.33 0.006 260)"/><stop offset="1" stop-color="oklch(0.16 0.006 260)"/></radialGradient>
+        <radialGradient id="deep"><stop offset="0" stop-color="oklch(0.08 0.02 280)"/><stop offset="0.75" stop-color="oklch(0.11 0.03 270)"/><stop offset="1" stop-color="oklch(0.05 0.01 270)"/></radialGradient>
+        <linearGradient id="steel" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="oklch(0.4 0.012 255)"/><stop offset="0.5" stop-color="oklch(0.25 0.012 255)"/><stop offset="1" stop-color="oklch(0.17 0.012 255)"/></linearGradient>
+        <!-- light on the glass is a fixed conic sweep, so it stays put while the ring turns -->
+        <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.4"/></filter>
+        <clipPath id="opening"><circle r="118"/></clipPath>
+        <mask id="wrapMask" maskUnits="userSpaceOnUse" x="-200" y="-200" width="400" height="400"><rect x="-200" y="-200" width="400" height="400" fill="#fff"/><g id="wrapHoles"></g></mask>
+        <filter id="lens-soft" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="0.9"/></filter>
+        <!-- a coating's reflection: magenta on one side, green on the other -->
+        <radialGradient id="coatA"><stop offset="0" stop-color="oklch(0.62 0.2 340 / 0.5)"/><stop offset="1" stop-color="oklch(0.62 0.2 340 / 0)"/></radialGradient>
+        <radialGradient id="coatB"><stop offset="0" stop-color="oklch(0.72 0.17 165 / 0.42)"/><stop offset="1" stop-color="oklch(0.72 0.17 165 / 0)"/></radialGradient>
+      </defs>
+
+      <circle r="186" fill="url(#barrel)"/>
+      <g id="ring">
+        <g id="knurl"></g>
+        <g id="scale"></g>
+      </g>
+      <circle r="124" fill="oklch(0.11 0.005 260)"/>
+      <circle r="121" fill="none" stroke="oklch(0.42 0.006 260)" stroke-width="1.5"/>
+
+      <!-- index mark: fixed on the barrel, the ring turns under it -->
+      <path d="M0 -181 L6 -171 H-6 Z" fill="oklch(0.86 0.17 92)"/>
+
+      <!-- behind the blades: the lens's dark inside, with coating colour -->
+      <g clip-path="url(#opening)">
+        <circle r="118" fill="url(#deep)"/>
+        <ellipse cx="-22" cy="-30" rx="58" ry="46" fill="url(#coatA)"/>
+        <ellipse cx="28" cy="34" rx="46" ry="34" fill="url(#coatB)"/>
+        <circle cx="-26" cy="-34" r="8" fill="oklch(0.95 0.02 300 / 0.75)"/>
+        <!-- nine blades -->
+        <g id="blades"></g>
+      </g>
+      <!-- glass in front of the blades: one soft reflection -->
+      <path d="M-88 -56 A104 104 0 0 1 -30 -100" fill="none" stroke="oklch(1 0 0 / 0.13)" stroke-width="9" stroke-linecap="round" filter="url(#soft)"/>
+      <circle class="focus" r="184" fill="none" stroke="oklch(0.86 0.17 92)" stroke-width="3"/>
+    </svg>
+  </div>
+</div>
+<div class="sr" id="live" aria-live="polite"></div>
+
+<script>
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = id => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (name, attrs, parent) => {
+    const n = document.createElementNS(NS, name);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    parent?.appendChild(n);
+    return n;
+  };
+  const fit = $('fit'), lens = $('lens'), live = $('live');
+  const say = t => { live.textContent = ''; setTimeout(() => live.textContent = t, 30); };
+
+  let scale = 1;
+  function resize() {
+    scale = Math.min(1, (innerWidth - 16) / 540, (innerHeight - 16) / 680);
+    fit.style.transform = `scale(${scale})`;
+    fit.style.margin = `${(680 * scale - 680) / 2}px ${(540 * scale - 540) / 2}px`;
+  }
+  addEventListener('resize', resize); resize();
+
+  const STOPS = ['1.4', '2', '2.8', '4', '5.6', '8', '11', '16'];
+  const NUM = [1.4, 2, 2.8, 4, 5.6, 8, 11, 16];
+  const STEP_DEG = 20;                           // ring travel per stop
+  const STOP_COUNT = STOPS.length;
+
+  /* the knurled grip and the engraved scale. They turn together with the ring. */
+  const knurl = $('knurl'), scaleG = $('scale');
+  for (let i = 0; i < 132; i++) {
+    const a = i / 132 * 360;
+    el('rect', { x: -1.6, y: -183, width: 3.2, height: 16, rx: 1, fill: i % 2 ? 'oklch(0.09 0.004 260)' : 'oklch(0.3 0.005 260)', transform: `rotate(${a})` }, knurl);
+  }
+  STOPS.forEach((s, i) => {
+    const a = i * STEP_DEG;
+    el('rect', { x: -1, y: -162, width: 2, height: 8, fill: 'oklch(0.92 0.004 260)', transform: `rotate(${a})` }, scaleG);
+    const t = el('text', { 'text-anchor': 'middle', 'font-size': 15, fill: i >= 6 ? 'oklch(0.86 0.17 92)' : 'oklch(0.96 0.004 260)', transform: `rotate(${a}) translate(0 -135)` }, scaleG);
+    t.textContent = s;
+  });
+
+  /* nine blades. Each pivots on a pin at radius R, and its inner edge is a straight line.
+     Turn a blade by beta and that edge sits at R·cos(beta) − D from the centre. So for any
+     opening r: beta = acos((r + D) / R). All nine edges are then tangent to one circle,
+     and the hole between them is a regular nonagon. */
+  const BLADES = 9, R = 168, D = 56;
+  const R_OPEN = 106;                            // inradius at f/1.4
+  const radiusFor = n => R_OPEN * NUM[0] / n;    // area goes with 1/N², so each full stop halves it
+  const bladesG = $('blades');
+  const BLADE_PATH = `M${D} -320 L${D} 20 C${D - 30} 62 -40 64 -66 30 C-90 -20 -90 -240 -40 -320 Z`;
+  const blades = [];
+  function makeBlade(i, parent) {
+    const g = el('g', {}, parent);
+    el('path', { d: BLADE_PATH, fill: 'url(#steel)' }, g);
+    const sheen = el('path', { d: BLADE_PATH, fill: 'oklch(0.86 0.02 250)', opacity: 0 }, g);
+    el('path', { d: `M${D} -320 L${D} 20`, stroke: 'oklch(0.72 0.01 250)', 'stroke-width': 1.1, fill: 'none' }, g);   // the lit, ground edge
+    el('path', { d: BLADE_PATH, fill: 'none', stroke: 'oklch(0.05 0.01 260 / 0.85)', 'stroke-width': 1 }, g);
+    return { g, sheen, a: i / BLADES * 360 };
+  }
+  for (let i = 0; i < BLADES; i++) blades.push(makeBlade(i, bladesG));
+  // blades overlap in a ring, which plain paint order can't do. So blade 0 is painted again
+  // on top, with a mask cutting out the four blades that should still lie over it.
+  const wrap = makeBlade(0, el('g', { mask: 'url(#wrapMask)' }, bladesG));
+  blades.push(wrap);
+  const holes = [1, 2, 3, 4].map(i => ({ a: i / BLADES * 360, g: el('path', { d: BLADE_PATH, fill: '#000' }, $('wrapHoles')) }));
+
+  function poseBlades(r) {
+    const beta = Math.acos(Math.min(1, (r + D) / R)) * 180 / Math.PI;
+    for (const h of holes) {
+      const px = R * Math.cos(h.a * Math.PI / 180), py = R * Math.sin(h.a * Math.PI / 180);
+      h.g.setAttribute('transform', `translate(${px.toFixed(3)} ${py.toFixed(3)}) rotate(${(h.a + 180 + beta).toFixed(3)})`);
+    }
+    for (const b of blades) {
+      // to the pin, then point the edge's normal at the centre, then turn by beta
+      const px = R * Math.cos(b.a * Math.PI / 180), py = R * Math.sin(b.a * Math.PI / 180);
+      const heading = b.a + 180 + beta;
+      b.g.setAttribute('transform', `translate(${px.toFixed(3)} ${py.toFixed(3)}) rotate(${heading.toFixed(3)})`);
+      // fixed light from the upper left: each blade catches it by its own angle
+      const c = Math.cos((heading + 60) * Math.PI / 180);
+      b.sheen.setAttribute('opacity', (Math.max(0, c) ** 3 * 0.17).toFixed(3));
+    }
+  }
+
+  /* the print: out-of-focus lights take the shape of the hole. Size goes with 1/N, like the real blur circle. */
+  const LIGHTS = [
+    // a string of warm lights sagging across the room, a tighter knot of them on the left, two far blues
+    [18, 58, 1.1, 'oklch(0.82 0.14 78)'], [62, 82, 0.9, 'oklch(0.8 0.15 70)'], [104, 106, 1.25, 'oklch(0.84 0.13 85)'],
+    [150, 122, 0.85, 'oklch(0.78 0.16 60)'], [196, 128, 1.05, 'oklch(0.84 0.13 88)'], [290, 118, 1, 'oklch(0.8 0.15 72)'],
+    [338, 100, 1.2, 'oklch(0.84 0.13 85)'], [384, 76, 0.85, 'oklch(0.78 0.16 55)'], [430, 48, 1.1, 'oklch(0.82 0.14 78)'],
+    [40, 190, 1.35, 'oklch(0.76 0.16 45)'], [84, 214, 1, 'oklch(0.82 0.14 80)'], [24, 250, 0.95, 'oklch(0.72 0.17 25)'],
+    [108, 262, 1.15, 'oklch(0.8 0.15 68)'], [62, 288, 0.8, 'oklch(0.84 0.12 90)'],
+    [388, 214, 1.1, 'oklch(0.7 0.13 225)'], [424, 276, 0.85, 'oklch(0.74 0.12 215)'],
+  ];
+  const bokehG = $('bokeh');
+  // a soft fill with a brighter rim, added on top of the room like real light
+  const lights = LIGHTS.map(([x, y, k, c]) => ({ x, y, k, el: el('polygon', { fill: c, stroke: c, 'stroke-width': 0.9, style: 'mix-blend-mode:screen' }, bokehG) }));
+  function nonagon(cx, cy, r, turn) {
+    const out = [];
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9 * 360 + turn) * Math.PI / 180;
+      out.push(`${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`);
+    }
+    return out.join(' ');
+  }
+  const exposed = $('exposed');
+  function posePrint(n, beta) {
+    const blur = 104 * NUM[0] / n;               // blur circle diameter ∝ 1/N
+    // the polygon turns with the blades, like in a real lens
+    for (const l of lights) {
+      l.el.setAttribute('points', nonagon(l.x, l.y, blur / 2 * l.k, beta));
+      // a smaller circle packs the same highlight into less area, so it reads denser
+      l.el.setAttribute('fill-opacity', (0.34 + 0.6 * (1 - blur / 104)).toFixed(3));
+    }
+    // film brightness at a fixed shutter, eased for the screen so f/16 is dark but not black
+    const stops = 2 * Math.log2(n / NUM[0]);
+    exposed.style.filter = `brightness(${(1.12 * Math.pow(2, -stops * 0.21)).toFixed(3)})`;
+  }
+
+  /* the ring: one value in stops, 0 to 7. It carries speed when you let go, then falls into the nearest detent. */
+  const S = { v: 2, speed: 0, target: 2, shown: 2, lock: null };
+  const n = st => NUM[0] * Math.pow(Math.SQRT2, st);  // continuous, so the blades move between stops too
+
+  function render() {
+    const st = S.v;
+    $('ring').setAttribute('transform', `rotate(${(-st * STEP_DEG).toFixed(3)})`);
+    const N = n(Math.max(0, Math.min(7, st)));
+    const r = radiusFor(N);
+    poseBlades(r);
+    const beta = Math.acos(Math.min(1, (r + D) / R)) * 180 / Math.PI;
+    posePrint(N, beta);
+  }
+  function readout(i) {
+    $('fnum').textContent = 'f/' + STOPS[i];
+    $('light').textContent = i === 0 ? 'Wide open, all the light' : `${i} ${i === 1 ? 'stop' : 'stops'} under f/1.4`;
+    $('blur').textContent = i < 3 ? 'Background melts' : i < 6 ? 'Lights tighten up' : 'Nearly all sharp';
+    lens.setAttribute('aria-valuenow', i);
+    lens.setAttribute('aria-valuetext', `f/${STOPS[i]}, ${i === 0 ? 'wide open' : i + ' stops less light'}`);
+  }
+  function detent(i, announce = true) {
+    if (i === S.shown) return;
+    S.shown = i;
+    readout(i);
+    if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(5);
+    if (announce) say(`f/${STOPS[i]}`);
+  }
+
+  let raf = 0, last = 0, drag = null;
+  function wake() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); } }
+  function tick(now) {
+    raf = 0;
+    const dt = Math.max(0, Math.min(64, now - last)) / 1000; last = now;
+    let t = dt;
+    if (!drag) {
+      if (S.lock !== null) S.target = S.lock;
+      while (t > 0) {
+        const h = Math.min(t, 1 / 240); t -= h;
+        // free-wheel: friction takes the speed off, then the nearest detent pulls it in
+        S.target = S.lock ?? Math.round(Math.max(0, Math.min(7, S.v + S.speed * 0.11)));
+        S.speed += (360 * (S.target - S.v) - 30 * S.speed) * h;
+        S.v += S.speed * h;
+      }
+    }
+    detent(Math.round(Math.max(0, Math.min(7, S.v))));
+    render();
+    if (drag || Math.abs(S.speed) > 0.002 || Math.abs(S.target - S.v) > 0.001) raf = requestAnimationFrame(tick);
+    else { S.v = S.target; S.speed = 0; S.lock = null; render(); }
+  }
+
+  // drag round the ring, like a real lens. Past the ends it only gives a little.
+  const angleOf = e => {
+    const b = lens.getBoundingClientRect();
+    return Math.atan2(e.clientY - (b.top + b.height / 2), e.clientX - (b.left + b.width / 2)) * 180 / Math.PI;
+  };
+  lens.addEventListener('pointerdown', e => {
+    if (!e.isPrimary || e.button !== 0 || drag) return;
+    lens.setPointerCapture(e.pointerId);
+    drag = { id: e.pointerId, a: angleOf(e), raw: S.v, t: e.timeStamp, sp: 0 };
+    S.speed = 0; S.lock = null;
+    lens.focus({ preventScroll: true });
+    wake();
+  });
+  lens.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const a = angleOf(e);
+    // near the centre tiny moves are huge angles, so the middle of the lens ignores them
+    const b = lens.getBoundingClientRect();
+    if (Math.hypot(e.clientX - (b.left + b.width / 2), e.clientY - (b.top + b.height / 2)) < b.width * 0.12) { drag.a = a; return; }
+    let d = a - drag.a;
+    if (d > 180) d -= 360;
+    if (d < -180) d += 360;
+    drag.a = a;
+    // turning the ring anticlockwise opens the numbers towards higher stops
+    const step = -d / STEP_DEG;
+    drag.raw += step;
+    const dt = Math.max(1, e.timeStamp - drag.t) / 1000; drag.t = e.timeStamp;
+    drag.sp = 0.7 * drag.sp + 0.3 * (step / dt);
+    const over = drag.raw < 0 ? drag.raw : drag.raw > 7 ? drag.raw - 7 : 0;
+    S.v = Math.max(0, Math.min(7, drag.raw)) + Math.tanh(over * 0.5) * 0.35;  // rubber band at the stops
+    wake();
+  });
+  const release = e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    // only speed from the last moments counts: a ring you stopped doesn't jump
+    S.speed = e.timeStamp - drag.t < 90 ? Math.max(-22, Math.min(22, drag.sp)) : 0;
+    drag = null;
+    if (reduce) { S.speed = 0; S.v = S.target = Math.round(Math.max(0, Math.min(7, S.v))); detent(S.v); render(); return; }
+    wake();
+  };
+  lens.addEventListener('pointerup', release);
+  lens.addEventListener('pointercancel', release);
+
+  function setStop(i) {
+    i = Math.max(0, Math.min(7, i));
+    if (reduce) { S.v = S.target = i; S.speed = 0; detent(i); render(); return; }
+    S.lock = i;                                  // the same spring as a flick, with its detent chosen
+    wake();
+  }
+  lens.addEventListener('keydown', e => {
+    const now = S.lock ?? S.shown;
+    const map = { ArrowRight: now + 1, ArrowUp: now + 1, ArrowLeft: now - 1, ArrowDown: now - 1, Home: 0, End: 7 };
+    if (e.key in map) { e.preventDefault(); setStop(map[e.key]); }
+  });
+  // a trackpad sends dozens of small deltas: one stop per 60px of scroll
+  let wheelSum = 0;
+  lens.addEventListener('wheel', e => {
+    e.preventDefault();
+    wheelSum += e.deltaY;
+    if (Math.abs(wheelSum) < 60) return;
+    setStop((S.lock ?? S.shown) + Math.sign(wheelSum));
+    wheelSum = 0;
+  }, { passive: false });
+
+  // stills and the demo loop
+  const params = new URLSearchParams(location.search);
+  const still = Number(params.get('stop') ?? 2);
+  // ?stop can sit between detents, for the mid-turn cover
+  S.v = S.target = still; S.shown = -1; detent(Math.round(still), false); render();
+  if (params.has('demo')) {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    (async function loop() {
+      for (const i of [3, 5, 7, 5, 2, 0, 2]) { await wait(1100); setStop(i); }
+      loop();
+    })();
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card wallet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --stage: oklch(0.36 0.07 195);
+    --stage-lift: oklch(0.46 0.075 195);
+    --ink: oklch(0.97 0.012 195);
+    --ink-2: oklch(0.82 0.03 195);
+    --hide: oklch(0.56 0.11 55);
+    --hide-deep: oklch(0.44 0.095 50);
+    --thread: oklch(0.88 0.05 85);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter Tight", system-ui, sans-serif;
+    background: radial-gradient(70% 55% at 50% 30%, var(--stage-lift), var(--stage));
+    background-color: var(--stage);
+    color: var(--ink);
+    display: grid; place-items: center;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  ::selection { background: var(--thread); color: oklch(0.3 0.06 55); }
+  em, i { font-style: normal; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* a fixed 440 x 660 object, scaled as one piece to fit the screen */
+  .fit { width: 440px; height: 660px; flex: none; transform-origin: 50% 50%; }
+  .wallet { position: relative; width: 440px; height: 580px; }
+
+  /* the back leather: the cards stand in front of it */
+  .back {
+    position: absolute; left: 0; right: 0; top: 268px; bottom: 0; border-radius: 30px 30px 34px 34px;
+    background: var(--hide-deep);
+    box-shadow: 0 2px 3px oklch(0.15 0.04 195 / 0.35), 0 44px 70px -26px oklch(0.14 0.05 195 / 0.75);
+  }
+
+  .card {
+    position: absolute; left: 30px; top: 0; width: 380px; height: 240px; padding: 0;
+    border: 0; border-radius: 17px; text-align: left; font: inherit; color: var(--fg);
+    background: var(--bg-card);
+    cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+    will-change: transform;
+    box-shadow: 0 1px 1px oklch(0.15 0.03 60 / 0.35), 0 5px 10px -3px oklch(0.15 0.03 60 / 0.4);
+    overflow: hidden;
+  }
+  .card:active { cursor: grabbing; }
+  .card:focus-visible { outline: 3px solid var(--thread); outline-offset: 2px; }
+  /* the top strip is all you see while it's in the pocket */
+  .top { position: absolute; inset: 0 0 auto; height: 46px; padding: 0 18px; display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .top small { font-size: 13.5px; font-weight: 500; opacity: 0.94; font-variant-numeric: tabular-nums; }
+  .face { position: absolute; inset: 46px 0 0; padding: 0 18px 16px; display: flex; flex-direction: column; justify-content: flex-end; }
+  .face b { font-size: 25px; font-weight: 700; letter-spacing: -0.015em; font-variant-numeric: tabular-nums; }
+  .face span { margin-top: 2px; font-size: 13.5px; font-weight: 500; opacity: 0.94; }
+  /* the sheen moves with the card's own angle and height, never with the page */
+  .sheen {
+    position: absolute; inset: -60% -60%; pointer-events: none; mix-blend-mode: soft-light;
+    background: linear-gradient(112deg, transparent 38%, oklch(1 0 0 / 0.75) 49%, oklch(1 0 0 / 0.1) 56%, transparent 66%);
+    will-change: transform;
+  }
+
+  .debit { --bg-card: linear-gradient(150deg, oklch(0.27 0.03 250), oklch(0.19 0.025 255)); --fg: oklch(0.96 0.005 250); }
+  .transit { --bg-card: linear-gradient(150deg, oklch(0.83 0.16 92), oklch(0.77 0.16 80)); --fg: oklch(0.25 0.05 75); }
+  .library { --bg-card: linear-gradient(150deg, oklch(0.55 0.17 28), oklch(0.47 0.16 26)); --fg: oklch(0.97 0.015 30); }
+  .gym { --bg-card: linear-gradient(150deg, oklch(0.93 0.008 240), oklch(0.86 0.012 240)); --fg: oklch(0.26 0.03 250); }
+  .coffee { --bg-card: linear-gradient(150deg, oklch(0.71 0.09 200), oklch(0.62 0.09 205)); --fg: oklch(0.2 0.04 215); }
+
+  .chip { position: absolute; left: 18px; top: 86px; width: 48px; height: 36px; border-radius: 7px; background: linear-gradient(135deg, oklch(0.88 0.08 88), oklch(0.72 0.1 78)); box-shadow: inset 0 0 0 1px oklch(0.45 0.07 75 / 0.55); }
+  .chip::before, .chip::after { content: ""; position: absolute; background: oklch(0.45 0.07 75 / 0.6); }
+  .chip::before { left: 0; right: 0; top: 50%; height: 1px; }
+  .chip::after { top: 0; bottom: 0; left: 50%; width: 1px; }
+  .route { position: absolute; left: 18px; right: 18px; top: 92px; height: 28px; }
+  .bars { position: absolute; right: 18px; top: 86px; display: flex; gap: 2px; height: 58px; }
+  .bars i { display: block; background: currentColor; opacity: 0.85; }
+  .punches { position: absolute; left: 18px; top: 86px; display: grid; grid-template-columns: repeat(5, 26px); gap: 7px 9px; }
+  .punches i { width: 26px; height: 26px; border-radius: 50%; background: oklch(0.2 0.04 215 / 0.8); }
+  .punches i.open { background: none; box-shadow: inset 0 0 0 2px oklch(0.2 0.04 215 / 0.4); }
+  .meter { position: absolute; left: 18px; right: 18px; top: 100px; height: 8px; border-radius: 4px; background: oklch(0.26 0.03 250 / 0.14); }
+  .meter i { display: block; width: 62%; height: 100%; border-radius: inherit; background: oklch(0.26 0.03 250); }
+
+  /* the pocket: one path with a thumb notch, stitched, sitting above every card */
+  .pocket {
+    position: absolute; left: 0; top: 330px; width: 440px; height: 250px; z-index: 20;
+    filter: drop-shadow(0 -3px 4px oklch(0.12 0.03 50 / 0.45)) drop-shadow(0 -10px 16px oklch(0.12 0.03 50 / 0.28));
+    pointer-events: none;
+  }
+  .pocket svg { display: block; overflow: visible; }
+  .pocket path.hit { pointer-events: auto; }
+  .brand { font-family: "Inter Tight", sans-serif; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+
+  /* the line under the wallet */
+  .read { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 440px; height: 56px; margin-top: 24px; padding: 0 4px; }
+  .read h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+  .read p { margin-top: 2px; font-size: 14.5px; font-weight: 500; color: var(--ink-2); }
+  .back-btn {
+    flex: none; height: 44px; padding: 0 18px; border: 0; border-radius: 13px;
+    background: var(--ink); color: var(--stage); font: inherit; font-size: 14.5px; font-weight: 700;
+    cursor: pointer; transition: scale 140ms var(--ease-out), opacity 160ms var(--ease-out);
+  }
+  .back-btn:active { scale: 0.97; }
+  .back-btn:focus-visible { outline: 3px solid var(--thread); outline-offset: 3px; }
+  .back-btn[hidden] { display: none; }
+  @media (hover: hover) and (pointer: fine) { .back-btn:hover { background: oklch(1 0 0); } }
+</style>
+</head>
+<body>
+<div class="fit" id="fit">
+  <div class="wallet" id="wallet" role="group" aria-label="Wallet, five cards">
+    <div class="back"></div>
+
+    <button class="card coffee" data-id="coffee" data-name="Kaffe Kart" data-info="7 stamps, 3 to a free cup" type="button">
+      <span class="top">Kaffe Kart<small>7 of 10</small></span>
+      <span class="punches" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="open"></i><i class="open"></i><i class="open"></i></span>
+      <span class="face"><b>3 to a free cup</b><span>Halden Kaffe, Storgata 14</span></span>
+      <span class="sheen"></span>
+    </button>
+    <button class="card gym" data-id="gym" data-name="Sentrum Bad" data-info="Member until 31 January" type="button">
+      <span class="top">Sentrum Bad<small>Pool + gym</small></span>
+      <span class="meter" aria-hidden="true"><i></i></span>
+      <span class="face"><b>Maren Aas</b><span>Member until 31 January</span></span>
+      <span class="sheen"></span>
+    </button>
+    <button class="card library" data-id="library" data-name="Deichman library" data-info="2 books due Friday" type="button">
+      <span class="top">Deichman library<small>2 due Fri</small></span>
+      <span class="bars" aria-hidden="true"></span>
+      <span class="face"><b>2 books due</b><span>Card 0418 2207 3316</span></span>
+      <span class="sheen"></span>
+    </button>
+    <button class="card transit" data-id="transit" data-name="Nordlys Transit" data-info="14 rides left, zones 1 and 2" type="button">
+      <span class="top">Nordlys Transit<small>14 rides</small></span>
+      <svg class="route" viewBox="0 0 344 28" aria-hidden="true">
+        <path d="M6 14H338" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+        <g fill="oklch(0.83 0.16 92)" stroke="currentColor" stroke-width="3.5"><circle cx="8" cy="14" r="6"/><circle cx="96" cy="14" r="6"/><circle cx="176" cy="14" r="6"/><circle cx="258" cy="14" r="6"/></g>
+        <circle cx="336" cy="14" r="8" fill="currentColor"/>
+      </svg>
+      <span class="face"><b>14 rides left</b><span>Zones 1 and 2, valid to 12 March</span></span>
+      <span class="sheen"></span>
+    </button>
+    <button class="card debit" data-id="debit" data-name="Halden Bank debit" data-info="Ending 4021, expires 08/29" type="button">
+      <span class="top">Halden Bank<small>Debit</small></span>
+      <span class="chip" aria-hidden="true"></span>
+      <span class="face"><b>4021 6638 2207 4021</b><span>Maren Aas, expires 08/29</span></span>
+      <span class="sheen"></span>
+    </button>
+
+    <div class="pocket" aria-hidden="true">
+      <svg width="440" height="250" viewBox="0 0 440 250">
+        <defs>
+          <filter id="grain" x="0" y="0" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" seed="7" result="n"/>
+            <feDiffuseLighting in="n" lighting-color="#fff" surfaceScale="0.9" diffuseConstant="1.05" result="l"><feDistantLight azimuth="235" elevation="58"/></feDiffuseLighting>
+            <feComposite in="l" in2="SourceGraphic" operator="in" result="c"/>
+            <feBlend in="SourceGraphic" in2="c" mode="multiply"/>
+          </filter>
+          <linearGradient id="hide" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="oklch(0.64 0.115 58)"/>
+            <stop offset="0.42" stop-color="oklch(0.56 0.11 55)"/>
+            <stop offset="1" stop-color="oklch(0.47 0.1 50)"/>
+          </linearGradient>
+        </defs>
+        <!-- the top edge dips into a thumb notch -->
+        <path class="hit" filter="url(#grain)" fill="url(#hide)" d="M0 22 Q0 0 22 0 H128 C160 0 164 38 220 38 C276 38 280 0 312 0 H418 Q440 0 440 22 V216 Q440 250 406 250 H34 Q0 250 0 216 Z"/>
+        <path fill="none" stroke="oklch(1 0 0 / 0.26)" stroke-width="1.5" d="M2 22 Q2 2 22 2 H128 C160 2 164 40 220 40 C276 40 280 2 312 2 H418 Q438 2 438 22"/>
+        <!-- stitching: a dark holes pass under the thread pass -->
+        <path fill="none" stroke="oklch(0.26 0.05 50 / 0.55)" stroke-width="3" stroke-linecap="round" stroke-dasharray="7 6" transform="translate(0 1)" d="M14 26 Q14 14 26 14 H128 C166 14 166 52 220 52 C274 52 274 14 312 14 H414 Q426 14 426 26 V214 Q426 236 404 236 H36 Q14 236 14 214 Z"/>
+        <path fill="none" stroke="var(--thread)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="7 6" d="M14 26 Q14 14 26 14 H128 C166 14 166 52 220 52 C274 52 274 14 312 14 H414 Q426 14 426 26 V214 Q426 236 404 236 H36 Q14 236 14 214 Z"/>
+        <!-- pressed-in maker's mark -->
+        <text class="brand" x="220" y="199" text-anchor="middle" fill="oklch(1 0 0 / 0.2)" dy="1">Maren Aas</text>
+        <text class="brand" x="220" y="199" text-anchor="middle" fill="oklch(0.28 0.06 50 / 0.72)">Maren Aas</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="read">
+    <div>
+      <h1 id="readName">Pull a card</h1>
+      <p id="readInfo">Last one used goes to the front</p>
+    </div>
+    <button class="back-btn" id="putBack" type="button" hidden>Put back</button>
+  </div>
+</div>
+<div class="sr" id="live" aria-live="polite"></div>
+
+<script>
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fit = document.getElementById('fit');
+  const wallet = document.getElementById('wallet');
+  const live = document.getElementById('live');
+  const readName = document.getElementById('readName');
+  const readInfo = document.getElementById('readInfo');
+  const putBackBtn = document.getElementById('putBack');
+
+  // the library barcode, thin and thick by a fixed pattern
+  document.querySelector('.bars').innerHTML = [2,1,3,1,1,4,2,1,3,2,1,1,4,1,2,3,1,2].map(w => `<i style="width:${w}px"></i>`).join('');
+
+  let scale = 1;
+  function resize() {
+    scale = Math.min(1, (innerWidth - 16) / 440, (innerHeight - 16) / 660);
+    fit.style.transform = `scale(${scale})`;
+    fit.style.margin = `${(660 * scale - 660) / 2}px ${(440 * scale - 440) / 2}px`;
+  }
+  addEventListener('resize', resize); resize();
+
+  // slots: 0 is the back of the stack, 4 the front. A card that comes back takes the front.
+  const IN_POCKET = [108, 152, 196, 240, 284];   // card tops with five in the pocket
+  const SQUEEZED  = [238, 254, 270, 286];        // four in the pocket, one out
+  const OUT_Y = 8, OUT_ROT = -2.2;               // where a pulled card rests
+  const PULL = 64;                               // lift that commits the pull
+  const FLICK = 0.11;                            // px/ms: a quick flick counts at any distance
+
+  const cards = [...wallet.querySelectorAll('.card')].map(el => ({
+    el, id: el.dataset.id, name: el.dataset.name, info: el.dataset.info,
+    sheen: el.querySelector('.sheen'),
+    y: 0, vy: 0, x: 0, vx: 0, r: 0, vr: 0,       // state
+    ty: 0, tx: 0, tr: 0, k: 300, c: 26,          // spring target
+  }));
+  let stack = [...cards];                        // back to front
+  let out = null, drag = null;
+
+  function layout() {
+    const slots = out ? SQUEEZED : IN_POCKET;
+    stack.forEach((c, i) => {
+      c.el.style.zIndex = i + 1;
+      if (c === drag?.card) return;
+      c.ty = slots[i]; c.tx = 0; c.tr = 0;
+      // cards settle front first, each softer than the one before it
+      c.k = 300 - (stack.length - 1 - i) * 26; c.c = 26;
+    });
+    if (out && out !== drag?.card) { out.ty = OUT_Y; out.tx = 0; out.tr = OUT_ROT; out.k = 260; out.c = 21; }
+    cards.forEach(c => c.el.setAttribute('aria-pressed', c === out));
+    wake();
+  }
+
+  function say(text) { live.textContent = ''; setTimeout(() => live.textContent = text, 30); }
+  function read() {
+    readName.textContent = out ? out.name : 'Pull a card';
+    readInfo.textContent = out ? out.info : 'Last one used goes to the front';
+    putBackBtn.hidden = !out;
+  }
+
+  function pull(card) {
+    if (out && out !== card) put(false);
+    stack = stack.filter(c => c !== card);
+    out = card; layout(); read();
+    say(`${card.name} out. ${card.info}`);
+  }
+  function put(announce = true) {
+    if (!out) return;
+    const c = out; out = null;
+    stack.push(c);                               // it goes back in at the front
+    layout(); read();
+    if (announce) say(`${c.name} back in the pocket`);
+  }
+
+  // one spring loop for all five; it sleeps when nothing moves
+  let raf = 0, last = 0;
+  function wake() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); } }
+  function paint(c) {
+    const lift = Math.max(0, 300 - c.y);
+    c.el.style.transform = `translate3d(${c.x.toFixed(2)}px, ${c.y.toFixed(2)}px, 0) rotate(${c.r.toFixed(3)}deg)`;
+    // the higher it is, the longer its shadow
+    const s = lift / 300;
+    c.el.style.boxShadow = `0 1px 1px oklch(0.15 0.03 60 / 0.35), 0 ${5 + s * 22}px ${10 + s * 34}px ${-3 - s * 8}px oklch(0.13 0.04 60 / ${0.4 + s * 0.2})`;
+    c.sheen.style.transform = `translate3d(${(c.r * 26 + (c.y - 150) * 0.32 + c.x * 0.4).toFixed(1)}px, 0, 0)`;
+  }
+  function tick(now) {
+    raf = 0;
+    let dt = Math.max(0, Math.min(32, now - last)) / 1000; last = now;
+    let moving = false;
+    for (const c of cards) {
+      if (reduce && c !== drag?.card) { c.y = c.ty; c.x = c.tx; c.r = c.tr; c.vy = c.vx = c.vr = 0; paint(c); continue; }
+      let t = dt;
+      while (t > 0) {
+        const h = Math.min(t, 1 / 240); t -= h;
+        c.vy += (c.k * (c.ty - c.y) - c.c * c.vy) * h; c.y += c.vy * h;
+        c.vx += (c.k * (c.tx - c.x) - c.c * c.vx) * h; c.x += c.vx * h;
+        c.vr += (c.k * (c.tr - c.r) - c.c * c.vr) * h; c.r += c.vr * h;
+      }
+      if (Math.abs(c.ty - c.y) + Math.abs(c.tx - c.x) + Math.abs(c.tr - c.r) + Math.abs(c.vy) + Math.abs(c.vx) + Math.abs(c.vr) > 0.02) moving = true;
+      paint(c);
+    }
+    if (moving || drag) raf = requestAnimationFrame(tick);
+  }
+
+  // drag: the leather holds on, then lets go. Rotation comes from where you grabbed.
+  function neighbours(card, amount) {
+    const i = stack.indexOf(card);
+    if (i < 0) return;
+    const slots = out ? SQUEEZED : IN_POCKET;
+    [stack[i - 1], stack[i + 1]].forEach(n => {
+      if (n) n.ty = slots[stack.indexOf(n)] - amount * 0.16;  // the card next to it comes along a little
+    });
+  }
+  function dragPose(card, dx, dy, side, home) {
+    let y;
+    if (card === out) {
+      // out of the pocket: free downwards, damped upwards
+      y = dy < 0 ? home + dy * 0.22 : home + dy;
+    } else {
+      // in the pocket: leather friction on the way up, a hard floor on the way down
+      y = dy < 0 ? home + dy * 0.82 : home + Math.sqrt(dy) * 2.2;
+    }
+    // the further out, the more it can swing: the pocket walls hold the rest
+    const free = Math.min(1, Math.max(0, (300 - y) / 260));
+    card.ty = y;
+    card.tx = dx * (0.08 + 0.42 * free);
+    card.tr = (card === out ? OUT_ROT : 0) + dx * side * 0.05 * (0.2 + 0.8 * free) + side * Math.min(7, Math.abs(dy) * 0.035) * -1;
+    if (card !== out) neighbours(card, Math.min(40, Math.max(0, -dy)));
+  }
+  let lastPointer = -1e9;
+  cards.forEach(card => {
+    const el = card.el;
+    // assistive tech fires click without a pointer: the pointer path already handled its own
+    el.addEventListener('click', e => { if (e.timeStamp - lastPointer > 500) card === out ? put() : pull(card); });
+    el.addEventListener('pointerdown', e => {
+      if (!e.isPrimary || e.button !== 0 || drag) return;
+      el.setPointerCapture(e.pointerId);
+      const box = el.getBoundingClientRect();
+      drag = {
+        card, id: e.pointerId, sx: e.clientX, sy: e.clientY, y0: card.y, x0: card.x,
+        side: (e.clientX - (box.left + box.width / 2)) / (box.width / 2),
+        lx: e.clientX, ly: e.clientY, lt: e.timeStamp, vy: 0, vx: 0, moved: 0,
+      };
+      card.k = 900; card.c = 52;                  // stiff under the hand
+      wake();
+    });
+    el.addEventListener('pointermove', e => {
+      if (!drag || drag.card !== card || e.pointerId !== drag.id) return;
+      const dx = (e.clientX - drag.sx) / scale, dy = (e.clientY - drag.sy) / scale;
+      const dt = Math.max(1, e.timeStamp - drag.lt);
+      drag.vy = 0.6 * drag.vy + 0.4 * ((e.clientY - drag.ly) / scale / dt);
+      drag.vx = 0.6 * drag.vx + 0.4 * ((e.clientX - drag.lx) / scale / dt);
+      drag.lx = e.clientX; drag.ly = e.clientY; drag.lt = e.timeStamp;
+      drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
+      dragPose(card, dx, dy, drag.side, card === out ? OUT_Y : drag.y0);
+      // the line under the wallet names the card as soon as it starts to lift
+      if (card !== out) {
+        readName.textContent = dy < -12 ? card.name : 'Pull a card';
+        readInfo.textContent = dy < -12 ? card.info : 'Last one used goes to the front';
+      }
+      wake();
+    });
+    const end = e => {
+      if (!drag || drag.card !== card || e.pointerId !== drag.id) return;
+      const d = drag; drag = null;
+      lastPointer = e.timeStamp;
+      // velocity kept on release, but only if the hand was still moving
+      const fresh = e.timeStamp - d.lt < 90;
+      card.vy = fresh ? d.vy * 1000 : 0; card.vx = fresh ? d.vx * 1000 : 0;
+      const dy = (e.clientY - d.sy) / scale;
+      const flicked = fresh && Math.abs(d.vy) > FLICK;
+      if (e.type === 'pointercancel') {
+        layout();
+      } else if (d.moved < 6) {                       // a plain tap toggles
+        card === out ? put() : pull(card);
+      } else if (card === out) {
+        (dy > PULL || (flicked && d.vy > 0)) ? put() : layout();
+      } else {
+        (-dy > PULL || (flicked && d.vy < 0)) ? pull(card) : layout();
+      }
+      read();
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!e.repeat) card === out ? put() : pull(card); }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const order = out ? [out, ...stack] : stack;
+        const i = order.indexOf(card) + (e.key === 'ArrowUp' ? -1 : 1);
+        order[(i + order.length) % order.length].el.focus();
+      }
+    });
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && out) { const c = out; put(); c.el.focus(); } });
+  putBackBtn.addEventListener('click', () => { const c = out; put(); c?.el.focus(); });
+
+  // start: everything at rest, nothing animates in
+  layout();
+  cards.forEach(c => { c.y = c.ty; c.x = c.tx; c.r = c.tr; c.vy = c.vx = c.vr = 0; paint(c); });
+
+  // stills and the demo loop
+  const params = new URLSearchParams(location.search);
+  const still = params.get('still');
+  const byId = id => cards.find(c => c.id === id);
+  function freeze() { cancelAnimationFrame(raf); raf = 0; cards.forEach(c => { c.y = c.ty; c.x = c.tx; c.r = c.tr; c.vy = c.vx = c.vr = 0; paint(c); }); }
+  if (still === 'pull') {
+    // the transit card caught halfway out, leaning off the thumb
+    // through the same pose function a real drag uses
+    const c = byId('transit');
+    layout(); freeze();
+    dragPose(c, -30, -229, -0.8, IN_POCKET[stack.indexOf(c)]);
+    freeze();
+    readName.textContent = c.name; readInfo.textContent = c.info;
+  }
+  if (still === 'out') { pull(byId('debit')); freeze(); }
+  if (params.has('demo')) {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    (async function loop() {
+      for (const id of ['transit', 'debit', 'coffee']) {
+        await wait(1200); pull(byId(id));
+        await wait(1600); put();
+      }
+      loop();
+    })();
+  }
+</script>
+</body>
+</html>
