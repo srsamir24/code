@@ -1,0 +1,940 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zellie Orb · Sound in the round</title>
+<meta name="description" content="Concept product site: a 360° smart speaker that maps the room and fills it. Built by AI, dissected part by part on @zellap.app.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  /* PART 0 · tokens. Cool concrete paper, hard ink, and the fabric in two strengths:
+     --tint (the bold knit colour) and --deep (the same hue, dyed dark). Every section reads them. */
+  :root { --paper: oklch(.93 .005 240); --ink: oklch(.17 .012 265); --dim: oklch(.44 .012 265); --lite: oklch(.97 .003 240);
+    --tint: oklch(.55 .11 175); --deep: oklch(.27 .055 190); --bgnow: var(--paper); --line: oklch(.17 .012 265 / .14);
+    --gl: 18px; --gr: 70px;                          /* portrait: keep text out of the Reel's right rail */
+    --sans: "Inter Tight", system-ui, sans-serif; }  /* one font for the whole site (owner) */
+  @media (min-width: 761px) { :root { --gl: 48px; --gr: 48px; } }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--paper); }
+  body { color: var(--ink); font: 400 16px/1.5 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; font-variant-numeric: tabular-nums; }
+  a { color: inherit; text-decoration: none; }
+  em, i, b { font-style: normal; }
+  svg text { font-family: var(--sans); font-style: normal; }
+
+  /* the room: one background colour that the scroll walks through (paper → deep knit → ink → bold knit) */
+  .room { position: fixed; inset: 0; z-index: -3; background: var(--bgnow); }
+  .rules { position: fixed; inset: 0 var(--gr) 0 var(--gl); z-index: -2; pointer-events: none; display: grid; grid-template-columns: repeat(4, 1fr);
+    border-left: 1px solid var(--rl, var(--line)); }
+  .rules i { border-right: 1px solid var(--rl, var(--line)); }
+  @media (min-width: 761px) { .rules { grid-template-columns: repeat(12, 1fr); } }
+  .grain { position: fixed; inset: -50%; z-index: 50; pointer-events: none; opacity: .06; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  /* layers: sound field (back) → headline → 3D orb → UI */
+  canvas#rings { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; display: block; }
+  canvas#gl { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; display: block; }
+
+  /* nav: always solid, so nothing ghosts through it */
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 20; height: 60px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 var(--gr) 0 var(--gl); background: var(--paper); border-bottom: 1px solid var(--line); }
+  .logo { font: 800 18px/1 var(--sans); letter-spacing: -.04em; display: flex; align-items: center; gap: 9px; text-transform: lowercase; }
+  .logo i { width: 14px; height: 14px; border-radius: 50%; background: var(--tint); display: block; box-shadow: inset -3px -3px 0 var(--deep); }
+  .navl { display: flex; gap: 26px; align-items: center; font: 600 12px var(--sans); letter-spacing: .08em; text-transform: uppercase; }
+  .navl .pill { padding: 9px 15px; background: var(--ink); color: var(--paper); }
+  h2 { text-wrap: balance; font: 800 clamp(40px, 5.4vw, 96px)/.92 var(--sans); letter-spacing: -.035em; word-spacing: .08em; }
+
+  /* PART 1 · hero: asymmetric. A deep-dyed block, the orb across its corner, an oversized numeral under it */
+  .hero { height: 100vh; position: relative; }
+  .hero-block { position: absolute; z-index: -2; background: var(--deep); left: 59.6vw; right: 0; top: 0; bottom: 0; }
+  .giant { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .hl { position: absolute; left: var(--gl); top: 17vh; font: 800 clamp(80px, 8.6vw, 160px)/.86 var(--sans); letter-spacing: -.035em; }
+  .hl .sp { width: .3em; }
+  .hl .w { display: block; overflow: hidden; padding-bottom: .05em; white-space: nowrap; }
+  .hl span, .num span { display: inline-block; will-change: transform; }
+  .num { position: absolute; right: var(--gr); bottom: 4vh; font: 800 clamp(120px, 13.6vw, 240px)/.8 var(--sans); letter-spacing: -.06em;
+    color: color-mix(in oklch, var(--tint) 70%, white); overflow: hidden; padding: .02em .02em .04em; }
+  .hero-copy { position: absolute; z-index: 5; left: var(--gl); bottom: 6vh; max-width: 34ch; font-size: 15px; line-height: 1.45; color: var(--dim); }
+  .hero-copy b { color: var(--ink); font-weight: 700; }
+  .live { position: absolute; z-index: 5; left: calc(59.6vw + 26px); top: 86px; display: flex; align-items: center; gap: 10px;
+    font: 600 11px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--lite); }
+  .live i { display: flex; gap: 2px; align-items: end; height: 14px; }
+  .live i u { width: 2px; background: currentColor; display: block; height: 100%; transform-origin: bottom; }
+
+  body[data-card="hook"] .giant .hl { opacity: 0; }                /* the Reel hook sits on its own card over the headline: no half-covered words under it */
+  /* sticky stages */
+  .stage-wrap { position: relative; z-index: 5; }
+  .stage { position: sticky; top: 0; height: 100vh; overflow: hidden; }
+
+  /* PART 2 · the turn: an oversized degree readout, callouts pinned to the silhouette */
+  #turn { height: 420vh; }
+  #turn .head { position: absolute; top: calc(60px + 8vh); left: var(--gl); }
+  
+  .deg { position: absolute; left: var(--gl); bottom: 6vh; }
+  .deg b { display: block; font: 800 clamp(96px, 15vw, 260px)/.8 var(--sans); letter-spacing: -.075em; }
+  .deg span { font: 600 11px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); display: block; margin-top: 10px; }
+  svg#leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  svg#leaders path { fill: none; stroke: var(--tint); stroke-width: 1.6; }
+  svg#leaders circle.o { fill: var(--paper); stroke: var(--ink); stroke-width: 1.2; }
+  svg#leaders circle.c { fill: var(--tint); }
+  .callout { position: absolute; width: 210px; opacity: 0; padding: 2px 0 2px 0;
+    background: linear-gradient(90deg, color-mix(in oklch, var(--paper) 92%, transparent), transparent); }
+  .callout .n { font: 800 22px/1 var(--sans); color: var(--tint); letter-spacing: -.03em; }
+  .callout .n small { font: 700 10px var(--sans); letter-spacing: .14em; margin-left: 6px; color: var(--dim); vertical-align: 3px; }
+  .callout h3 { font: 700 15px/1.15 var(--sans); letter-spacing: -.015em; margin: 5px 0 3px; }
+  .callout p { font-size: 12.5px; color: var(--dim); line-height: 1.4; }
+
+  /* PART 3 · fabrics: four full-width bolts of cloth stacked on one scroll timeline. The one you're on opens up and the orb sits in it; the others fold to named strips. */
+  #finish { height: 430vh; }
+  .bands { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; visibility: hidden; }
+  .bands i { position: absolute; left: 0; right: 0; top: 0; will-change: transform;
+    background-image: repeating-linear-gradient(45deg, oklch(1 0 0 / .055) 0 2px, transparent 2px 6px), repeating-linear-gradient(-45deg, oklch(0 0 0 / .085) 0 2px, transparent 2px 6px);
+    box-shadow: inset 0 1px 0 oklch(1 0 0 / .2), inset 0 -22px 24px -22px oklch(0 0 0 / .5); }
+  .bandbtn { position: absolute; left: 0; right: 0; top: 0; background: none; border: 0; color: var(--lite); cursor: pointer; text-align: left; overflow: hidden; outline-offset: -5px; padding: 0 var(--gr) 0 var(--gl); }
+  .bandbtn:focus-visible { outline: 2px solid var(--lite); }
+  .bandbtn .s { position: absolute; left: var(--gl); right: var(--gr); top: 0; display: flex; justify-content: space-between; align-items: center; height: 9vh; }
+  .bandbtn .s b { font: 800 clamp(22px, 2.5vw, 38px)/1 var(--sans); letter-spacing: -.03em; }
+  .bandbtn .s span { font: 500 15px/1 var(--sans); opacity: .82; }
+  .bandbtn .o { position: absolute; left: var(--gl); top: 50%; transform: translateY(-50%); width: 56vw; }
+  .bandbtn .o b { display: block; font: 800 clamp(64px, 10vw, 176px)/.86 var(--sans); letter-spacing: -.045em; white-space: nowrap; }
+  .bandbtn .o span { display: block; margin-top: 18px; font: 500 17px/1.35 var(--sans); }
+  .bandbtn .o small { display: block; font: inherit; opacity: .74; }
+
+  /* the stereo pair: a live halftone of two wave sources interfering, drawn in the rings canvas. The ridge passes through your seat because the pair times itself to you */
+  #pair { height: 380vh; }
+  #pair .phead { position: absolute; left: var(--gl); top: 60px; padding: 8vh 30px 24px 0; width: min(500px, 36vw); background: var(--paper); box-shadow: -100px 0 0 var(--paper); }
+  #pair h2 { font-size: clamp(40px, 4.6vw, 80px); }
+  #pair .phead p { margin-top: 16px; color: var(--dim); font-size: 15px; max-width: 34ch; }
+  .pread { position: absolute; left: var(--gl); bottom: 0; padding: 24px 30px 7vh 0; width: min(500px, 36vw); background: var(--paper); box-shadow: -100px 0 0 var(--paper); }
+  .pnums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .pnums b { display: block; font: 800 clamp(34px, 3.4vw, 58px)/.9 var(--sans); letter-spacing: -.05em; }
+  .pnums span { display: block; margin-top: 8px; font-size: 13px; line-height: 1.25; color: var(--dim); }
+  #psync { display: block; width: 100%; height: 52px; margin-top: 20px; background: var(--ink); color: var(--paper); border: 0; font: 700 15px/1 var(--sans); cursor: pointer; }
+  #psync:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+  .ptag { position: absolute; left: 0; top: 0; padding: 5px 10px 6px; background: var(--ink); color: var(--paper); font: 700 13px/1 var(--sans); will-change: transform; opacity: 0; }
+  .seat { position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; pointer-events: none; will-change: transform; }
+  .seat i { position: absolute; left: -13px; top: -13px; width: 26px; height: 26px; border-radius: 50%; background: var(--paper); border: 3px solid var(--ink); }
+  .seat b { position: absolute; left: 18px; top: -12px; padding: 5px 9px 6px; background: var(--paper); font: 700 13px/1 var(--sans); white-space: nowrap; }
+
+  .pick button { width: 52px; height: 52px; border-radius: 50%; border: 0; cursor: pointer; position: relative;
+    background: repeating-linear-gradient(45deg, oklch(1 0 0 / .16) 0 1.5px, transparent 1.5px 4px),
+                repeating-linear-gradient(-45deg, oklch(0 0 0 / .12) 0 1.5px, transparent 1.5px 4px), var(--c);
+    box-shadow: inset 0 -6px 12px oklch(0 0 0 / .22), inset 0 4px 8px oklch(1 0 0 / .25); }
+  .pick button::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 2px solid var(--lite); opacity: 0; transform: scale(.82); transition: .3s; }
+  .pick button.on::after { opacity: 1; transform: none; }
+
+  /* NEW · room plan: a top-down floor plan, the orb seen from above, sound filling one room after another */
+  #room { height: 340vh; }
+  #room .head { position: absolute; left: var(--gl); top: calc(60px + 8vh); max-width: 30vw; }
+  #room .count { position: absolute; left: var(--gl); bottom: 7vh; }
+  #room .count b { display: block; font: 800 clamp(96px, 13vw, 230px)/.8 var(--sans); letter-spacing: -.075em; }
+  #room .count span { font: 600 11px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); display: block; margin-top: 10px; }
+  .plan { position: absolute; right: var(--gr); top: calc(60px + 9vh); width: min(54vw, calc((100vh - 60px - 16vh) * 600 / 420)); aspect-ratio: 600 / 420; }
+  .plan svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .plan .wall { fill: none; stroke: var(--ink); stroke-width: 5; stroke-linecap: square; }
+  .plan .furn { fill: none; stroke: var(--ink); stroke-opacity: .28; stroke-width: 1.5; }
+  .plan .fill { fill: var(--tint); }
+  .plan .wave { fill: none; stroke: var(--tint); stroke-width: 2; }
+  .plan .rname { font-size: 15px; font-weight: 800; letter-spacing: -.02em; fill: var(--ink); }
+  .plan .rstate { font-size: 10px; font-weight: 600; letter-spacing: .14em; fill: var(--dim); }
+  .plan .spk circle.o { fill: var(--paper); stroke: var(--ink); stroke-width: 2; }
+  .plan .spk circle.i { fill: var(--tint); }
+
+  /* PART 4 · feature cards: editorial split, sticky title left, a bento of live components right */
+  #features { position: relative; z-index: 5; padding: 16vh var(--gr) 16vh var(--gl); display: grid; grid-template-columns: 4fr 8fr; gap: 0 40px; }
+  #features .fhead { position: sticky; top: 100px; align-self: start; }
+  #features .fhead p { color: var(--dim); max-width: 30ch; margin-top: 22px; }
+  .stats { display: flex; gap: 30px; margin-top: 40px; }
+  .stats div b { display: block; font: 800 clamp(64px, 7vw, 120px)/.8 var(--sans); letter-spacing: -.07em; color: var(--tint); }
+  .stats div span { font: 600 11px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); display: block; margin-top: 10px; }
+  .bento { display: grid; grid-template-columns: repeat(2, 1fr); grid-auto-rows: 310px; gap: 14px; }
+  .fc { position: relative; overflow: hidden; padding: 24px; display: flex; flex-direction: column; justify-content: space-between;
+    background: var(--lite); border: 1px solid var(--line); will-change: transform, opacity; }
+  .fc.dark { background: var(--ink); color: var(--lite); border-color: var(--ink); }
+  .fc.tinted { background: var(--deep); color: var(--lite); border-color: var(--deep); }
+  .fc::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: var(--lit, 0);
+    background: radial-gradient(200px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklch, var(--tint) 8%, transparent), transparent 60%); }
+  .fc::after { content: ""; position: absolute; inset: 0; padding: 1.5px; pointer-events: none; opacity: var(--lit, 0);
+    background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), var(--tint), transparent 70%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+  .fc.wide { grid-column: span 2; }
+  .fc-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; position: relative; z-index: 1; }
+  .fc-tag { font: 700 11px var(--sans); text-transform: uppercase; letter-spacing: .14em; }
+  .fc-foot { position: relative; z-index: 1; }
+  .fc-foot b { display: block; font: 800 60px/.85 var(--sans); letter-spacing: -.065em; }
+  .fc-foot b small { font-size: .36em; margin-left: 4px; opacity: .6; letter-spacing: -.01em; font-weight: 700; }
+  .fc-foot span { display: block; opacity: .66; font-size: 14px; line-height: 1.4; margin-top: 10px; max-width: 30ch; }
+  .fc.wide .fc-foot { max-width: 44%; }
+  .chip { font: 700 10px var(--sans); letter-spacing: .12em; text-transform: uppercase; padding: 5px 9px; border: 1px solid currentColor; opacity: .7; }
+  .viz { position: absolute; top: 0; bottom: 0; right: 0; width: 58%; height: 100%; display: block; }
+  .fc[data-k="voice"] .viz { width: 100%; }
+  .fc[data-k="bass"] .viz { width: 60%; }
+  .resp { width: 100%; height: 120px; display: block; overflow: visible; }
+  .resp path { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .resp .raw { stroke: var(--ink); stroke-opacity: .25; stroke-width: 1.5; stroke-dasharray: 2 4; }
+  .resp .fix { stroke: var(--tint); stroke-width: 3; }
+  .resp .grid { stroke: var(--line); stroke-width: 1; }
+  .scan { position: absolute; left: 0; top: -8px; height: 136px; width: 70px; margin-left: -70px; pointer-events: none;
+    background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--tint) 20%, transparent)); border-right: 2px solid var(--tint); }
+  .say { margin-bottom: 40px; position: relative; z-index: 1; font: 600 15px/1.35 var(--sans); letter-spacing: -.01em; min-height: 2.7em; max-width: 24ch; }
+  .say u { text-decoration: none; display: inline-block; width: 2px; height: 1em; background: var(--tint); vertical-align: -2px; margin-left: 2px; }
+
+  /* NEW · sound field: dark room, the orb follows the cursor, wavefronts bend around what's in the way */
+  #field { height: 240vh; color: var(--lite); }
+  #field .head { position: absolute; left: var(--gl); top: calc(60px + 8vh); max-width: 34vw; }
+  #field .head p { margin-top: 20px; opacity: .7; max-width: 30ch; }
+  #field .hint { position: absolute; left: var(--gl); bottom: 7vh; font: 600 11px var(--sans); letter-spacing: .14em; text-transform: uppercase; display: flex; gap: 10px; align-items: center; opacity: .8; }
+  #field .hint i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid currentColor; display: block; }
+
+  /* PART 5 · the close: full-bleed knit colour, a fabric picker and the magnetic button */
+  #buy { height: 100vh; position: relative; z-index: 5; color: var(--lite); }
+  #buy h2 { position: absolute; left: var(--gl); top: calc(60px + 7vh); font-size: clamp(56px, 8.4vw, 150px); max-width: 5em; }
+  .pickwrap { position: absolute; left: var(--gl); bottom: calc(8vh + 112px + 30px); }
+  .pickwrap span { font: 600 11px var(--sans); letter-spacing: .14em; text-transform: uppercase; opacity: .8; }
+  .pickwrap span b { font-weight: 800; opacity: 1; }
+  .pick { display: flex; gap: 12px; margin-top: 14px; }
+  .pick button { width: 40px; height: 40px; }
+  .mag { position: absolute; left: var(--gl); bottom: 8vh; width: 470px; height: 112px; display: block; background: var(--deep); color: var(--lite);
+    will-change: transform; box-shadow: inset 0 0 0 1px oklch(1 0 0 / .1), 0 30px 60px -30px oklch(.1 .03 265 / .7); }
+  .mag span { will-change: transform; display: flex; justify-content: space-between; align-items: center; height: 100%; padding: 0 30px; }
+  .mag b { font: 800 24px var(--sans); letter-spacing: -.02em; }
+  .mag i { font: 800 56px/1 var(--sans); letter-spacing: -.05em; }
+  .ship { position: absolute; left: var(--gl); bottom: calc(8vh - 30px); font: 600 11px var(--sans); letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
+  footer { position: relative; z-index: 5; overflow: hidden; padding: 26px 0; background: var(--ink); color: var(--lite); }
+  .marq { display: flex; gap: 48px; white-space: nowrap; font: 800 clamp(40px, 6vw, 84px)/1 var(--sans); letter-spacing: -.035em; word-spacing: .08em; will-change: transform; }
+  .fine { padding: 18px var(--gr) 0 var(--gl); font: 400 12px var(--sans); opacity: .6; }
+
+  @media (max-width: 760px) {
+    .navl a:not(.pill) { display: none; }
+    h2 { font-size: 40px; }
+    /* hero: block top-right, orb across its lower-left corner, numeral under the orb, everything above y 820 */
+    .hero-block { left: 250px; top: 60px; bottom: auto; height: 470px; }
+    .hl { top: 88px; font-size: 64px; }
+    .num { left: 12px; right: auto; bottom: auto; top: 588px; font-size: 150px; color: var(--tint); }
+    .hero-copy { left: var(--gl); bottom: auto; top: 728px; max-width: 30ch; font-size: 14px; }
+    .live { left: 268px; top: 80px; }
+    /* turn */
+    #turn .head { top: 82px; }
+    .deg { bottom: auto; top: 640px; } .deg b { font-size: 120px; }
+    .callout { width: auto; max-width: 42vw; padding: 2px 8px 2px 10px; background: var(--paper); }
+    .callout .n { font-size: 18px; } .callout h3 { font-size: 14px; margin-bottom: 0; }
+    .callout p { display: none; }
+    /* finish */
+    .bandbtn .s { height: 8.1vh; }
+    .bandbtn .s span { font-size: 13px; }
+    .bandbtn:first-child .s { justify-content: flex-end; } .bandbtn:first-child .s span { display: none; }
+    .bandbtn .o { top: 84px; transform: none; width: auto; right: var(--gr); }
+    .bandbtn .o b { font-size: 13.5vw; }
+    .bandbtn .o span { margin-top: 8px; font-size: 14px; }
+    #pair .phead { top: 60px; left: 0; right: 0; width: auto; padding: 84px var(--gr) 16px var(--gl); box-shadow: none; }
+    #pair h2 { font-size: 40px; }
+    #pair .phead p { margin-top: 8px; font-size: 14px; }
+    .pread { left: 0; right: 0; bottom: 14.5vh; width: auto; padding: 14px var(--gr) 0 var(--gl); box-shadow: 0 300px 0 300px var(--paper); }
+    .pnums b { font-size: 30px; }
+    .pnums span { margin-top: 5px; font-size: 12px; }
+    #psync { height: 44px; margin-top: 12px; font-size: 14px; }
+    /* room */
+    #room .head { top: 82px; max-width: none; }
+    .plan { left: var(--gl); right: auto; top: 300px; width: calc(100vw - var(--gl) - 70px); }
+    #room .count { bottom: auto; top: 650px; } #room .count b { font-size: 120px; }
+    /* features: title stays pinned under the nav, the cards scroll under it */
+    #features { display: block; padding: 10vh 70px 14vh var(--gl); }
+    #features .fhead { top: 60px; z-index: 8; background: var(--paper); padding: 14px 0 16px; margin: 0 -70px 0 calc(-1 * var(--gl)); padding-left: var(--gl); box-shadow: 0 1px 0 var(--line); }
+    #features .fhead h2 { font-size: 34px; } #features .fhead p, .stats { display: none; }
+    .bento { grid-template-columns: 1fr; grid-auto-rows: 206px; gap: 10px; margin-top: 58px; }
+    .resp, .scan { height: 60px !important; } .fc { padding: 20px; } .fc-foot b { font-size: 42px !important; } .fc-foot span { font-size: 13px; margin-top: 8px; }
+    .fc.wide { grid-column: auto; }
+    .fc-foot b { font-size: 48px; }
+    /* field */
+    #field .head { top: 144px; max-width: none; } #field .head p { font-size: 14px; }
+    #field .hint { bottom: auto; top: 780px; }
+    /* buy */
+    #buy h2 { top: 84px; font-size: 64px; }
+    .pickwrap { bottom: auto; top: 590px; }
+    .mag { bottom: auto; top: 692px; width: calc(100vw - var(--gl) - 84px); height: 92px; }
+    .mag span { padding: 0 22px; } .mag i { font-size: 46px; }
+    .ship { bottom: auto; top: 800px; }
+  }
+</style>
+</head>
+<body>
+<div class="room"></div>
+<div class="rules" id="rules"></div>
+<canvas id="rings"></canvas>
+<div class="giant" aria-hidden="true"><div class="hl" id="hl"></div><div class="num" id="num"></div></div>
+<div class="bands" id="bands" aria-hidden="true"></div>
+<canvas id="gl"></canvas>
+<div class="grain" id="grain"></div>
+
+<nav><a class="logo" href="#"><i></i>zellie orb</a>
+  <div class="navl"><a href="#turn">Design</a><a href="#finish">Fabrics</a><a href="#room">Rooms</a><a href="#pair">Stereo</a><a href="#field">Sound</a><a class="pill" href="#buy">Pre-order</a></div></nav>
+
+<header class="hero">
+  <div class="hero-block"></div>
+  <div class="live"><i id="livebars"><u></u><u></u><u></u><u></u><u></u></i>Now playing</div>
+  <p class="hero-copy"><b>Zellie Orb</b> is a 360° speaker. It listens to the room, then tunes itself to it. No front, no sweet spot.</p>
+</header>
+
+<section class="stage-wrap" id="turn"><div class="stage">
+  <div class="head"><h2>No front.<br>No back.</h2></div>
+  <div class="deg"><b id="degnum">0°</b><span>Same sound from every side</span></div>
+  <svg id="leaders"></svg>
+  <div class="callout" data-i="0"><div class="n">000°<small>N</small></div><h3>Machined crown</h3><p>One ring of aluminium, turned and bead-blasted. Touch to pause.</p></div>
+  <div class="callout" data-i="1"><div class="n">300°<small>NW</small></div><h3>Halo light ring</h3><p>Breathes when it listens, glows the volume as you turn the crown.</p></div>
+  <div class="callout" data-i="2"><div class="n">090°<small>E</small></div><h3>Acoustic knit</h3><p>One seamless sleeve, woven to be invisible to sound.</p></div>
+  <div class="callout" data-i="3"><div class="n">225°<small>SW</small></div><h3>Down-firing woofer</h3><p>A 4.5" driver uses the table as a horn.</p></div>
+</div></section>
+
+<section class="stage-wrap" id="finish" aria-label="Four fabrics"><div class="stage" id="bandbtns"></div></section>
+
+<section class="stage-wrap" id="room"><div class="stage">
+  <div class="head"><h2>One orb per room. One sound.</h2></div>
+  <div class="plan"><svg viewBox="0 0 600 420" id="plan">
+    <defs><clipPath id="c0"><rect x="0" y="0" width="340" height="250"/></clipPath><clipPath id="c1"><rect x="340" y="0" width="260" height="170"/></clipPath>
+      <clipPath id="c2"><rect x="340" y="170" width="260" height="250"/></clipPath><clipPath id="c3"><rect x="0" y="250" width="340" height="170"/></clipPath></defs>
+    <g id="fills"></g>
+    <g class="furn"><rect x="40" y="170" width="170" height="54" rx="10"/><rect x="232" y="40" width="80" height="120" rx="4"/>
+      <path d="M370 24h206v40H410v84h-40z"/><rect x="420" y="352" width="150" height="46" rx="4"/><circle cx="470" cy="330" r="14"/>
+      <rect x="40" y="290" width="150" height="104" rx="8"/><rect x="50" y="300" width="60" height="26" rx="6"/><rect x="120" y="300" width="60" height="26" rx="6"/></g>
+    <path class="wall" d="M0 0H600V420H0Z"/>
+    <path class="wall" d="M340 0V100M340 140V330M340 370V420M340 170H420M470 170H600M0 250H200M250 250H340"/>
+    <g id="labels"></g>
+  </svg></div>
+  <div class="count"><b id="roomnum">01</b><span>of 4 rooms playing · in sync</span></div>
+</div></section>
+
+<section class="stage-wrap" id="pair"><div class="stage">
+  <div class="phead"><h2>A second orb finds the first.</h2><p>Set two apart and they lock to one clock, then time themselves to where you sit. Move your cursor: the ridge follows you.</p></div>
+  <div class="ptag" id="ptagL">Left</div><div class="ptag" id="ptagR">Right</div>
+  <div class="seat" id="seat"><i></i><b>You</b></div>
+  <div class="pread"><div class="pnums"><div><b id="pl">0.0</b><span>ms from the left orb</span></div><div><b id="pr">0.0</b><span>ms from the right orb</span></div><div><b id="pdb">0</b><span>dB lost at your seat</span></div></div>
+    <button id="psync">Unlink the pair</button></div>
+</div></section>
+
+<section id="features">
+  <div class="fhead"><h2>Hears the room. Then fills it.</h2>
+    <p>Seven drivers, six microphones and a chip that does nothing but listen. You set it down. It does the rest.</p>
+    <div class="stats"><div><b>07</b><span>Drivers</span></div><div><b>06</b><span>Mics</span></div></div></div>
+  <div class="bento">
+    <article class="fc wide dark" data-k="field360"><canvas class="viz"></canvas>
+      <div class="fc-top"><span class="fc-tag">360° sound</span><span class="chip">Top view</span></div>
+      <div class="fc-foot"><b data-num="360" data-suf="°">0°</b><span>Six tweeters around the waist, one woofer pointing down. Every seat is the sweet spot.</span></div></article>
+    <article class="fc" data-k="cal"><div class="fc-top"><span class="fc-tag">Room calibration</span><span class="chip" id="calchip">Listening</span></div>
+      <div style="position:relative"><svg class="resp" viewBox="0 0 300 120" preserveAspectRatio="none"><path class="grid" d="M0 60H300"/><path class="raw"/><path class="fix"/></svg><div class="scan"></div></div>
+      <div class="fc-foot"><b data-num="8">0<small>s</small></b><span>One chirp. It hears the walls and flattens the bass.</span></div></article>
+    <article class="fc tinted" data-k="voice"><canvas class="viz"></canvas>
+      <div class="fc-top"><span class="fc-tag">Voice</span><span class="chip">6-mic array</span></div>
+      <div class="say" id="say"></div></article>
+    <article class="fc wide" data-k="bass"><canvas class="viz"></canvas>
+      <div class="fc-top"><span class="fc-tag">Bass</span><span class="chip">Down-firing</span></div>
+      <div class="fc-foot"><b data-num="38">0<small>Hz</small></b><span>A 4.5" woofer fires into the table and uses it as a horn. Deep, not boomy.</span></div></article>
+  </div>
+</section>
+
+<section class="stage-wrap" id="field"><div class="stage">
+  <div class="head"><h2>Move it.<br>The sound follows.</h2>
+    <p>Six tweeters re-aim around whatever is in the way. Move your cursor and watch the wavefronts bend.</p></div>
+  <div class="hint"><i></i>The orb follows your cursor</div>
+</div></section>
+
+<section id="buy">
+  <h2>Fill every room.</h2>
+  <div class="pickwrap"><span>Choose your knit · <b id="pname">Sea glass</b></span><div class="pick" id="pick"></div></div>
+  <a class="mag" id="mag" href="#"><span><b>Pre-order</b><i>$449</i></span></a>
+  <div class="ship">Zellie Orb · ships in April · free returns</div>
+</section>
+<footer><div class="marq" id="marq"></div>
+  <div class="fine">Concept product. Site built with AI for @zellap.app · comment PROMPT for the prompts.</div></footer>
+
+<script type="importmap">{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }</script>
+<script type="module">
+import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const Q = new URLSearchParams(location.search), REC = Q.has("rec");
+history.scrollRestoration = "manual"; scrollTo(0, 0);              // always open on the hero; the recorder drives time with __tick(dt)
+const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)];
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const ease = (u) => (u = clamp(u), u * u * u * (u * (u * 6 - 15) + 10));          // smootherstep
+const lerp = (a, b, t) => a + (b - a) * t;
+const damp = (a, b, k, dt) => lerp(a, b, 1 - Math.exp(-k * dt));                  // frame-rate independent smoothing
+const DPR = +Q.get("dpr") || Math.min(devicePixelRatio, 2);
+
+/* ---------- PART 1 · split headline + oversized numeral ---------- */
+const split = (el, text) => { el.innerHTML = text.split("|").map((w) => `<b class="w">${[...w].map((c) => (c === " " ? `<span class="sp"></span>` : `<span>${c}</span>`)).join("")}</b>`).join(""); };
+split($("#hl"), "Sound|in the|round."); $("#num").innerHTML = [..."360°"].map((c) => `<span>${c}</span>`).join("");
+const letters = $$("#hl span"), numLetters = $$("#num span");
+$("#rules").innerHTML = "<i></i>".repeat(12);
+
+/* ---------- renderer, camera, light ---------- */
+const canvas = $("#gl");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: REC });
+renderer.setPixelRatio(DPR);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 100);
+camera.position.set(0, 0, 9);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xf4f6ff, 0x9a9890, 1.0));
+const key = new THREE.DirectionalLight(0xffffff, 2.6); key.position.set(-3, 5, 5); scene.add(key);
+const rim = new THREE.DirectionalLight(0xffffff, 2.4); rim.position.set(4, 1, -4); scene.add(rim);   // rim takes the fabric colour
+
+/* ---------- PART 3 · fabric tint: one uniform recolours the knit, the metal stays metal ---------- */
+const FINISHES = [   // one family: sea glass and three quiet greys that sit next to it (owner 2026-11-03: no rainbow)
+  { name: "Sea glass", room: "For rooms full of daylight", knit: "Recycled PET · 3D woven", css: "oklch(.6 .085 168)",  tint: "oklch(.55 .11 175)",  deep: "oklch(.27 .055 190)", hex: 0x4f9a86 },
+  { name: "Lichen", room: "For north-facing rooms", knit: "Wool blend · 3D woven",   css: "oklch(.6 .038 166)", tint: "oklch(.54 .042 166)",  deep: "oklch(.27 .024 166)",  hex: 0x7a948b },
+  { name: "Fog", room: "For warm timber floors", knit: "Recycled PET · melange",  css: "oklch(.66 .014 230)",  tint: "oklch(.58 .016 230)",  deep: "oklch(.3 .012 230)",  hex: 0x9aa4ab },
+  { name: "Ink", room: "For rooms you use at night", knit: "Wool blend · melange",    css: "oklch(.36 .022 240)",   tint: "oklch(.34 .025 240)",  deep: "oklch(.2 .015 240)",  hex: 0x3a4650 },
+];
+const uTint = { value: new THREE.Color(FINISHES[0].hex) };
+/* PART 3 · the knit: one dyed colour + a fine loop stitch as a bump, computed in object space (no UV seams),
+   faded out before a stitch gets smaller than ~3 px so it never shimmers or moires */
+const knitMats = [];
+function knitMaterial() {
+  const mat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: .9, metalness: 0, envMapIntensity: .85,
+    sheen: .6, sheenRoughness: .5, sheenColor: new THREE.Color(0xffffff) });
+  knitMats.push(mat);          // fibre sheen at grazing angles
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uTint = uTint;
+    sh.vertexShader = "varying vec3 vOP;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n vOP = position;");
+    sh.fragmentShader = "uniform vec3 uTint; varying vec3 vOP;\n" + `
+      float weave(vec2 q) {                                    // plain weave: over-under threads, soft round profile
+        vec2 c = floor(q), f = fract(q);
+        float chk = mod(c.x + c.y, 2.0);
+        float tx = pow(sin(3.14159 * fract(f.y * 2.0)), .55), ty = pow(sin(3.14159 * fract(f.x * 2.0)), .55);
+        float lift = pow(sin(3.14159 * (chk > .5 ? f.x : f.y)), .5);
+        return mix(tx, ty, chk) * (.75 + .25 * lift);
+      }
+      float tri(vec3 p, float sc) {                             // triplanar so the weave has no seams on the sphere
+        vec3 n = abs(normalize(p)); n = pow(n, vec3(10.)); n /= n.x + n.y + n.z;
+        return weave(p.yz / sc) * n.x + weave(p.xz / sc) * n.y + weave(p.xy / sc) * n.z;
+      }
+      float cloth(vec3 p) {
+        float px = length(fwidth(p));                          // object units per screen pixel
+        float lod = log2(max(px * 8.0, 1e-5) / .01);           // one weave cell (two threads) 8-16 px: a thread is 4-8 px
+        float l0 = floor(lod), f = fract(lod);
+        float sc = .01 * exp2(l0);
+        return mix(tri(p, sc), tri(p, sc * 2.0), f);
+      }\n` + sh.fragmentShader
+      .replace("#include <map_fragment>", `#include <map_fragment>
+        float wv = cloth(vOP);
+        float mel = .5 + .25 * sin(vOP.x * 23. + sin(vOP.y * 17.) * 2.) * sin(vOP.y * 29. + vOP.z * 11.) + .25 * sin(vOP.z * 37. - vOP.x * 13.);
+        diffuseColor.rgb = uTint * (.86 + .15 * wv + .04 * (mel - .5));`)
+      .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
+        roughnessFactor = .78 + .2 * (1.0 - wv);               // the tops of the threads catch a little more light`);
+  };
+  return mat;
+}
+
+/* ---------- the product: built from lathes, not a scan. A sphere of radius 1, a recessed crown flush with the top,
+   the light ring in the seam, a soft rounded foot ---------- */
+const pivot = new THREE.Group(); scene.add(pivot);       // scroll moves, scales and leans the pivot
+const spin = new THREE.Group(); pivot.add(spin);         // the turntable spins this (callouts stay on the silhouette)
+const tilt = new THREE.Group(); spin.add(tilt);          // the cursor tilts this
+const ANCHORS = [new THREE.Vector3(.16, .93, .12), new THREE.Vector3(-.33, .905, .25), new THREE.Vector3(.98, -.05, .2), new THREE.Vector3(-.22, -.975, .1)];
+const lathe = (pts, mat, seg = 256) => new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), seg), mat);
+// body: the sphere from the foot (r .36) to the crown recess (r .43), then a small lip down into the recess
+const bodyPts = [];
+for (let i = 0; i <= 220; i++) { const f = lerp(Math.asin(.36), Math.PI - Math.asin(.43), i / 220); bodyPts.push([Math.sin(f), -Math.cos(f)]); }
+bodyPts.push([.418, .893], [.408, .872], [.4, .86]);
+const product = lathe(bodyPts, knitMaterial());
+tilt.add(product);
+// foot: graphite, soft radius, slightly inset
+tilt.add(lathe([[0, -.988], [.29, -.988], [.33, -.982], [.352, -.966], [.364, -.946], [.362, -.928]], new THREE.MeshStandardMaterial({ color: 0x2b2d32, roughness: .7, metalness: .1 }), 128));
+// crown: brushed aluminium, chamfered edge, its dome follows the sphere so it sits flush
+const brushed = (() => { const c = document.createElement("canvas"); c.width = 8; c.height = 1024; const x = c.getContext("2d");
+  for (let i = 0; i < 1024; i++) { const g = 160 + Math.floor((((Math.sin(i * 12.9898) * 43758.5453) % 1) + 1) % 1 * 60); x.fillStyle = `rgb(${g},${g},${g})`; x.fillRect(0, i, 8, 1); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
+const crownPts = [[.388, .86], [.398, .866], [.398, .904], [.392, .912], [.384, .916]];
+for (let i = 1; i <= 32; i++) { const r = .384 * (1 - i / 32); crownPts.push([r, .916 + .022 * (1 - (r / .384) ** 2)]); }
+const crownMat = new THREE.MeshStandardMaterial({ color: 0xa9adb3, metalness: 1, roughness: .34, envMapIntensity: .7 });
+crownMat.onBeforeCompile = (sh) => {                     // lathe rings: fine concentric brushing, filtered so it never shimmers
+  sh.vertexShader = "varying vec3 vCP;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n vCP = position;");
+  sh.fragmentShader = "varying vec3 vCP;\n" + sh.fragmentShader.replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
+    float rr = length(vCP.xz) * 520.0, fwr = fwidth(rr), ring = (.5 + .5 * sin(rr * 6.28318)) * (1.0 - smoothstep(.3, .6, fwr));
+    float ring2 = (.5 + .5 * sin(rr * .37 * 6.28318)) * (1.0 - smoothstep(.3, .6, fwr * .37));
+    roughnessFactor = .32 + .08 * ring + .06 * ring2;
+    diffuseColor.rgb *= .95 + .05 * ring2;`);
+};
+const crown = lathe(crownPts, crownMat);
+tilt.add(crown);
+// the halo: an emissive ring in the seam; it takes the fabric colour and breathes with the music
+const halo = new THREE.Mesh(new THREE.TorusGeometry(.409, .0085, 16, 200), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
+halo.rotation.x = Math.PI / 2; halo.position.y = .897;
+tilt.add(halo);
+// a soft contact shadow under the orb (faces the camera, lives in the pivot so it follows the orb)
+const shadowTex = (() => { const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d");
+  const g = x.createRadialGradient(128, 128, 0, 128, 128, 128); g.addColorStop(0, "rgba(0,0,0,.5)"); g.addColorStop(.55, "rgba(0,0,0,.16)"); g.addColorStop(1, "rgba(0,0,0,0)");
+  x.fillStyle = g; x.fillRect(0, 0, 256, 256); return new THREE.CanvasTexture(c); })();
+const shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.1, .42), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
+shadow.position.set(0, -1.05, -.6); pivot.add(shadow);
+const pivot2 = new THREE.Group(), tilt2 = tilt.clone(); pivot2.add(tilt2, shadow.clone()); pivot2.visible = false; scene.add(pivot2);   // the second orb: same geometry and cloth, its own halo
+const halo2 = tilt2.children[tilt.children.indexOf(halo)]; halo2.material = halo.material.clone();
+let ready = true;                                        // nothing to download: the orb is geometry
+
+/* ---------- fabric bands, picker, marquee ---------- */
+let pick = -1;                                                   // the fabric you chose (a band click or the picker); it stays with you down the page
+$("#bands").innerHTML = FINISHES.map(() => "<i></i>").join("");
+const bandEls = $$("#bands i");
+FINISHES.forEach((f, i) => {
+  const b = document.createElement("button"); b.className = "bandbtn"; b.ariaLabel = f.name + ", " + f.knit;
+  b.innerHTML = `<div class="s"><b>${f.name}</b><span>${f.knit}</span></div><div class="o"><b>${f.name}</b><span>${f.room}<small>${f.knit}</small></span></div>`;
+  b.onclick = () => jumpBand(i); $("#bandbtns").append(b);
+  const c = document.createElement("button"); c.style.setProperty("--c", f.css); c.ariaLabel = f.name; c.onclick = (e) => { e.preventDefault(); pick = i; }; $("#pick").append(c);
+});
+const bandBtns = $$(".bandbtn");
+function jumpBand(i) { i = clamp(i, 0, 3); pick = i; if (!REC) scrollTo(0, sec.finish.top + sec.finish.len * i / 3); }   // the scroll timeline does the rest
+
+/* the stereo pair: link / unlink, and the seat */
+let driftA = 0, linked = true, linkK = 1, seatX = .5, seatY = .7, ptrOn = false;
+$("#psync").onclick = () => (linked = !linked);
+addEventListener("keydown", (e) => {
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  const inS = (id) => sy > sec[id].top - H * .2 && sy < sec[id].top + sec[id].len + H * .2;
+  if (inS("finish") && (e.key === "ArrowDown" || e.key === "ArrowUp")) { const cur = Math.round(bandPos(prog("finish", scrollY))), nx = cur + (e.key === "ArrowDown" ? 1 : -1);
+    if (nx >= 0 && nx <= 3) { jumpBand(nx); e.preventDefault(); } }                 // past the last band the arrow scrolls the page as usual
+  else if (inS("pair") && e.key.toLowerCase() === "s") $("#psync").click();
+  else if (inS("pair") && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { seatTarget.x = clamp(seatTarget.x + (e.key === "ArrowLeft" ? -.05 : .05), .05, .95); seatTarget.key = true; e.preventDefault(); }
+});
+const seatTarget = { x: .5, key: false };
+$("#marq").innerHTML = Array(6).fill("Sound in the round ·").join(" ");
+
+/* ---------- room plan: fills, waves, other orbs, labels ---------- */
+const ROOMS = [
+  { name: "Living", x: 0, y: 0, w: 340, h: 250, sx: 170, sy: 110, lx: 18, ly: 30 },
+  { name: "Kitchen", x: 340, y: 0, w: 260, h: 170, sx: 500, sy: 110, lx: 358, ly: 98 },
+  { name: "Study", x: 340, y: 170, w: 260, h: 250, sx: 470, sy: 268, lx: 358, ly: 200 },
+  { name: "Bedroom", x: 0, y: 250, w: 340, h: 170, sx: 262, sy: 340, lx: 204, ly: 400 },
+];
+$("#fills").innerHTML = ROOMS.map((r, i) => `<g clip-path="url(#c${i})"><rect class="fill" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" opacity="0"/>${"<circle class=\"wave\" r=\"0\"/>".repeat(5)}</g>`).join("");
+$("#labels").innerHTML = ROOMS.map((r, i) => `<text class="rname" x="${r.lx}" y="${r.ly}">${r.name}</text><text class="rstate" x="${r.lx}" y="${r.ly + 15}">IDLE</text>`
+  + `<g class="spk" data-i="${i}" transform="translate(${r.sx} ${r.sy})"><circle class="o" r="20"/><circle class="i" r="7"/></g>`).join("");
+const fillG = $$("#fills > g"), rstates = $$("#labels .rstate"), spks = $$("#labels .spk");
+
+/* ---------- layout: section offsets for the scroll timeline ---------- */
+let W = 1, H = 1, vis = { w: 1, h: 1 }, sec = {};
+const rc = $("#rings"), rx = rc.getContext("2d");
+const vizzes = $$(".fc canvas.viz").map((cv) => ({ cv, ctx: cv.getContext("2d"), k: cv.parentNode.dataset.k }));
+function layout() {
+  W = innerWidth; H = innerHeight;
+  renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix();
+  rc.width = W * DPR; rc.height = H * DPR;
+  vizzes.forEach((z) => { z.cv.width = z.cv.offsetWidth * DPR; z.cv.height = z.cv.offsetHeight * DPR; });
+  const hh = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)); vis = { w: hh * camera.aspect, h: hh };
+  for (const id of ["turn", "finish", "room", "pair", "features", "field", "buy"]) { const el = document.getElementById(id); sec[id] = { top: el.offsetTop, len: Math.max(1, el.offsetHeight - H) }; }
+}
+addEventListener("resize", layout); layout();
+const prog = (id, y) => clamp((y - sec[id].top) / Math.max(1, sec[id].len));
+const bandPos = (pf) => { const u = pf * 3, i = Math.min(2, Math.floor(u)); return i + ease((u - i - .24) / .52); };    // four holds on one scroll timeline
+/* the stack, in px. Portrait: the bottom strip's name stays above Instagram's caption area; the last band just runs on to the screen edge */
+function bandLayout(pos) {
+  const P = W < H, top0 = 60, end = P ? H * .854 : H, thin = P ? H * .081 : H * .09, wide = end - top0 - thin * 3, out = []; let y = top0;
+  for (let i = 0; i < 4; i++) { const a = Math.max(0, 1 - Math.abs(pos - i)), h = thin + (wide - thin) * a; out.push({ y, h, a, full: i === 3 ? H - y : h }); y += h; }
+  return out;
+}
+function orbInBand(pos) {                                        // the orb sits in the open band: screen fractions + scale for the keyframes
+  const P = W < H, L = bandLayout(pos); let cy = 0;
+  L.forEach((l) => (cy += (l.y + l.h * (P ? .68 : .5)) * l.a));
+  const wide = (P ? H * .854 : H) - 60 - (P ? H * .081 : H * .09) * 3, R = P ? W * .305 : wide * .41;
+  return { x: P ? -.03 : .2, y: -(cy / H - .5), s: R * vis.h / H };
+}
+const win = (id, y, a = .6, b = .6) => ease((y - (sec[id].top - H * a)) / (H * a)) * (1 - ease((y - (sec[id].top + sec[id].len)) / (H * b)));
+
+/* ---------- PART 2 · scroll keyframes (x,y in screen fractions, rotations in turns, f = sound field strength) ---------- */
+const portrait = () => W < H;
+function keys() {
+  const p = portrait(), S = Math.min(1.3, vis.w * (p ? .33 : .19));            // scale that fits any screen
+  const T0 = { x: p ? 0 : .1, y: p ? .02 : -.02, s: S * (p ? .88 : 1.0), rx: .015, rz: 0, f: .45 };
+  return [
+    [0,                                       { x: p ? .093 : .042, y: p ? .07 : .08, s: S * (p ? .74 : .82), ry: -.05, rx: .032, rz: 0, f: 1 }],
+    [sec.turn.top,                            { ...T0, ry: 0 }],
+    [sec.turn.top + sec.turn.len * .5,        { ...T0, ry: .5, rx: .05, rz: .015 }],
+    [sec.turn.top + sec.turn.len,             { ...T0, ry: 1 }],
+    [sec.finish.top,                          { ...orbInBand(0), ry: 1.1, rx: .035, rz: 0, f: 0 }],
+    [sec.finish.top + sec.finish.len,         { ...orbInBand(3), ry: 1.6, rx: .035, rz: 0, f: 0 }],
+    [sec.room.top,                            { x: 0, y: 0, s: S * .3, ry: 1.8, rx: .25, rz: 0, f: 0 }],    // seen from above, placed on the plan
+    [sec.room.top + sec.room.len,             { x: 0, y: 0, s: S * .3, ry: 2.2, rx: .25, rz: 0, f: 0 }],
+    [sec.pair.top,                            { x: 0, y: 0, s: S * .5, ry: 2.25, rx: .03, rz: 0, f: 0 }],
+    [sec.pair.top + sec.pair.len,             { x: 0, y: 0, s: S * .5, ry: 2.35, rx: .03, rz: 0, f: 0 }],
+    [sec.features.top,                        { x: p ? 0 : .3, y: .95, s: S * .5, ry: 2.4, rx: .1, rz: 0, f: 0 }],   // floats out: the cards own this part
+    [sec.features.top + sec.features.len,     { x: p ? 0 : .3, y: .95, s: S * .5, ry: 2.6, rx: .1, rz: 0, f: 0 }],
+    [sec.field.top,                           { x: 0, y: 0, s: S * .4, ry: 2.8, rx: .08, rz: 0, f: 0 }],
+    [sec.field.top + sec.field.len,           { x: 0, y: 0, s: S * .4, ry: 3.2, rx: .08, rz: 0, f: 0 }],
+    [sec.buy.top,                             { x: p ? .07 : .16, y: p ? .1 : .1, s: S * (p ? .76 : .92), ry: 3.6, rx: .02, rz: 0, f: .8 }],
+  ];
+}
+function stateAt(y) {
+  const K = keys(); if (y <= K[0][0]) return K[0][1];
+  for (let i = 0; i < K.length - 1; i++) {
+    const [y0, a] = K[i], [y1, b] = K[i + 1];
+    if (y <= y1) { const t = ease((y - y0) / Math.max(1, y1 - y0)); const o = {}; for (const k in a) o[k] = lerp(a[k], b[k], t); return o; }
+  }
+  return K[K.length - 1][1];
+}
+
+/* ---------- the music: a deterministic 112 bpm signal, so the recorder gets the same frames every run ---------- */
+const BEAT = 112 / 60;
+const kick = (t) => Math.exp(-((t * BEAT) % 1) * 7);
+const band = (t, a) => .5 + .5 * Math.sin(a * 5 + t * 3.1) * Math.cos(a * 3 - t * 1.7) * Math.sin(a * 11 + t * 6.3);
+const level = (t) => .35 + .65 * kick(t);
+
+/* ---------- the sound field (2D canvas behind the orb). Wavefronts bend around obstacles: behind each one they lag,
+   so the ring wraps the obstacle and leaves a dent in its shadow ---------- */
+const DOTS = Array.from({ length: 220 }, (_, i) => ({ a: (i * 2.39996) % (Math.PI * 2), b: ((i * .618) % 1), z: .6 + ((i * 7.13) % 1) * .9 }));
+const angd = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+function bentR(cx, cy, r, th, obs) {
+  let out = r;
+  for (const o of obs) {
+    const dx = o.x - cx, dy = o.y - cy, d = Math.hypot(dx, dy);
+    if (r < d - o.r || d < o.r) continue;
+    const half = Math.asin(Math.min(1, o.r / d)) * 1.7, dt = Math.abs(angd(th, Math.atan2(dy, dx)));
+    if (dt > half) continue;
+    const sh = 1 - dt / half, lag = Math.min(r - (d - o.r), o.r * 2.2) * (sh * sh * (3 - 2 * sh));
+    out = Math.min(out, r - lag);
+  }
+  return out;
+}
+function drawField(cx, cy, R, o) {
+  rx.setTransform(DPR, 0, 0, DPR, 0, 0); rx.clearRect(0, 0, W, H);
+  const { amt, ink, tint, dial, obs, obsAmt, dots } = o;
+  if (amt <= .01 && dial <= .01) return;
+  const L = level(T), maxR = Math.hypot(W, H) * .7;
+  rx.lineCap = "round"; rx.lineJoin = "round";
+  // expanding pressure waves, one every half beat, bent by the obstacles
+  const NR = obs.length ? 10 : 6;
+  for (let i = 0; i < NR; i++) {
+    const ph = ((T * BEAT * .5) + i / NR) % 1, r = R * 1.1 + ph * (maxR - R);
+    rx.strokeStyle = tint; rx.globalAlpha = amt * (1 - ph) ** 1.6 * (obs.length ? .9 : .5); rx.lineWidth = obs.length ? 2.4 + (1 - ph) * 3 : 1 + (1 - ph) * 1.5;
+    rx.beginPath();
+    for (let j = 0; j <= 180; j++) { const th = j / 180 * Math.PI * 2, rr = obs.length ? bentR(cx, cy, r, th, obs) : r; const X = cx + Math.cos(th) * rr, Y = cy + Math.sin(th) * rr; j ? rx.lineTo(X, Y) : rx.moveTo(X, Y); }
+    rx.stroke();
+  }
+  // spectrum crown: 144 radial bars that dance to the band energy
+  const N = 144;
+  rx.strokeStyle = ink; rx.lineWidth = Math.max(1.2, R * .012);
+  for (let i = 0; i < N; i++) {
+    const a = i / N * Math.PI * 2 - Math.PI / 2, e = band(T, a) * L, r0 = R * 1.14, r1 = r0 + R * (.03 + .26 * e);
+    rx.globalAlpha = amt * (.25 + .6 * e);
+    rx.beginPath(); rx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); rx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); rx.stroke();
+  }
+  // drifting particles, pushed out on every kick (hero only)
+  if (dots > .01) { rx.fillStyle = tint;
+    for (const d of DOTS) { const a = d.a + T * .06 * (1.2 - d.b), r = R * (1.55 + d.b * 1.9) + kick(T - d.b * .25) * R * .1 * d.z;
+      rx.globalAlpha = dots * (1 - d.b) * .75; rx.beginPath(); rx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, d.z * 1.6, 0, Math.PI * 2); rx.fill(); } }
+  // obstacles in the field section
+  if (obsAmt > .01) for (const ob of obs) {
+    rx.globalAlpha = obsAmt; rx.fillStyle = "#26282f"; rx.strokeStyle = "#e9ebee"; rx.lineWidth = 1.5;
+    rx.beginPath(); rx.arc(ob.x, ob.y, ob.r, 0, Math.PI * 2); rx.fill(); rx.stroke();
+    rx.fillStyle = "#e9ebee"; rx.font = `700 ${portrait() ? 15 : 12}px "Inter Tight"`; rx.textAlign = "center"; rx.textBaseline = "middle";
+    rx.fillText(ob.label.toUpperCase(), ob.x, ob.y);
+  }
+  if (obsAmt > .01) { rx.save(); rx.globalCompositeOperation = "destination-out"; rx.globalAlpha = 1; rx.fillStyle = "#000"; rx.shadowColor = "#000"; rx.shadowBlur = 26 * DPR;
+    for (const q of ["#field .head", "#field .hint"]) { const b = $(q).getBoundingClientRect(); rx.fillRect(b.left - 14, b.top - 10, b.width + 28, b.height + 20); }
+    rx.restore(); }
+  // PART 2 · the dial: 120 ticks that turn with the orb
+  if (dial > .01) {
+    const rr = R * 1.42, rot = curSpin;
+    for (let i = 0; i < 120; i++) {
+      const a = i / 120 * Math.PI * 2 + rot - Math.PI / 2, big = i % 10 === 0, len = big ? 14 : 6;
+      rx.strokeStyle = big ? tint : ink; rx.globalAlpha = dial * (big ? 1 : .35); rx.lineWidth = big ? 2 : 1;
+      rx.beginPath(); rx.moveTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); rx.lineTo(cx + Math.cos(a) * (rr + len), cy + Math.sin(a) * (rr + len)); rx.stroke();
+    }
+    rx.globalAlpha = dial; rx.fillStyle = ink;
+    rx.beginPath(); rx.moveTo(cx, cy - rr - 22); rx.lineTo(cx - 6, cy - rr - 32); rx.lineTo(cx + 6, cy - rr - 32); rx.closePath(); rx.fill();
+  }
+  rx.globalAlpha = 1;
+}
+function obstacles() {
+  const p = portrait(), m = Math.min(W, H);
+  return p ? [{ x: W * .2, y: H * .5, r: m * .1, label: "Sofa" }, { x: W * .72, y: H * .42, r: m * .095, label: "Column" }, { x: W * .46, y: H * .73, r: m * .09, label: "Shelf" }]
+           : [{ x: W * .55, y: H * .34, r: m * .07, label: "Column" }, { x: W * .82, y: H * .6, r: m * .085, label: "Sofa" }, { x: W * .6, y: H * .76, r: m * .06, label: "Shelf" }];
+}
+
+/* ---------- input ---------- */
+const ptr = { x: .5, y: .5 }, ptrS = { x: .5, y: .5 };
+addEventListener("pointermove", (e) => { ptr.x = e.clientX / W; ptr.y = e.clientY / H; ptrOn = e.clientX >= 0 && e.clientY >= 0 && e.clientX <= W && e.clientY <= H; seatTarget.key = false; });
+document.documentElement.addEventListener("pointerleave", () => (ptrOn = false));
+
+/* ---------- the frame ---------- */
+let prevY = 0, T = 0, sy = scrollY, finishF = 0, curSpin = 0;
+const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), tintCol = new THREE.Color(), mix = new THREE.Color();
+const callouts = $$(".callout"), fcs = $$(".fc");
+const svg = $("#leaders");
+svg.innerHTML = ANCHORS.map(() => '<path/><circle class="o" r="6"/><circle class="c" r="2.6"/>').join("");
+const paths = $$("#leaders path"), rimsC = $$("#leaders circle.o"), coreC = $$("#leaders circle.c");
+const SAY = "“Play something warm in the kitchen.”";
+const root = document.documentElement.style;
+const mixCss = (a, b, f) => `color-mix(in oklch, ${a} ${Math.round((1 - f) * 100)}%, ${b})`;
+
+function frame(dt) {
+  T += dt;
+  sy = REC ? scrollY : damp(sy, scrollY, 9, dt);              // smooth scroll value (the recorder already passes a smooth path)
+  ptrS.x = damp(ptrS.x, ptr.x, 5, dt); ptrS.y = damp(ptrS.y, ptr.y, 5, dt);
+  const p = portrait();
+
+  // intro: letters rise one after another, the orb settles in
+  const heroOut = clamp(sy / (H * .9));
+  letters.forEach((l, i) => { const u = ease((T - .15 - i * .045) / .85); l.style.transform = `translateY(${(1 - u) * 105 + heroOut * -70}%)`; l.style.opacity = 1 - heroOut * 1.4; });
+  numLetters.forEach((l, i) => { const u = ease((T - .55 - i * .07) / .9); l.style.transform = `translateY(${(1 - u) * 100 + heroOut * 60}%)`; l.style.opacity = 1 - heroOut * 1.4; });
+  const drop = ease((T - .25) / 1.5);
+  $$("#livebars u").forEach((u, i) => (u.style.transform = `scaleY(${(.2 + .8 * band(T, i * 1.3) * level(T)).toFixed(3)})`));
+
+  // the page colour: paper → deep knit (fabrics) → paper → ink (sound field) → bold knit (close)
+  const wF = win("finish", sy), wR = win("room", sy), wFi = win("field", sy), wB = ease((sy - (sec.buy.top - H * .7)) / (H * .7));
+  root.setProperty("--bgnow", mixCss(mixCss(mixCss("var(--paper)", "var(--deep)", wF), "var(--ink)", wFi), "var(--tint)", wB));
+  const dark = Math.max(wF, wFi, wB);
+  root.setProperty("--rl", `oklch(${dark > .5 ? "1 0 0 / .08" : ".17 .012 265 / .1"})`);
+
+  // the orb follows the scroll timeline …
+  const st = stateAt(sy);
+  let X = st.x * vis.w, Y = st.y * vis.h, Sc = st.s;
+  const pf = prog("finish", sy), bPos = bandPos(pf), inFin = sy >= sec.finish.top && sy <= sec.finish.top + sec.finish.len;
+  if (inFin) { const o = orbInBand(bPos); X = o.x * vis.w; Y = o.y * vis.h; Sc = o.s; }
+  // the stereo pair: the first orb steps aside, the second rolls in from off screen and stops on the same line
+  const wP = win("pair", sy), pp = prog("pair", sy), sep = ease(pp / .3);
+  const pMid = p ? .47 : .66, pHalf0 = p ? .27 : .2, pHalf = pHalf0 * sep, pX2 = lerp(1.3, pMid + pHalf0, sep), pYf = p ? .445 : .43, pR = p ? W * .125 : H * .135;
+  if (wP > .001) { X = lerp(X, (pMid - pHalf - .5) * vis.w, wP); Y = lerp(Y, -(pYf - .5) * vis.h, wP); Sc = lerp(Sc, pR * vis.h / H, wP); }
+  // … except on the plan (it sits on the living-room speaker) and in the sound field (it follows the cursor)
+  if (wR > .001) { const r = spks[0].getBoundingClientRect(), tx = r.left + r.width / 2, ty = r.top + r.height / 2;
+    X = lerp(X, (tx / W - .5) * vis.w, wR); Y = lerp(Y, -(ty / H - .5) * vis.h, wR); Sc = lerp(Sc, r.width * .62 * vis.h / H, wR); }
+  if (wFi > .001) { const tx = clamp(ptrS.x, p ? .14 : .42, p ? .86 : .94) * W, ty = clamp(ptrS.y, p ? .36 : .16, p ? .84 : .88) * H;
+    X = lerp(X, (tx / W - .5) * vis.w, wFi); Y = lerp(Y, -(ty / H - .5) * vis.h, wFi); Sc = lerp(Sc, Math.min(W, H) * (p ? .12 : .1) * vis.h / H, wFi); }
+  pivot.position.set(X, Y + (1 - drop) * -1.4 + Math.sin(T * 1.1) * .03 * (1 - wR), 0);
+  pivot.scale.setScalar(Sc * lerp(.7, 1, drop) * (1 + kick(T) * .006 * st.f));
+  pivot.rotation.set(st.rx * Math.PI * 2, 0, st.rz * Math.PI * 2);
+  curSpin = st.ry * Math.PI * 2 + (1 - drop) * 1.6;
+  spin.rotation.y = curSpin;
+  const follow = 1 - clamp(sy / (H * .8));                     // the cursor only steers it in the hero
+  tilt.rotation.y = damp(tilt.rotation.y, (ptrS.x - .5) * .7 * follow, 6, dt);
+  tilt.rotation.x = damp(tilt.rotation.x, (ptrS.y - .5) * .45 * follow, 6, dt);
+  pivot.updateMatrixWorld(true);
+  pivot2.visible = wP > .02 && sep > .002;
+  if (pivot2.visible) { linkK = damp(linkK, linked ? 1 : 0, 6, dt);
+    if (linked) driftA = damp(driftA, 0, 11, dt); else driftA = Math.min(Math.PI * 3, driftA + 10 * dt);   // unlinked: the right orb's clock slips 1.5 cycles, which puts your seat on a null; relinked: the ridge travels back
+    const lag = (1 - linkK) * .19;                               // unlinked: the right orb's beat slips behind the left
+    pivot2.position.set(lerp(1.3 - .5, pX2 - .5, wP) * vis.w, pivot.position.y, 0);
+    pivot2.scale.setScalar(Sc * (1 + kick(T - lag) * .03)); pivot.scale.setScalar(Sc * (1 + kick(T) * .03));
+    pivot2.rotation.copy(pivot.rotation); tilt2.rotation.set(0, curSpin - (1 - sep) * 5, 0); }
+
+  // screen centre and radius of the orb
+  tmp.set(0, 0, 0).applyMatrix4(pivot.matrixWorld).project(camera);
+  const cx = (tmp.x * .5 + .5) * W, cy = (-tmp.y * .5 + .5) * H;
+  tmp2.set(1, 0, 0).applyMatrix4(pivot.matrixWorld).project(camera);
+  const R = Math.abs((tmp2.x * .5 + .5) * W - cx);
+
+  // PART 3 · the bands: pulled in from alternate sides, one opens at a time, pulled out again. One scroll timeline; a click just scrolls
+  const eIn = Math.max(0, sec.finish.top - sy), eOut = Math.max(0, sy - sec.finish.top - sec.finish.len), bVis = eIn < H * 1.05 && eOut < H * 1.05;
+  $("#bands").style.visibility = bVis ? "visible" : "hidden";
+  if (bVis) { const BL = bandLayout(bPos);
+    BL.forEach((l, i) => { const f0 = FINISHES[i], el = bandEls[i], b = bandBtns[i], near = Math.round(bPos), hold = ease(1 - Math.abs(bPos - near) / .1), moving = i === Math.floor(bPos) || i === Math.ceil(bPos), on = near === i, off = (eIn + eOut) / H * W * 1.04 * (i % 2 ? 1 : -1);
+      el.style.height = (i === 3 ? H - l.y : l.h + 1) + "px"; el.style.transform = `translate(${off.toFixed(1)}px, ${l.y.toFixed(1)}px)`;
+      el.style.backgroundColor = `color-mix(in oklch, ${f0.deep} ${Math.round(l.a * 100)}%, ${i ? f0.tint : f0.deep})`;
+      b.style.height = (i === 3 ? H - l.y : l.h) + "px"; b.style.transform = `translateY(${l.y.toFixed(1)}px)`; b.setAttribute("aria-pressed", Math.round(bPos) === i);
+      b.querySelector(".s").style.opacity = !moving ? 1 : on ? 0 : hold; b.querySelector(".o").style.opacity = on ? hold : 0; }); }
+
+  // the fabric colour: inside the bands it follows the scroll; after that it is the one you picked, or the last band you passed
+  const target = inFin ? bPos : pick >= 0 ? pick : sy < sec.finish.top ? 0 : 3;
+  finishF = REC && Math.abs(scrollY - prevY) > H * .6 ? target : damp(finishF, target, inFin ? 16 : 5, dt); prevY = scrollY;
+  const i0 = Math.floor(finishF), f = finishF - i0, A = FINISHES[i0], B = FINISHES[Math.min(3, i0 + 1)];
+  tintCol.setHex(A.hex).lerp(mix.setHex(B.hex), f); uTint.value.copy(tintCol); rim.color.copy(tintCol).lerp(mix.set(0xffffff), .35);
+  root.setProperty("--tint", `color-mix(in oklch, ${A.tint} ${Math.round((1 - f) * 100)}%, ${B.tint})`);
+  root.setProperty("--deep", `color-mix(in oklch, ${A.deep} ${Math.round((1 - f) * 100)}%, ${B.deep})`);
+  const cur = FINISHES[Math.round(finishF)];
+  $("#pname").textContent = cur.name;
+  $$("#pick button").forEach((b, i) => b.classList.toggle("on", i === Math.round(finishF)));
+  halo.material.color.copy(tintCol).offsetHSL(0, .12, .04).multiplyScalar(1.3 + level(T) * .6);   // emissive, breathing, not neon
+  halo2.material.color.copy(tintCol).offsetHSL(0, .12, .04).multiplyScalar(1.3 + level(T - (1 - linkK) * .19) * .6);
+  knitMats.forEach((m) => m.sheenColor.copy(tintCol).lerp(mix.set(0xffffff), .55));   // fibre sheen in the yarn's own colour
+
+  shadow.material.opacity = 1 - Math.max(wR, wFi);
+
+  // the sound field: hero/turn/fabrics/close from the timeline, plus the obstacle field in its own section
+  const pt = prog("turn", sy);
+  const dialOn = ease((sy - sec.turn.top + H * .5) / (H * .5)) * (1 - ease((sy - (sec.turn.top + sec.turn.len)) / (H * .4)));
+  const light = "#" + tintCol.clone().lerp(mix.set(0xffffff), .35).getHexString();
+  drawField(cx, cy, R, { amt: Math.max(st.f * (1 - wR), wFi), ink: dark > .5 ? "#eef0f2" : "#1d2028", tint: dark > .5 ? light : "#" + tintCol.getHexString(),
+    dial: dialOn, obs: wFi > .01 ? obstacles() : [], obsAmt: wFi, dots: st.f * (1 - wFi) * (1 - dark * .6) });
+  $("#degnum").textContent = Math.round(clamp(pt) * 360) + "°";
+
+  // the stereo pair: where you sit, what each orb has to do to reach you together, and the field that proves it
+  if (wP > .01) {
+    const pmx = p ? W / 2.5 : W / 5;                             // px per metre
+    const sx1 = (pMid - pHalf) * W, sx2 = pX2 * W, sy0 = pYf * H;
+    const lo = p ? .56 : .08, tx = !seatTarget.key && ptrOn ? ptr.x : seatTarget.key ? seatTarget.x : pMid + Math.sin(T * .55) * (p ? .2 : .16), ty = ptrOn && !seatTarget.key ? ptr.y : (p ? .6 : .76) + Math.sin(T * .37) * .03;
+    if (!seatTarget.key && !ptrOn) seatTarget.x = tx;
+    seatX = damp(seatX, clamp(tx, .03, .95), 8, dt); seatY = damp(seatY, clamp(ty, lo * (p ? 1 : 0) + .1, p ? .68 : .92), 8, dt);
+    const qx = seatX * W, qy = seatY * H, r1 = Math.hypot(qx - sx1, qy - sy0), r2 = Math.hypot(qx - sx2, qy - sy0);
+    const drift = driftA, dl = (((drift + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+    const lossDb = -20 * Math.log10(Math.max(.06, Math.abs(Math.cos(dl / 2))));
+    drawPair(sx1, sx2, sy0, r1, r2, drift, wP);
+    $("#pl").textContent = (r1 / pmx / 343 * 1000).toFixed(1); $("#pr").textContent = (r2 / pmx / 343 * 1000).toFixed(1); $("#pdb").textContent = lossDb < .05 ? "0" : "-" + lossDb.toFixed(lossDb < 10 ? 1 : 0);
+    $("#seat").lastChild.textContent = lossDb < .5 ? "You" : "You, -" + lossDb.toFixed(0) + " dB";
+    $("#seat").firstChild.style.background = lossDb < .5 ? cur.tint : "var(--paper)";
+    $("#psync").textContent = linked ? "Unlink the pair" : "Link the pair"; $("#psync").setAttribute("aria-pressed", !linked);
+    const sTop = $("#pair .stage").getBoundingClientRect().top, sOn = wP * ease((pp - .22) / .08);
+    $("#seat").style.opacity = sOn; $("#seat").style.transform = `translate(${qx}px, ${qy - sTop}px)`;
+    $("#ptagL").style.opacity = sOn; $("#ptagR").style.opacity = sOn;
+    $("#ptagL").style.transform = `translate(${sx1 - 18}px, ${sy0 + pR + 16 - sTop}px)`; $("#ptagR").style.transform = `translate(${sx2 - 22}px, ${sy0 + pR + 16 - sTop}px)`;
+  }
+
+  // PART 2 · callouts: project 3D anchors to the screen, draw an elbow leader to each label
+  ANCHORS.forEach((a, i) => {
+    const on = ease((pt - .08 - i * .17) / .08) - ease((pt - .96) / .04);
+    tmp.copy(a).applyMatrix4(pivot.matrixWorld).project(camera);
+    const px = (tmp.x * .5 + .5) * W, py = (-tmp.y * .5 + .5) * H;
+    const el = callouts[i], cw = el.offsetWidth, ch = el.offsetHeight, right = px > cx;
+    const rmax = W - (p ? 70 : 48) - cw;
+    const lx = right ? Math.min(rmax, cx + R * (p ? 1.0 : 1.6)) : Math.max(p ? 18 : 48, cx - R * (p ? 1.0 : 1.6) - cw);
+    const lo = p ? H * .19 : (right ? H * .16 : H * .44), hi = p ? H * .62 - ch : (right ? H * .86 - ch : H * .56 - ch);
+    const ly = clamp(py + (a.y > 0 ? -R * (p ? .62 : .3) : R * (p ? .62 : .3)) - ch / 2, lo, hi);
+    el.style.left = lx + "px"; el.style.top = ly + "px"; el.style.opacity = on; el.style.transform = `translateY(${(1 - on) * 14}px)`;
+    if (!Number.isFinite(px + py + lx + ly + on)) return;          // first frame: nothing laid out yet
+    const ex = right ? lx : lx + cw, ey = ly + ch / 2, mx = lerp(px, ex, .55);
+    const k = ease((on - .1) / .9);
+    paths[i].setAttribute("d", `M${px} ${py} L${lerp(px, mx, k)} ${lerp(py, ey, k)} L${lerp(px, ex, k)} ${lerp(py, ey, k)}`); paths[i].style.opacity = on;
+    rimsC[i].setAttribute("cx", px); rimsC[i].setAttribute("cy", py); rimsC[i].setAttribute("r", 6 * on);
+    coreC[i].setAttribute("cx", px); coreC[i].setAttribute("cy", py); coreC[i].setAttribute("r", (2.2 + kick(T) * 1.4) * on);
+  });
+
+  // NEW · room plan: sound fills the rooms one by one, a pulse ring on every beat, all on one clock
+  const pr = prog("room", sy);
+  let playing = 0;
+  ROOMS.forEach((r, i) => {
+    const a = ease((pr - .06 - i * .2) / .14); if (a > .5) playing++;
+    const g = fillG[i]; g.firstChild.setAttribute("opacity", (a * .16).toFixed(3));
+    g.querySelectorAll(".wave").forEach((c, k) => { const ph = ((T * BEAT * .5) + k / 5) % 1;
+      c.setAttribute("cx", r.sx); c.setAttribute("cy", r.sy); c.setAttribute("r", (24 + ph * 260 * a).toFixed(1)); c.setAttribute("opacity", (a * (1 - ph) * .85).toFixed(3)); });
+    rstates[i].textContent = a > .5 ? "PLAYING" : "IDLE"; rstates[i].style.fill = a > .5 ? "var(--tint)" : "";
+    spks[i].style.opacity = i === 0 ? (1 - wR) : a; spks[i].setAttribute("transform", `translate(${r.sx} ${r.sy}) scale(${i === 0 ? 1 : (.6 + .4 * a) * (1 + kick(T) * .06 * a)})`);
+  });
+  $("#roomnum").textContent = String(Math.max(1, playing)).padStart(2, "0");
+
+  // PART 4 · feature cards: reveal on enter, cursor spotlight + tilt, and each card's own live visual
+  fcs.forEach((c) => {
+    const r = c.getBoundingClientRect(), u = ease((H * .84 - r.top) / (H * .3)), v = ease((H * .8 - r.top) / (H * .35));
+    c.style.opacity = u; if (r.bottom < -40 || r.top > H + 40) return;
+    const lx = ptr.x * W - r.left, ly = ptr.y * H - r.top, inside = lx > 0 && lx < r.width && ly > 0 && ly < r.height;
+    c._rx = damp(c._rx || 0, inside ? -(ly / r.height - .5) * 3 : 0, 8, dt);
+    c._ry = damp(c._ry || 0, inside ? (lx / r.width - .5) * 3 : 0, 8, dt);
+    c._lit = damp(c._lit || 0, inside ? 1 : 0, 8, dt);
+    c.style.setProperty("--mx", lx + "px"); c.style.setProperty("--my", ly + "px"); c.style.setProperty("--lit", c._lit.toFixed(3));
+    c.style.transform = `translateY(${(1 - u) * 60}px) perspective(900px) rotateX(${c._rx}deg) rotateY(${c._ry}deg)`;
+    c.querySelectorAll("[data-num]").forEach((n) => { n.firstChild.nodeValue = Math.round(n.dataset.num * v) + (n.dataset.suf || ""); });
+    const k = c.dataset.k, z = vizzes.find((q) => q.cv.parentNode === c);
+    if (k === "cal") {                                     // a jagged room response is scanned and flattened
+      const sc = clamp(v * 1.4), raw = (x) => 60 + 34 * Math.exp(-(((x - 60) / 26) ** 2)) - 22 * Math.exp(-(((x - 150) / 18) ** 2)) + 12 * Math.sin(x * .09) * Math.exp(-x / 200) + 6 * Math.sin(x * .31);
+      let d1 = "", d2 = "";
+      for (let x = 0; x <= 300; x += 4) { const y0 = raw(x), fx = x / 300 < sc ? 60 + (y0 - 60) * .1 + Math.sin(x * .05 + T * 2) * 1.2 : y0; d1 += (x ? "L" : "M") + x + " " + y0.toFixed(1); d2 += (x ? "L" : "M") + x + " " + fx.toFixed(1); }
+      c.querySelector(".raw").setAttribute("d", d1); c.querySelector(".fix").setAttribute("d", d2);
+      const scan = c.querySelector(".scan"); scan.style.transform = `translateX(${(sc * scan.parentNode.offsetWidth).toFixed(1)}px)`; scan.style.opacity = (1 - clamp((v - .66) * 8)).toFixed(3);
+      $("#calchip").textContent = sc < 1 ? "Listening" : "Tuned";
+    } else if (k === "voice") {
+      const n = Math.round(clamp((v - .15) / .8) * SAY.length);
+      $("#say").innerHTML = SAY.slice(0, n) + (n < SAY.length || Math.floor(T * 2) % 2 ? "<u></u>" : "");
+    }
+    if (z) drawCard(z, k, v);
+  });
+
+  // PART 5 · magnetic button + marquee
+  const mag = $("#mag"), mr = mag.getBoundingClientRect();
+  const dx = ptr.x * W - (mr.left + mr.width / 2 - (mag._x || 0)), dy = ptr.y * H - (mr.top + mr.height / 2 - (mag._y || 0));
+  const pull = clamp(1 - Math.hypot(dx, dy) / 260);
+  mag._x = damp(mag._x || 0, clamp(dx * .5 * pull, -14, 14), 10, dt); mag._y = damp(mag._y || 0, clamp(dy * .5 * pull, -8, 8), 10, dt);   // a wide block: a short leash
+  mag.style.transform = `translate(${mag._x}px, ${mag._y}px)`; mag.firstChild.style.transform = `translate(${mag._x * .4}px, ${mag._y * .4}px)`;
+  $("#marq").style.transform = `translateX(${-((T * 60 + sy * .3) % ($("#marq").scrollWidth / 6))}px)`;
+  $("#grain").style.transform = `translate(${(Math.floor(T * 12) * 37) % 100 - 50}px, ${(Math.floor(T * 12) * 53) % 100 - 50}px)`;
+
+  renderer.render(scene, camera);
+}
+
+/* ---------- the stereo field: two wave sources summed per cell, drawn as a halftone. Each orb's phase is set from your seat,
+   so both peaks land on you together and the ridge runs through where you sit. Unlinked, the right orb's clock slips and the ridge wanders off ---------- */
+function drawPair(sx1, sx2, sy0, r1, r2, drift, amt) {
+  const P = W < H, cell = P ? 15 : 16, rmax = cell * .64, lam = P ? W * .3 : W * .16, k = Math.PI * 2 / lam, om = BEAT * Math.PI * 2 * .75, ph1 = -k * r1, ph2 = -k * r2 + drift;
+  rx.setTransform(DPR, 0, 0, DPR, 0, 0); rx.globalAlpha = 1;
+  const other = new Path2D(), mine = new Path2D();
+  for (let y = 60 + cell / 2; y < H; y += cell) for (let x = cell / 2; x < W; x += cell) {
+    const d1 = Math.hypot(x - sx1, y - sy0), d2 = Math.hypot(x - sx2, y - sy0), u = k * (d1 - d2) + ph1 - ph2, env = Math.abs(Math.cos(u / 2)), wave = .72 + .28 * Math.sin(k * (d1 + d2) / 2 - om * T);
+    const rad = env * env * wave * rmax * amt;
+    if (rad < 1.1) continue;
+    const q = Math.abs(u) < Math.PI ? mine : other; q.moveTo(x + rad, y); q.arc(x, y, rad, 0, 6.2832);
+  }
+  rx.fillStyle = "#bcc0c8"; rx.fill(other); rx.fillStyle = FINISHES[Math.round(finishF)].tint; rx.fill(mine);
+}
+
+/* ---------- live card visuals (canvas) ---------- */
+function drawCard({ cv, ctx }, k, v) {
+  const w = cv.width / DPR, h = cv.height / DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, w, h);
+  const tc = "#" + tintCol.clone().lerp(mix.set(0xffffff), .3).getHexString(), tdeep = "#" + tintCol.getHexString();
+  if (k === "field360") {                                  // top view: the orb, 6 tweeter lobes sweeping, waves to the walls
+    const ox = w * .55, oy = h * .5, rr = Math.min(w, h) * .14;
+    for (let j = 0; j < 7; j++) { const ph = ((T * .55) + j / 7) % 1; ctx.globalAlpha = (1 - ph) ** 1.6 * .55 * v; ctx.strokeStyle = "#eef0f2"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(ox, oy, rr + ph * Math.max(w, h) * .62, 0, Math.PI * 2); ctx.stroke(); }
+    for (let j = 0; j < 6; j++) {
+      const a = j / 6 * Math.PI * 2 + T * .25, e = (.55 + .45 * band(T, j * 1.7)) * v, L = rr * (1.6 + 2.6 * e);
+      const g = ctx.createRadialGradient(ox, oy, rr, ox, oy, L); g.addColorStop(0, tc); g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalAlpha = .85; ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.arc(ox, oy, L, a - .34, a + .34); ctx.closePath(); ctx.fill();
+    }
+    ctx.globalAlpha = 1; const og = ctx.createRadialGradient(ox - rr * .35, oy - rr * .4, rr * .1, ox, oy, rr);
+    og.addColorStop(0, "#f4f5f6"); og.addColorStop(1, "#8b8e94"); ctx.fillStyle = og; ctx.beginPath(); ctx.arc(ox, oy, rr, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = tc; ctx.lineWidth = 2; ctx.globalAlpha = .6 + .4 * level(T); ctx.beginPath(); ctx.arc(ox, oy, rr * .62, 0, Math.PI * 2); ctx.stroke();
+  } else if (k === "voice") {                              // the crown from above: brushed disc, halo, six mic dots; a beam finds the voice
+    const p = w < 420, ox = p ? w * .72 : w * .7, oy = h * .42, R = Math.min(h * .26, w * .2);
+    const ang = -2.4 + Math.sin(T * .7) * .5, talk = (t) => Math.max(0, Math.sin(t * 2.3) * Math.sin(t * .9 + 1));
+    const sx = ox + Math.cos(ang) * R * 3.2, sy2 = oy + Math.sin(ang) * R * 3.2;
+    for (let j = 0; j < 4; j++) { const ph = ((T * .9) + j / 4) % 1, rr = R * 3.2 * (1 - ph) + R * .3;     // the voice arriving
+      ctx.globalAlpha = v * ph * .7; ctx.strokeStyle = tc; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(sx, sy2, rr, ang + Math.PI - .5, ang + Math.PI + .5); ctx.stroke(); }
+    const g = ctx.createRadialGradient(ox, oy, R * .9, ox, oy, R * 2.4); g.addColorStop(0, tc); g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalAlpha = v * (.35 + .4 * talk(T)); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.arc(ox, oy, R * 2.4, ang - .4, ang + .4); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;                                    // halo ring at the rim
+    ctx.strokeStyle = tc; ctx.lineWidth = R * .07; ctx.shadowColor = tc; ctx.shadowBlur = 12 * (.5 + talk(T) * v);
+    ctx.beginPath(); ctx.arc(ox, oy, R * 1.04, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0;
+    const cg = ctx.createRadialGradient(ox - R * .3, oy - R * .35, R * .05, ox, oy, R);                       // brushed aluminium disc
+    cg.addColorStop(0, "#f7f8f9"); cg.addColorStop(.6, "#c9ccd1"); cg.addColorStop(1, "#9ea2a9");
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(ox, oy, R, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,.22)"; ctx.lineWidth = .6;
+    for (let j = 3; j < 30; j++) { ctx.beginPath(); ctx.arc(ox, oy, R * j / 30, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.strokeStyle = "rgba(0,0,0,.18)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(ox, oy, R * .3, 0, Math.PI * 2); ctx.stroke();   // touch area
+    for (let j = 0; j < 6; j++) { const a = j / 6 * Math.PI * 2 - Math.PI / 2, mx2 = ox + Math.cos(a) * R * .68, my2 = oy + Math.sin(a) * R * .68, near = Math.cos(angd(a, ang));
+      const on = near > .3 ? v * near * (.4 + .6 * talk(T)) : 0;
+      if (on > .02) { ctx.globalAlpha = on; ctx.fillStyle = tc; ctx.beginPath(); ctx.arc(mx2, my2, R * .1, 0, Math.PI * 2); ctx.fill(); }
+      ctx.globalAlpha = 1; ctx.fillStyle = "#2a2d33"; ctx.beginPath(); ctx.arc(mx2, my2, R * .035, 0, Math.PI * 2); ctx.fill(); }
+    const n = 46, bx = 24, bw = w - 48, by = h - 30, step = bw / n;                                         // live voiceprint
+    for (let j = 0; j < n; j++) { const t = T - (n - j) * .045, e = talk(t) * (.35 + .65 * Math.abs(Math.sin(t * 17 + j))) * v, hh = 2 + e * 20;
+      ctx.globalAlpha = .35 + .65 * (j / n); ctx.fillStyle = j > n - 6 ? tc : "#eef0f2"; ctx.fillRect(bx + j * step, by - hh, Math.max(1.5, step * .5), hh * 2); }
+  } else if (k === "bass") {                               // the woofer from the front, moving with every kick; a slow, fat wave beside it
+    const ox = w * .3, oy = h * .5, R = Math.min(h * .38, w * .26), ex = kick(T) * v;
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#d9dbdf"; ctx.beginPath(); ctx.arc(ox, oy, R, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#a8acb3"; ctx.lineWidth = R * .08; ctx.beginPath(); ctx.arc(ox, oy, R * .88, 0, Math.PI * 2); ctx.stroke();       // surround
+    const cg = ctx.createRadialGradient(ox, oy, R * .1, ox, oy, R * .82); cg.addColorStop(0, tdeep); cg.addColorStop(1, "#1d2028");
+    ctx.save(); ctx.translate(ox, oy); ctx.scale(1 + ex * .05, 1 + ex * .05);
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, 0, R * .8, 0, Math.PI * 2); ctx.fill();                                              // cone
+    ctx.strokeStyle = "rgba(255,255,255,.12)"; ctx.lineWidth = 1; for (let j = 1; j < 5; j++) { ctx.beginPath(); ctx.arc(0, 0, R * .8 * j / 5, 0, Math.PI * 2); ctx.stroke(); }
+    const dg = ctx.createRadialGradient(-R * .08, -R * .1, 0, 0, 0, R * .3); dg.addColorStop(0, "#f4f5f6"); dg.addColorStop(1, "#80848b");
+    ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(0, 0, R * .28, 0, Math.PI * 2); ctx.fill(); ctx.restore();                                // dust cap
+    ctx.strokeStyle = tdeep; ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.globalAlpha = v;
+    ctx.beginPath(); for (let x = 0; x <= w * .44; x += 4) { const X = ox + R * 1.25 + x, Y = oy + Math.sin(x * .03 - T * 6) * R * .45 * (.4 + .6 * kick(T - x / 400)) * Math.exp(-x / (w * .5)); x ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+if (REC) {
+  window.__tick = (dt) => frame(dt);
+  window.__layout = layout;
+  window.__sections = () => ({ H, ...Object.fromEntries(Object.entries(sec).map(([k, v]) => [k, v])), end: document.documentElement.scrollHeight - H });
+} else {
+  let last = performance.now();
+  renderer.setAnimationLoop((now) => { frame(Math.min(.05, (now - last) / 1000)); last = now; });
+}
+const wait = () => (ready ? document.fonts.ready.then(() => { layout(); window.__ready = true; }) : setTimeout(wait, 50)); wait();
+</script>
+</body>
+</html>
