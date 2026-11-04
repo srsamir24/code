@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heavy silk hero · the prompts · @zellap.app</title>
+<meta name="description" content="Prompts for a heavy silk hero background, plus the live page and the full code.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #0a0a0b; --card: #131316; --line: rgb(255 255 255 / .1); --ink: #f5f5f4; --dim: #a1a1a6; --accent: #00c48e; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  em, i, b { font-style: normal; }
+  body { background: var(--bg); color: var(--ink); font: 400 16px/1.6 "Inter Tight", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 48px 20px 80px; }
+  .top { display: flex; justify-content: space-between; align-items: center; font-weight: 600; color: var(--dim); font-size: 14px; }
+  .top a { color: var(--ink); text-decoration: none; }
+  h1 { font: 800 clamp(36px, 7vw, 60px)/1.02 "Inter Tight", sans-serif; letter-spacing: -.035em; word-spacing: .04em; margin: 40px 0 14px; }
+  .lede { color: var(--dim); font-size: 18px; max-width: 52ch; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 28px 0 8px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 18px; border-radius: 12px; font-weight: 700; text-decoration: none; }
+  .btn.primary { background: var(--ink); color: #0a0a0b; }
+  .btn.ghost { border: 1px solid var(--line); color: var(--ink); }
+  .note { color: var(--dim); font-size: 14px; margin-top: 10px; }
+  .p { margin-top: 26px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px; }
+  .p header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .p h2 { font: 700 20px/1.2 "Inter Tight", sans-serif; letter-spacing: -.01em; }
+  .p h2 span { color: var(--dim); font-weight: 600; margin-right: 8px; }
+  .p blockquote { font-size: 17px; line-height: 1.6; color: var(--ink); border-left: 2px solid var(--accent); padding-left: 14px; }
+  .copy { font: 700 13px "Inter Tight", sans-serif; background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+  .copy.done { border-color: var(--accent); color: var(--accent); }
+  .tip { margin-top: 40px; color: var(--dim); font-size: 15px; }
+  .tip b { color: var(--ink); }
+  footer { margin-top: 48px; color: var(--dim); font-size: 14px; }
+  footer a { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a href="../../">zellap.app · code</a><span>@zellap.app</span></div>
+  <h1>Heavy silk hero. The prompts.</h1>
+  <p class="lede">Prompts for a heavy silk hero background: dark satin you can drag, which takes a couple of seconds to settle back, on desktop and phone. Run them in order, each one builds on the file from the last. The full code of the finished page is linked below if you want to compare.</p>
+  <div class="actions">
+    <a class="btn primary" href="../../sites/heavy-silk/">Open the live page</a>
+    <a class="btn ghost" href="https://github.com/srsamir24/code/tree/main/sites/heavy-silk">View the full code</a>
+  </div>
+  <p class="note">One HTML file, raw WebGL2. No libraries, no build step, no video, no 3D model.</p>
+
+  <section class="p"><header><h2><span>01</span>The cloth</h2><button class="copy">Copy</button></header>
+    <blockquote>Build one HTML file with raw WebGL2, no libraries, Inter Tight only. Full-screen fragment shader: heavy oxblood satin, one hue plus light. A few broad diagonal folds with soft crease tops and round valleys, fanning out as they fall. Analytic normals, so one pass. A wide anisotropic satin sheen along the threads, real shadows cast by the crests, dither to stop banding.</blockquote></section>
+
+  <section class="p"><header><h2><span>02</span>It has weight</h2><button class="copy">Copy</button></header>
+    <blockquote>Add a coarse grid in JS, about 15,000 cells, with sideways drag u,v and press depth w. Tension spreads a pull, a weak spring and heavy damping bring it home in about two seconds. Draw the pleats at position minus drag, so the cursor carries the folds, and let the grip lag behind the cursor a little so the cloth feels heavy. Where the fabric gets compressed, raise the folds, and clamp how tightly they can pinch so they never comb into strands.</blockquote></section>
+
+  <section class="p"><header><h2><span>03</span>The hero</h2><button class="copy">Copy</button></header>
+    <blockquote>Add a simple hero: wordmark, three text links with &quot;Menu&quot; on phones, one heavy headline, one line of text, a thin footer. Keep the corner behind the copy in shadow so the text stays readable. Touch drags the cloth and lets go on lift. Lower the resolution if the frame rate drops. prefers-reduced-motion draws one still frame.</blockquote></section>
+
+  <p class="tip"><b>Honest take:</b> this is a great hero, and for most businesses it's overkill. Your plumber doesn't need a silk curtain. Use it where the wow is the point.</p>
+  <footer>More every day on Instagram: <a href="https://www.instagram.com/zellap.app/">@zellap.app</a></footer>
+</div>
+<script>
+document.querySelectorAll(".copy").forEach((b) => b.addEventListener("click", async () => {
+  const t = b.closest(".p").querySelector("blockquote").innerText.trim();
+  try { await navigator.clipboard.writeText(t); } catch (e) {}
+  b.textContent = "Copied"; b.classList.add("done"); setTimeout(() => { b.textContent = "Copy"; b.classList.remove("done"); }, 1600);
+}));
+</script>
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zellap · Heavy silk hero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* One font, one hue plus light. Raw WebGL2, no libraries.
+     ?bare = the cloth alone; ?macro=2.2 = close-up of the cloth; ?rec = recorder drives time;
+     ?auto = a scripted hand (a cursor on a monitor, a thumb on a phone) for the stage iframes; ?nonav hides the nav under Reel labels. */
+  :root { --bg: #0b0305; --fg: #f6eeee; --muted: rgb(246 238 238 / .72); --rose: #e9b9bb; --pad: clamp(20px, 4.4vw, 64px); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; touch-action: none; }
+  body { background: var(--bg); color: var(--fg); font-family: "Inter Tight", system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  ::selection { background: var(--rose); color: #1b0509; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  /* the cloth falls into shadow where the copy sits, the way a real drape does under a key light from the far corner */
+  .lens { position: fixed; inset: 0; pointer-events: none;
+    background: linear-gradient(to top, rgb(11 3 5 / .88), rgb(11 3 5 / .62) 30%, transparent 62%),
+                linear-gradient(to bottom, rgb(11 3 5 / .5), transparent 16%); }
+
+  .site { position: relative; z-index: 2; height: 100%; display: grid; grid-template-rows: auto 1fr auto; padding: 0 var(--pad); pointer-events: none; }
+  nav { display: flex; align-items: center; justify-content: space-between; min-height: 84px; }
+  .brand { font-weight: 700; font-size: 22px; letter-spacing: -.035em; }
+  .links { display: flex; gap: 34px; font-size: 15px; font-weight: 500; color: var(--muted); }
+  .links a { color: inherit; text-decoration: none; pointer-events: auto; }
+  .menu { display: none; font-size: 15px; font-weight: 500; color: var(--muted); }
+  .hero { align-self: end; padding-bottom: clamp(28px, 6vh, 60px); }
+  h1 { font-weight: 800; font-size: clamp(50px, 8.6vw, 148px); line-height: .9; letter-spacing: -.035em; max-width: 8ch; }
+  .sub { margin-top: clamp(16px, 2.4vh, 26px); max-width: 36ch; font-size: clamp(16px, 1.35vw, 20px); line-height: 1.45; color: var(--muted); }
+  .foot { display: flex; justify-content: space-between; padding: 16px 0 24px; font-size: 13px; font-weight: 500; color: rgb(246 238 238 / .5); }
+
+  @media (max-width: 760px) {
+    .links { display: none; } .menu { display: block; }
+    nav { min-height: 68px; }
+    h1 { font-size: 17.5vw; }
+    .sub { font-size: 17px; max-width: 27ch; }
+  }
+  /* Reel framing only (540x960 at 2x): lift the copy out of the bottom 140 css px and the right 60 */
+  .reel .hero { padding-bottom: 100px; }
+  .reel h1 { font-size: 82px; letter-spacing: -.03em; max-width: none; }
+  .reel .foot { visibility: hidden; }
+  .reel .sub { max-width: 24ch; }
+  .bare .site, .bare .lens { display: none; }
+  .nonav nav { visibility: hidden; }
+  .lownav nav { padding: 150px 40px 0 0; }   /* the nav, moved down from under the Reel label */
+
+  /* the scripted hand, only in ?auto: an arrow on a monitor, a fingertip on a phone */
+  #hand { position: fixed; left: 0; top: 0; z-index: 5; pointer-events: none; display: none; will-change: transform; }
+  .auto #hand { display: block; }
+  #hand.thumb { width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgb(255 255 255 / .28); box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .6); }
+</style>
+</head>
+<body>
+<canvas id="silk" aria-hidden="true"></canvas>
+<div class="lens" aria-hidden="true"></div>
+<div class="site">
+  <nav aria-label="Main">
+    <div class="brand">Zellap</div>
+    <div class="links"><a href="#">Work</a><a href="#">About</a><a href="#">Contact</a></div>
+    <div class="menu">Menu</div>
+  </nav>
+  <main class="hero">
+    <h1>Websites with weight.</h1>
+    <p class="sub">Web design and code for brands that want a first screen you can almost feel.</p>
+  </main>
+  <div class="foot"><span>Zellap, 2026</span><span>Work below</span></div>
+</div>
+<div id="hand" aria-hidden="true"></div>
+
+<script>
+const Q = location.search, REC = /rec/.test(Q), AUTO = /auto/.test(Q), BARE = /bare/.test(Q);
+const root = document.documentElement;
+if (BARE) root.classList.add('bare');
+if (AUTO) root.classList.add('auto');
+if (/nonav/.test(Q)) root.classList.add('nonav');
+if (/lownav/.test(Q)) root.classList.add('lownav');
+if (REC && !AUTO) root.classList.add('reel');
+const num = (k, d) => +(Q.match(new RegExp(k + '=([\\d.]+)')) || [])[1] || d;
+const MACRO = num('macro', 1), MX = num('mx', .5), MY = num('my', .5);
+// stills only: ?shots=93,140 draws just those ticks. The cloth is simulated on every tick either way, so state is identical.
+const SHOTS = (Q.match(/shots=([\d,]+)/) || [])[1]?.split(',').map(Number);
+let DPR = num('dpr', 0) || (REC ? devicePixelRatio : Math.min(devicePixelRatio, 1.5));
+const reduce = !REC && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const TOUCH = AUTO && innerWidth < 760, PULL = REC && /pull/.test(Q);   // ?pull: a drag already under way when the recording starts
+
+const canvas = document.getElementById('silk');
+const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: REC });
+if (!gl) { canvas.style.background = 'linear-gradient(150deg,#3a0a15,#0b0305 70%)'; }
+
+const VERT = `#version 300 es
+out vec2 vUv; void main(){ vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2); vUv=p; gl_Position=vec4(p*2.-1.,0.,1.); }`;
+const FRAG = `#version 300 es
+precision highp float;
+in vec2 vUv; out vec4 o;
+uniform vec2 uRes, uTexel, uFocus, uMapS, uMapO; uniform float uT, uZoom; uniform sampler2D uSim;
+const float SCALE = 10.5;
+
+// B-spline bicubic in 4 bilinear taps: the coarse cloth grid never shows its cells in the highlights
+vec4 sim(vec2 uv){
+  vec2 st=uv/uTexel-.5, f=fract(st), i=st-f; vec2 f2=f*f, f3=f2*f;
+  vec2 w0=(1.-f)*(1.-f)*(1.-f)/6., w1=(4.-6.*f2+3.*f3)/6., w2=(1.+3.*f+3.*f2-3.*f3)/6., w3=f3/6.;
+  vec2 g0=w0+w1, g1=w2+w3, h0=(i-.5+w1/g0)*uTexel, h1=(i+1.5+w3/g1)*uTexel;
+  return (texture(uSim,vec2(h0.x,h0.y))*g0.x+texture(uSim,vec2(h1.x,h0.y))*g1.x)*g0.y
+        +(texture(uSim,vec2(h0.x,h1.y))*g0.x+texture(uSim,vec2(h1.x,h1.y))*g1.x)*g1.y;
+}
+// a pleat: a sharp crease on top, a round valley underneath. This is what separates cloth from sine waves.
+// x = value, y = derivative, so a normal costs no extra evaluations (one pass, also compiles fast on Windows/ANGLE)
+vec2 ridge(float x,float e){ float s=sin(x),c=cos(x),v=sqrt(s*s+e); return vec2(1.-v,-s*c/v); }
+
+// the drape: x = height, yz = gradient with respect to q
+vec3 folds(vec2 q){
+  float t=uT*.05;
+  const vec2 ra=vec2(.86,.51), rb=vec2(-.51,.86);        // the drape falls diagonally from the top right
+  float rx=dot(q,ra), b=dot(q,rb);
+  float a=rx*(1.-.05*b);                                // folds fan out as they fall, so they merge and split
+  float B1=b*.21+.7+t, B2=b*.57+a*.31+1.9-t*.7, B3=b*1.15+a*.9+.3+t*.6;
+  float w1=a+.42*sin(B1)+.13*sin(B2), c2=cos(B2);
+  float w2=w1+.05*sin(B3), c3=cos(B3);
+  vec2 dw1=vec2(1.+.0403*c2, .0882*cos(B1)+.0741*c2);    // d/da, d/db
+  vec2 dw2=dw1+vec2(.045*c3,.0575*c3);
+  // the big swells
+  float S=w1*.93+.4; float h=1.1*sin(S); vec2 g=dw1*1.023*cos(S);
+  // the main pleats, fading in and out along the fall
+  float pB=b*.27, X=w2*1.12+1.1+.7*sin(pB), m1a=b*.33+a*.47, m1=.6+.4*sin(m1a), m1c=.4*cos(m1a);
+  vec2 R=ridge(X,.16);
+  h+=.8*R.x*m1;
+  g+=.8*(R.y*(dw2*1.12+vec2(0.,.189*cos(pB)))*m1+R.x*m1c*vec2(.47,.33));
+  // thin secondary creases
+  float C=b*.37+a*.3, Y=w2*3.1+2.+1.1*sin(C), m2a=b*.41-a*.73+.8, m2s=sin(m2a);
+  float m2u=clamp((m2s+.4)/1.2,0.,1.), m2=m2u*m2u*(3.-2.*m2u), dm2=6.*m2u*(1.-m2u)/1.2*cos(m2a);
+  R=ridge(Y,.14);
+  h+=.08*R.x*m2;
+  g+=.08*(R.y*(dw2*3.1+1.1*cos(C)*vec2(.3,.37))*m2+R.x*dm2*vec2(-.73,.41));
+  // a slow cross sag from the weight
+  float ca=a*.6, D=b*.5+.5*sin(ca)+1.; h+=.16*sin(D); g+=.16*cos(D)*vec2(.3*cos(ca),.5);
+  // back from (a,b) to q
+  vec2 da=(1.-.05*b)*ra-.05*rx*rb;
+  return vec3(h,g.x*da+g.y*rb);
+}
+float foldsH(vec2 q){                                    // height only, for the shadow walk
+  float t=uT*.05, rx=q.x*.86+q.y*.51, b=-q.x*.51+q.y*.86, a=rx*(1.-.05*b);
+  float w1=a+.42*sin(b*.21+.7+t)+.13*sin(b*.57+a*.31+1.9-t*.7);
+  return 1.1*sin(w1*.93+.4)+.8*ridge(w1*1.12+1.1+.7*sin(b*.27),.16).x*(.6+.4*sin(b*.33+a*.47))+.16*sin(b*.5+.5*sin(a*.6)+1.);
+}
+vec3 ramp(float x){                                     // one hue plus light: shadow, wine, rose, near-white
+  const vec3 c0=vec3(.028,.007,.012),c1=vec3(.098,.018,.034),c2=vec3(.255,.038,.074),c3=vec3(.50,.135,.165),c4=vec3(.93,.75,.73);
+  x=clamp(x,0.,1.);
+  if(x<.22) return mix(c0,c1,x/.22);
+  if(x<.5)  return mix(c1,c2,(x-.22)/.28);
+  if(x<.78) return mix(c2,c3,(x-.5)/.28);
+  return mix(c3,c4,(x-.78)/.22);
+}
+float hash(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
+void main(){
+  vec2 asp=uRes/min(uRes.x,uRes.y), uv=vUv;
+  vec4 S=sim(uv*uMapS+uMapO);
+  // the sim fields are smooth, so screen derivatives are safe for them
+  vec4 Sx=dFdx(S)*uRes.x/asp.x, Sy=dFdy(S)*uRes.y/asp.y;  // per min-dimension unit
+  const float DRAG=.7;                                   // the folds follow the pull but stay broad, they never comb into strands
+  vec2 P=(uv-.5)*asp-S.xy*DRAG;
+  vec2 q=(P/uZoom+uFocus)*SCALE;
+  vec3 F=folds(q);
+  float comp=clamp(S.w,-.6,1.3), k=1.+comp*.4;   // how tightly a fold can pinch: past this it reads as liquid, not cloth
+  float A=.3/SCALE*uZoom;
+  // chain rule: moved folds, squeezed folds, pressed dent
+  vec2 gF=F.yz*SCALE/uZoom;
+  vec2 grad=vec2(gF.x*(1.-Sx.x*DRAG)-gF.y*Sx.y*DRAG, -gF.x*Sy.x*DRAG+gF.y*(1.-Sy.y*DRAG))*A*k + A*F.x*.55*vec2(Sx.w,Sy.w) - vec2(Sx.z,Sy.z);
+  // fabric pushed together buckles across the push
+  float amp=smoothstep(.05,.55,comp);
+  if(amp>.001){
+    vec2 d=S.xy/(length(S.xy)+.015);
+    float ph=dot(P,d)*15.+sin(dot(P,vec2(d.y,-d.x))*7.)*1.1;
+    vec2 R=ridge(ph,.14);
+    grad+=A*.1*amp*R.y*(15.*d);
+  }
+  vec3 n=normalize(vec3(-grad,1.));
+  vec3 V=vec3(0.,0.,1.), L=normalize(vec3(.52,.74,.62));
+  vec3 Hv=normalize(L+V);
+  // satin floats its threads one way: the highlight stretches across that direction, in a soft band and a tighter core
+  vec3 Td=vec3(.86,.51,0.); vec3 T=normalize(Td-n*dot(Td,n));
+  float th=dot(T,Hv), sh=sqrt(max(0.,1.-th*th));
+  float along=dot(q,vec2(.86,.51));
+  float slub=1.+.03*sin(along*7.+sin(dot(q,vec2(-.51,.86))*.9)*2.);   // raw silk: uneven threads run along the fall
+  float spec=(pow(sh,8.)*.24+pow(sh,22.)*.32)*slub;
+  float diff=clamp(dot(n,L)*.72+.28,0.,1.);
+  float graze=pow(1.-n.z,1.5)*.2;                       // cloth lifts at grazing angles: the fuzz of the fibres
+  // real shadow: walk towards the light over the folds, a crest casts onto the valley behind it
+  vec2 ld=normalize(L.xy); float f0=F.x;
+  float sh1=foldsH(q+ld*.28), sh2=foldsH(q+ld*.72);
+  float occ=smoothstep(0.,.55,max(sh1-f0-.12,(sh2-f0-.3)*.72));
+  float lum=.07+.33*diff*diff+spec*(.25+.75*diff)+graze*.5;
+  lum*=1.-.82*occ;
+  lum+=.018*occ;                                        // light bouncing back into the valley
+  // the far corner stays in shadow so the page keeps a calm side
+  vec2 c=(uv-vec2(.78,.86))*asp; lum*=mix(.5,1.12,exp(-dot(c,c)*.55));
+  vec3 col=ramp(pow(lum,.72)*1.05);
+  col+=(hash(gl_FragCoord.xy+fract(uT)*61.)-.5)*(1.6/255.);   // dither: dark satin bands badly in video without this
+  o=vec4(col,1.);
+}`;
+
+function compile(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s)); return s; }
+let prog, U = {}, tex;
+if (gl) {
+  prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT)); gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog); gl.useProgram(prog);
+  for (const n of ['uMapS', 'uMapO', 'uRes', 'uTexel', 'uFocus', 'uT', 'uZoom', 'uSim']) U[n] = gl.getUniformLocation(prog, n);
+  gl.bindVertexArray(gl.createVertexArray());
+  tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+}
+
+/* The cloth: three fields on a coarse grid. u,v = how far the fabric has been dragged sideways, w = how deep it is pressed.
+   Tension spreads a pull across the sheet, a weak spring brings it home, heavy damping makes that take its time.
+   The pleats are drawn at (position - displacement), so dragging literally carries the folds along and squeezes them together. */
+const DT = 1 / 120, TENSION = 1500, HOME = 3.6, DAMP = 6.4, HOME_W = 7, DAMP_W = 7.5, GRIP = 22, PRESS = .34;
+let GW, GH, cell, u, v, w, vu, vv, vw, data, W, H_, MIN;
+function buildGrid() {
+  W = innerWidth; H_ = innerHeight; MIN = Math.min(W, H_);
+  cell = Math.max(3, Math.sqrt(W * H_ / 15000));
+  GW = Math.ceil(W / cell) + 3; GH = Math.ceil(H_ / cell) + 3;
+  const n = GW * GH;
+  u = new Float32Array(n); v = new Float32Array(n); w = new Float32Array(n);
+  vu = new Float32Array(n); vv = new Float32Array(n); vw = new Float32Array(n);
+  data = new Float32Array(n * 4);
+}
+// pointer: real events, or the scripted hand (?auto)
+const ptr = { x: 0, y: 0, on: false }, hand = { x: -1, y: -1, vx: 0, vy: 0, grip: 0 };
+if (!AUTO && !reduce) {
+  const at = e => { ptr.x = e.clientX; ptr.y = e.clientY; };
+  addEventListener('pointermove', e => { at(e); if (!ptr.on) { hand.x = ptr.x; hand.y = ptr.y; } ptr.on = e.pointerType !== 'touch' || e.buttons > 0 || e.pressure > 0; }, { passive: true });
+  addEventListener('pointerdown', e => { at(e); hand.x = ptr.x; hand.y = ptr.y; ptr.on = true; }, { passive: true });
+  addEventListener('pointerup', e => { if (e.pointerType === 'touch') ptr.on = false; }, { passive: true });
+  addEventListener('pointercancel', () => { ptr.on = false; }, { passive: true });
+  root.addEventListener('pointerleave', () => { ptr.on = false; });
+}
+// scripted hand: one deliberate pull, a rest while the cloth settles, then a second pull somewhere else
+const KEYS_DESK = [[0,.86,.14,0],[3.0,.86,.14,0],[3.2,.84,.16,1],[4.7,.44,.3,1],[5.3,.42,.31,1],[5.8,.42,.31,0],[7.4,.42,.2,0],[7.7,.4,.2,1],[9.0,.72,.5,1],[9.4,.74,.52,0],[12.2,.74,.52,0]];
+const KEYS_THUMB = [[0,.86,.34,0],[3.1,.86,.34,0],[3.3,.84,.34,1],[3.9,.2,.46,1],[4.05,.18,.47,0],[5.1,.18,.3,0],[5.3,.2,.3,1],[5.9,.82,.2,1],[6.05,.84,.19,0],[7.1,.3,.58,0],[7.3,.3,.58,1],[7.9,.72,.4,1],[8.05,.74,.39,0],[12.2,.74,.39,0]];
+const smooth = u => u * u * (3 - 2 * u);
+function scripted(t, keys) {
+  const T = keys[keys.length - 1][0]; t = t % T;
+  for (let i = 0; i < keys.length - 1; i++) { const a = keys[i], b = keys[i + 1];
+    if (t <= b[0]) { const k = smooth((t - a[0]) / (b[0] - a[0])); return [a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k, b[3] > 0 && a[3] > 0 ? 1 : (b[3] > a[3] ? k : a[3] > b[3] ? 1 - k : a[3])]; } }
+  return [.5, .5, 0];
+}
+const handEl = document.getElementById('hand');
+if (AUTO) {
+  if (TOUCH) handEl.className = 'thumb';
+  else handEl.innerHTML = '<svg viewBox="0 0 24 24" width="58" height="58"><path d="M4 2l15 11-6.5 1.2L16 21l-3 1.4-3.4-6.9L4 20z" fill="#fff" stroke="#0a0a0a" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+}
+let simT = 0, thumbOn = 0;
+function step(dt) {
+  simT += dt;
+  if (PULL && simT < 3) { const k = smooth(Math.min(1, Math.max(0, (simT - 2.1) / .9))); ptr.x = (.66 - .16 * k) * W; ptr.y = (.12 + .18 * k) * H_; ptr.on = simT > 2.1; if (simT <= 2.1) { hand.x = ptr.x; hand.y = ptr.y; } }
+  if (AUTO) { const [x, y, on] = scripted(simT, TOUCH ? KEYS_THUMB : KEYS_DESK); ptr.x = x * W; ptr.y = y * H_; ptr.on = on > .01; thumbOn = on; if (hand.x < 0) { hand.x = ptr.x; hand.y = ptr.y; } }
+  const px = hand.x, py = hand.y, kh = 1 - Math.exp(-dt * 9);
+  hand.x += (ptr.x - hand.x) * kh; hand.y += (ptr.y - hand.y) * kh;
+  hand.vx = (hand.x - px) / dt; hand.vy = (hand.y - py) / dt;
+  hand.grip += ((ptr.on ? 1 : 0) - hand.grip) * (1 - Math.exp(-dt * 9));
+  const R = MIN * .21 / cell, R2 = R * R, cx = hand.x / cell + 1, cy = hand.y / cell + 1, g = hand.grip;
+  const hvx = hand.vx / MIN, hvy = hand.vy / MIN;
+  const reach = Math.ceil(R * 2.6);
+  for (let y = 1; y < GH - 1; y++) for (let x = 1, i = y * GW + 1; x < GW - 1; x++, i++) {
+    const lu = u[i - 1] + u[i + 1] + u[i - GW] + u[i + GW] - 4 * u[i];
+    const lv = v[i - 1] + v[i + 1] + v[i - GW] + v[i + GW] - 4 * v[i];
+    const lw = w[i - 1] + w[i + 1] + w[i - GW] + w[i + GW] - 4 * w[i];
+    let au = TENSION * lu - HOME * u[i] - DAMP * vu[i];
+    let av = TENSION * lv - HOME * v[i] - DAMP * vv[i];
+    let aw = TENSION * .55 * lw - HOME_W * w[i] - DAMP_W * vw[i];
+    if (g > .001 && Math.abs(x - cx) < reach && Math.abs(y - cy) < reach) {
+      const dx = x - cx, dy = y - cy, f = Math.exp(-(dx * dx + dy * dy) / R2) * g;
+      au += GRIP * f * (hvx - vu[i]); av += GRIP * f * (hvy - vv[i]);
+      aw += PRESS * f * (1 + Math.min(1.2, Math.hypot(hvx, hvy) * .8));
+    }
+    vu[i] += au * dt; vv[i] += av * dt; vw[i] += aw * dt;
+  }
+  const n = GW * GH;
+  for (let i = 0; i < n; i++) { u[i] += vu[i] * dt; v[i] += vv[i] * dt; w[i] += vw[i] * dt; }
+  // free edges: the sheet carries on past the frame, it is not nailed to it
+  for (const f of [u, v, w, vu, vv, vw]) {
+    for (let x = 0; x < GW; x++) { f[x] = f[x + GW]; f[n - 1 - x] = f[n - 1 - x - GW]; }
+    for (let y = 0; y < GH; y++) { f[y * GW] = f[y * GW + 1]; f[y * GW + GW - 1] = f[y * GW + GW - 2]; }
+  }
+}
+function upload() {
+  // grid y runs down the page, texture y runs up; u,v are stored in min-dimension units, y flipped
+  const s = cell / MIN, cs = 1 / s;
+  for (let y = 0; y < GH; y++) {
+    const gy = y, ty = GH - 1 - y;
+    for (let x = 0; x < GW; x++) {
+      const i = gy * GW + x, j = (ty * GW + x) * 4;
+      const xm = x > 0 ? i - 1 : i, xp = x < GW - 1 ? i + 1 : i, ym = gy > 0 ? i - GW : i, yp = gy < GH - 1 ? i + GW : i;
+      data[j] = u[i]; data[j + 1] = -v[i]; data[j + 2] = w[i] * .1;
+      data[j + 3] = -((u[xp] - u[xm]) + (v[yp] - v[ym])) * .5 * cs;       // compression: where fabric is being pushed together
+    }
+  }
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, GW, GH, 0, gl.RGBA, gl.FLOAT, data);
+}
+function render() {
+  if (AUTO) handEl.style.transform = `translate(${hand.x}px, ${hand.y}px)` + (TOUCH ? ` scale(${.8 + .2 * thumbOn})` : ' translate(-5px,-3px)'), handEl.style.opacity = TOUCH ? thumbOn : 1;
+  if (!gl) return;
+  upload();
+  const asp = canvas.width / canvas.height;
+  gl.uniform2f(U.uRes, canvas.width, canvas.height);
+  gl.uniform2f(U.uTexel, 1 / GW, 1 / GH);
+  gl.uniform2f(U.uMapS, W / cell / GW, H_ / cell / GH); gl.uniform2f(U.uMapO, 1.5 / GW, (GH - 1.5 - H_ / cell) / GH);
+  gl.uniform1f(U.uT, simT); gl.uniform1f(U.uZoom, MACRO);
+  gl.uniform2f(U.uFocus, MX - .5, .5 - MY);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+function layout() {
+  canvas.width = Math.round(innerWidth * DPR); canvas.height = Math.round(innerHeight * DPR);
+  if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
+  buildGrid();
+}
+let acc = 0, ticks = 0;
+function advance(dt) { acc += dt; while (acc >= DT) { step(DT); acc -= DT; } }
+layout();
+if (REC) {
+  window.__tick = dt => { advance(dt); if (dt > 0) ticks++; if (!SHOTS || SHOTS.includes(ticks)) render(); };
+  window.__layout = () => { layout(); render(); };
+  window.__sections = () => ({ H: innerHeight, hero: { top: 0, len: 1 }, end: 0 });
+  document.fonts.ready.then(() => { render(); window.__ready = true; });
+} else if (reduce) {
+  addEventListener('resize', () => { layout(); render(); });
+  render();
+} else {
+  addEventListener('resize', layout);
+  // if a phone can't hold the frame rate, render fewer pixels rather than drop frames: silk is soft, it forgives this
+  let last = performance.now(), slow = 0, seen = 0;
+  const loop = now => {
+    const ms = now - last; last = now;
+    advance(Math.min(.05, ms / 1000)); render();
+    if (++seen > 30) { slow = ms > 26 ? slow + 1 : Math.max(0, slow - 1); if (slow > 24 && DPR > .8) { DPR = Math.max(.8, DPR * .8); layout2(); slow = 0; seen = 0; } }
+    requestAnimationFrame(loop);
+  };
+  const layout2 = () => { canvas.width = Math.round(innerWidth * DPR); canvas.height = Math.round(innerHeight * DPR); gl && gl.viewport(0, 0, canvas.width, canvas.height); };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
