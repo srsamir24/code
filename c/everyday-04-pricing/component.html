@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pricing</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap">
+<style>
+  :root {
+    --stage: oklch(0.47 0.19 262);
+    --card: oklch(0.985 0.004 262);
+    --ink: oklch(0.23 0.04 262);
+    --ink2: oklch(0.31 0.05 262);
+    --mute: oklch(0.47 0.03 262);
+    --well: oklch(0.945 0.012 262);
+    --hover: oklch(0.905 0.018 262);
+    --hot: oklch(0.7 0.2 45);
+    --out: cubic-bezier(0.23, 1, 0.32, 1);
+    --move: cubic-bezier(0.77, 0, 0.175, 1);
+    --settle: linear(0, 0.3 8%, 0.8 22%, 1.02 38%, 1.015 52%, 1 70%, 1);
+    --spring: linear(0, 0.26 8%, 0.75 19%, 1.05 31%, 1.12 39%, 1.09 49%, 1 63%, 0.985 75%, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--stage); color: var(--ink); font-family: "Inter Tight", sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; overflow-x: hidden; }
+  main { width: min(100%, 540px); margin: 0 auto; padding: 52px 14px 150px; }
+  h1 { color: #fff; font-size: 92px; line-height: 0.95; font-weight: 800; letter-spacing: -0.025em; text-align: center; }
+  .ask { color: #fff; font-size: 23px; font-weight: 500; text-align: center; margin: 12px 0 22px; letter-spacing: -0.01em; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  button:focus-visible { outline: 2px solid var(--stage); outline-offset: 2px; }
+
+  .app { display: flex; flex-direction: column; height: 600px; padding: 14px; border-radius: 24px; background: var(--card); }
+
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex: none; }
+  .bill { position: relative; display: grid; grid-template-columns: 1fr 1fr; width: 248px; height: 54px; padding: 5px; border-radius: 16px; background: var(--well); }
+  .blk { position: absolute; left: 5px; top: 5px; bottom: 5px; width: 119px; border-radius: 12px; background: var(--ink); transition: transform 0.44s var(--settle); }
+  .bill.yr .blk { transform: translateX(119px); }
+  .bill button { position: relative; z-index: 1; border-radius: 12px; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; transition: color 0.2s var(--out), transform 0.14s var(--out), background-color 0.15s var(--out); }
+  .bill button:active { transform: scale(0.97); }
+  .bill button[aria-pressed="true"] { color: #fff; }
+  @media (hover: hover) and (pointer: fine) { .bill button:not([aria-pressed="true"]):hover { background: var(--hover); } }
+  .free { padding: 8px 14px; border-radius: 12px; background: var(--hot); font-size: 16.5px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; opacity: 0; transform: translateX(-14px) scale(0.92); transition: opacity 0.2s var(--out), transform 0.42s var(--spring); }
+  .bill.yr + .free { opacity: 1; transform: none; }
+
+  .plans { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; flex: 1; min-height: 0; }
+  .plan { display: block; width: 100%; padding: 18px 32px 18px 16px; border-radius: 18px; background: var(--well); text-align: left; transition: background-color 0.26s var(--out), color 0.2s var(--out), transform 0.14s var(--out); }
+  .plan:active { transform: scale(0.985); }
+  @media (hover: hover) and (pointer: fine) { .plan:not([aria-pressed="true"]):hover { background: var(--hover); } }
+  .plan[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  .plan > span, .plan span span { display: block; }
+  .top { display: flex !important; align-items: center; justify-content: space-between; gap: 10px; }
+  .pname { font-size: 25px; line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
+  .pline { margin-top: 3px; font-size: 15.5px; line-height: 1.2; font-weight: 500; color: var(--mute); transition: color 0.2s var(--out); }
+  .plan[aria-pressed="true"] .pline { color: oklch(0.82 0.02 262); }
+  .price { flex: none; text-align: right; }
+  .amount { display: flex !important; align-items: flex-start; justify-content: flex-end; font-size: 46px; line-height: 1; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .amount .cur { font-size: 25px; line-height: 1.3; margin-right: 1px; }
+  .w { height: 1em; overflow: hidden; }
+  .s { transition: transform 0.66s var(--out); transition-delay: var(--d, 0ms); }
+  .s i { display: block; height: 1em; font-style: normal; }
+  .per { margin-top: 2px; font-size: 14.5px; font-weight: 600; color: var(--mute); white-space: nowrap; transition: color 0.2s var(--out); }
+  .plan[aria-pressed="true"] .per { color: oklch(0.82 0.02 262); }
+
+  .more { display: grid !important; grid-template-rows: 0fr; transition: grid-template-rows 0.42s var(--out); }
+  .plan[aria-pressed="true"] .more { grid-template-rows: 1fr; }
+  .more > span { overflow: hidden; min-height: 0; }
+  .feat { display: flex !important; align-items: center; gap: 9px; height: 30px; font-size: 16.5px; font-weight: 600; opacity: 0; transform: translateY(-6px); transition: opacity 0.2s var(--out), transform 0.3s var(--out); }
+  .feat:first-child { margin-top: 10px; }
+  .plan[aria-pressed="true"] .feat { opacity: 1; transform: none; transition-delay: calc(var(--i) * 45ms + 90ms); }
+  .feat svg { flex: none; width: 19px; height: 19px; fill: none; stroke: var(--hot); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+  .cta { position: relative; flex: none; display: block; width: 100%; height: 60px; margin-top: 10px; border-radius: 16px; background: var(--hot); color: var(--ink); font-size: 20px; font-weight: 800; letter-spacing: -0.015em; overflow: hidden; transition: transform 0.14s var(--out), background-color 0.12s linear, color 0.12s linear; }
+  .cta:active { transform: scale(0.97); }
+  @media (hover: hover) and (pointer: fine) { .cta:hover { background: oklch(0.74 0.19 48); } .cta.ok:hover { background: var(--ink); } }
+  .cta.ok { background: var(--ink); color: #fff; }
+  .cta .t { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 9px; white-space: nowrap; }
+  .ring { display: none; width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; animation: spin 0.72s linear infinite; }
+  .cta.busy .ring { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before { transition-duration: 0.01s !important; transition-delay: 0s !important; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Pricing</h1>
+  <p class="ask">Free code, link in bio.</p>
+  <div class="app">
+    <div class="head">
+      <div class="bill" id="bill" role="group" aria-label="Billing period">
+        <i class="blk"></i>
+        <button id="mo" aria-pressed="true">Monthly</button>
+        <button id="yr" aria-pressed="false">Yearly</button>
+      </div>
+      <span class="free" id="free">2 months free</span>
+    </div>
+    <div class="plans" id="plans" role="group" aria-label="Plan"></div>
+    <button class="cta" id="cta"><span class="t" id="ctaText"></span></button>
+  </div>
+</main>
+<script>
+// yearly is ten months of the monthly price, so "2 months free" is true of every plan,
+// and these divide by 12 exactly: 120, 300 and 780 a year is 10, 25 and 65 a month
+const PLANS = [
+  { id: 'solo', name: 'Solo', line: 'For one person sending invoices', month: 12, feats: ['30 invoices a month', 'Card and bank payments', 'Email reminders'] },
+  { id: 'studio', name: 'Studio', line: 'For a small team with regular clients', month: 30, feats: ['Up to 8 people', 'Unlimited invoices', 'Automatic late fees'] },
+  { id: 'agency', name: 'Agency', line: 'For many clients and many hands', month: 78, feats: ['Unlimited people', 'Client payment portals', 'Priority support'] },
+];
+const $ = s => document.querySelector(s);
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const plansBox = $('#plans'), bill = $('#bill'), cta = $('#cta'), ctaText = $('#ctaText');
+const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.6 4.6L19 7.5"/></svg>';
+const DIGITS = Array.from({ length: 10 }, (_, d) => `<i>${d}</i>`).join('');
+
+plansBox.innerHTML = PLANS.map(p => `<button class="plan" id="${p.id}" aria-pressed="false">
+  <span class="top"><span><span class="pname">${p.name}</span><span class="pline">${p.line}</span></span>
+  <span class="price"><span class="amount"><span class="cur">$</span><span class="w"><span class="s">${DIGITS}</span></span><span class="w"><span class="s">${DIGITS}</span></span></span><span class="per"></span></span></span>
+  <span class="more"><span>${p.feats.map((f, i) => `<span class="feat" style="--i:${i}">${TICK}${f}</span>`).join('')}</span></span>
+</button>`).join('');
+
+let yearly = false, chosen = 'studio', token = 0, busy = false;
+const perMonth = p => yearly ? Math.round(p.month * 10 / 12) : p.month;
+const perLabel = p => yearly ? `$${p.month * 10} a year` : 'per month';
+
+// the old label stays on top of the new one while they swap, so the button is never empty
+function swapLabel(html) {
+  if (!calm && ctaText.innerHTML) {
+    const old = ctaText.cloneNode(true);
+    old.removeAttribute('id');
+    old.style.pointerEvents = 'none';
+    cta.append(old);
+    old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 90, easing: 'linear', fill: 'forwards' }).onfinish = () => old.remove();
+    ctaText.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 170, delay: 60, fill: 'backwards', easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+  }
+  ctaText.innerHTML = html;
+}
+function paintCta(animate) {
+  const p = PLANS.find(x => x.id === chosen);
+  const text = `Start ${p.name}, ${yearly ? `$${p.month * 10} a year` : `$${p.month} a month`}`;
+  if (animate) swapLabel(text); else ctaText.textContent = text;
+}
+function paintPrices() {
+  PLANS.forEach((p, row) => {
+    const el = document.getElementById(p.id);
+    const text = String(perMonth(p)).padStart(2, '0');
+    el.querySelectorAll('.s').forEach((s, k) => {
+      s.style.setProperty('--d', row * 40 + k * 50 + 'ms');
+      s.style.transform = `translateY(${-Number(text[k]) * 10}%)`;
+    });
+    el.querySelector('.per').textContent = perLabel(p);
+    el.querySelector('.amount').setAttribute('aria-label', `$${perMonth(p)} a month`);
+  });
+}
+function setPeriod(y) {
+  if (y === yearly) return;
+  yearly = y;
+  bill.classList.toggle('yr', y);
+  $('#mo').setAttribute('aria-pressed', !y);
+  $('#yr').setAttribute('aria-pressed', y);
+  paintPrices();
+  resetCta();
+  paintCta(true);
+}
+function choose(id) {
+  if (id === chosen) return;
+  chosen = id;
+  PLANS.forEach(p => document.getElementById(p.id).setAttribute('aria-pressed', p.id === id));
+  resetCta();
+  paintCta(true);
+}
+function resetCta() { token++; busy = false; cta.classList.remove('busy', 'ok'); }
+function start() {
+  if (busy || cta.classList.contains('ok')) return;
+  const t = ++token, p = PLANS.find(x => x.id === chosen);
+  busy = true;
+  cta.classList.add('busy');
+  ctaText.innerHTML = `<svg class="ring" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10" stroke-dasharray="44 20"/></svg>Starting ${p.name}`;
+  setTimeout(() => {
+    if (t !== token) return;
+    busy = false;
+    cta.classList.remove('busy'); cta.classList.add('ok');
+    swapLabel(`You're on ${p.name}`);
+    setTimeout(() => { if (t === token) { cta.classList.remove('ok'); paintCta(true); } }, 1000);
+  }, 800);
+}
+
+$('#mo').addEventListener('click', () => setPeriod(false));
+$('#yr').addEventListener('click', () => setPeriod(true));
+PLANS.forEach(p => document.getElementById(p.id).addEventListener('click', () => choose(p.id)));
+cta.addEventListener('click', start);
+
+document.getElementById('studio').setAttribute('aria-pressed', 'true');
+// the first paint has no transition to run, so the wheels start on the right digit
+paintPrices();
+paintCta(false);
+</script>
+</body>
+</html>

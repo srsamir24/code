@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toggles, 6 ways</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap">
+<style>
+  @property --bx { syntax: "<length>"; inherits: false; initial-value: 79px; }
+  @property --by { syntax: "<length>"; inherits: false; initial-value: 5px; }
+  :root {
+    --stage: oklch(0.47 0.19 262);
+    --card: oklch(0.985 0.004 262);
+    --ink: oklch(0.23 0.04 262);
+    --mute: oklch(0.47 0.03 262);
+    --well: oklch(0.945 0.012 262);
+    --bone: oklch(0.84 0.02 262);
+    --hot: oklch(0.7 0.2 45);
+    --out: cubic-bezier(0.23, 1, 0.32, 1);
+    --settle: linear(0, 0.3 8%, 0.8 22%, 1.02 38%, 1.015 52%, 1 70%, 1);
+    --spring: linear(0, 0.26 8%, 0.75 19%, 1.05 31%, 1.12 39%, 1.09 49%, 1 63%, 0.985 75%, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body { background: var(--stage); color: var(--ink); font-family: "Inter Tight", sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  main { width: min(100%, 540px); margin: 0 auto; padding: 52px 14px 150px; }
+  h1 { color: #fff; font-size: 92px; line-height: 0.95; font-weight: 800; letter-spacing: -0.012em; text-align: center; }
+  .ask { color: #fff; font-size: 23px; font-weight: 500; text-align: center; margin: 22px 0 22px; letter-spacing: -0.01em; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  article { background: var(--card); border-radius: 20px; padding: 24px 12px 12px; min-height: 186px; display: flex; flex-direction: column; }
+  article h2 { display: flex; align-items: baseline; gap: 7px; font-size: 20px; line-height: 1; font-weight: 700; letter-spacing: -0.015em; margin-top: auto; padding: 0 4px; }
+  article h2 b { font-size: 32px; font-weight: 800; color: var(--hot); }
+  article p { font-size: 15.5px; line-height: 1.2; font-weight: 500; color: var(--mute); padding: 4px 4px 0; text-wrap: pretty; }
+  article:nth-child(even) p { padding-right: 34px; }
+
+  .demo { position: relative; flex: none; height: 66px; display: grid; place-items: center; }
+  .sw { position: relative; display: block; border: 0; padding: 0; background: none; color: var(--ink); font: inherit; cursor: pointer; transition: transform 0.14s var(--out), background-color 0.25s var(--out), filter 0.15s var(--out); -webkit-tap-highlight-color: transparent; }
+  .sw:active { transform: scale(0.97); }
+  .sw:focus-visible { outline: 2px solid var(--stage); outline-offset: 3px; }
+  @media (hover: hover) and (pointer: fine) { .sw:hover { filter: brightness(0.96); } }
+  .sw i { display: block; font-style: normal; }
+  .tap { position: absolute; z-index: 3; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; background: oklch(0.23 0.04 262 / 0.28); pointer-events: none; opacity: 0; display: none; }
+
+  /* 1 the thumb stretches in flight and squashes when it stops */
+  .squash { width: 112px; height: 58px; border-radius: 29px; background: var(--bone); }
+  .squash[aria-checked="true"] { background: var(--hot); }
+  .squash .knob { position: absolute; left: 6px; top: 6px; width: 46px; height: 46px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px oklch(0.23 0.04 262 / 0.3), 0 4px 10px oklch(0.23 0.04 262 / 0.18); }
+
+  /* 2 a block slides under two words */
+  .words { display: grid; grid-template-columns: 1fr 1fr; width: 164px; height: 58px; padding: 5px; border-radius: 17px; background: var(--well); }
+  .words .blk { position: absolute; left: 5px; top: 5px; bottom: 5px; width: 77px; border-radius: 13px; background: var(--ink); transition: transform 0.4s var(--settle); }
+  .words .top { position: absolute; z-index: 2; inset: 5px; display: grid; grid-template-columns: 1fr 1fr; color: #fff; clip-path: inset(0 50% 0 0 round 13px); transition: clip-path 0.4s var(--settle); }
+  .words[aria-checked="true"] .top { clip-path: inset(0 0 0 50% round 13px); }
+  .words[aria-checked="true"] .blk { transform: translateX(77px); }
+  .words span { position: relative; z-index: 1; display: grid; place-items: center; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+
+  /* 3 a shadow slides over the sun, and stars come out */
+  .sky { width: 112px; height: 58px; border-radius: 29px; background: var(--stage); overflow: hidden; transition: transform 0.14s var(--out), background-color 0.55s linear; }
+  .sky[aria-checked="true"] { background: var(--ink); }
+  .sky .knob { position: absolute; left: 6px; top: 6px; width: 46px; height: 46px; border-radius: 50%; background: var(--hot); --bx: 79px; --by: 5px; -webkit-mask: radial-gradient(circle 21px at var(--bx) var(--by), transparent 97%, #000 100%); mask: radial-gradient(circle 21px at var(--bx) var(--by), transparent 97%, #000 100%); transition: transform 0.56s var(--settle), background-color 0.55s linear, --bx 0.6s ease-in-out, --by 0.6s ease-in-out; }
+  .sky[aria-checked="true"] .knob { background: #fff; --bx: 33px; --by: 15px; }
+  .sky[aria-checked="true"] .knob { transform: translateX(54px); }
+  .sky .star { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #fff; opacity: 0; transform: translateY(8px); transition: opacity 0.2s var(--out), transform 0.36s var(--out); }
+  .sky .star:nth-of-type(2) { left: 18px; top: 16px; }
+  .sky .star:nth-of-type(3) { left: 36px; top: 34px; width: 4px; height: 4px; }
+  .sky .star:nth-of-type(4) { left: 44px; top: 12px; width: 3px; height: 3px; }
+  .sky[aria-checked="true"] .star { opacity: 1; transform: none; transition-delay: calc(var(--i) * 70ms + 460ms); }
+
+  /* 4 the box fills and the tick draws itself */
+  .box { width: 58px; height: 58px; border-radius: 17px; background: var(--card); box-shadow: inset 0 0 0 3.5px var(--ink); transition: transform 0.14s var(--out), background-color 0.18s var(--out); }
+  .box[aria-checked="true"] { background: var(--ink); }
+  .box svg { position: absolute; inset: 12px; width: 34px; height: 34px; fill: none; stroke: #fff; stroke-width: 3.6; stroke-linecap: round; stroke-linejoin: round; }
+  .box path { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 0.2s linear; }
+  .box[aria-checked="true"] path { stroke-dashoffset: 0; transition: stroke-dashoffset 0.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) 0.16s; }
+
+  /* 5 colour floods out from where the thumb sat */
+  .flood { width: 112px; height: 58px; border-radius: 29px; background: var(--card); overflow: hidden; }
+  .flood::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 3.5px var(--ink); pointer-events: none; }
+  .flood .sea { position: absolute; inset: 0; background: var(--stage); clip-path: circle(0px at 29px 50%); transition: clip-path 0.55s cubic-bezier(0.4, 0, 0.2, 1); }
+  .flood[aria-checked="true"] .sea { clip-path: circle(120px at 29px 50%); }
+  .flood .knob { position: absolute; left: 10px; top: 10px; width: 38px; height: 38px; border-radius: 50%; background: var(--ink); transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s var(--out); }
+  .flood[aria-checked="true"] .knob { transform: translateX(54px); background: #fff; }
+
+  /* 6 a rocker that tilts on its pivot */
+  .rock { width: 124px; height: 62px; border-radius: 17px; background: var(--ink); padding: 5px; perspective: 260px; }
+  .rock .face { display: grid; grid-template-columns: 1fr 1fr; height: 100%; border-radius: 12px; overflow: hidden; background: var(--card); transform: rotateY(-28deg); transition: transform 0.46s var(--spring); }
+  .rock[aria-checked="true"] .face { transform: rotateY(28deg); }
+  .rock span { display: grid; place-items: center; font-size: 22px; font-weight: 800; transition: background-color 0.3s linear, color 0.3s linear; }
+  .rock span:first-child { background: var(--bone); }
+  .rock[aria-checked="true"] span:first-child { background: var(--card); }
+  .rock[aria-checked="true"] span:last-child { background: var(--hot); }
+
+  @media (prefers-reduced-motion: reduce) { .sw, .sw * { transition-duration: 0.01s !important; transition-delay: 0s !important; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Toggles</h1>
+  <p class="ask">Which one would you use?</p>
+  <div class="grid">
+    <article><div class="demo"><button class="sw squash" role="switch" aria-checked="false" aria-label="Notifications" data-kind="squash"><i class="knob"></i></button></div><h2><b>1</b> Squash</h2><p>The thumb stretches in flight and squashes to a stop.</p></article>
+    <article><div class="demo"><button class="sw words" role="switch" aria-checked="true" aria-label="Autosave"><i class="blk"></i><span>Off</span><span>On</span><i class="top" aria-hidden="true"><span>Off</span><span>On</span></i></button></div><h2><b>2</b> Two words</h2><p>A block slides under Off and On.</p></article>
+    <article><div class="demo"><button class="sw sky" role="switch" aria-checked="true" aria-label="Dark mode"><i class="knob"></i><i class="star" style="--i:0"></i><i class="star" style="--i:1"></i><i class="star" style="--i:2"></i></button></div><h2><b>3</b> Sun to moon</h2><p>A shadow slides over the sun and stars come out.</p></article>
+    <article><div class="demo"><button class="sw box" role="switch" aria-checked="false" aria-label="Accept updates" data-kind="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="m5 12.5 4.6 4.6L19 7.5"/></svg></button></div><h2><b>4</b> Draw tick</h2><p>The box fills and the tick draws itself in.</p></article>
+    <article><div class="demo"><button class="sw flood" role="switch" aria-checked="false" aria-label="Sync"><i class="sea"></i><i class="knob"></i></button></div><h2><b>5</b> Flood</h2><p>Colour floods out from where the thumb sat.</p></article>
+    <article><div class="demo"><button class="sw rock" role="switch" aria-checked="true" aria-label="Power"><i class="face"><span>O</span><span>I</span></i></button></div><h2><b>6</b> Rocker</h2><p>It tilts, and the pressed side changes colour.</p></article>
+  </div>
+</main>
+<script>
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const TRAVEL = 54;
+
+document.querySelectorAll('.sw').forEach((sw, n) => {
+  const knob = sw.querySelector('.knob');
+  const kind = sw.dataset.kind;
+  const tap = document.createElement('i');
+  tap.className = 'tap';
+  sw.parentElement.append(tap);
+  let touched = false, step = 0;
+  const isOn = () => sw.getAttribute('aria-checked') === 'true';
+
+  function squash(on) {
+    const a = on ? 0 : TRAVEL, b = on ? TRAVEL : 0, m = (a + b) / 2, over = b + (on ? 4 : -4);
+    knob.style.transform = `translateX(${b}px)`;
+    if (calm) return;
+    knob.animate([
+      { transform: `translateX(${a}px) scale(1, 1)`, easing: 'cubic-bezier(0.4, 0, 0.7, 0.6)' },
+      { transform: `translateX(${m}px) scale(1.42, 0.74)`, offset: 0.34, easing: 'cubic-bezier(0.2, 0.7, 0.3, 1)' },
+      { transform: `translateX(${over}px) scale(0.8, 1.18)`, offset: 0.62, easing: 'cubic-bezier(0.3, 0, 0.3, 1)' },
+      { transform: `translateX(${b}px) scale(1, 1)` },
+    ], { duration: 560 });
+  }
+  function set(on) {
+    if (on === isOn()) return;
+    sw.setAttribute('aria-checked', on);
+    if (kind === 'squash') squash(on);
+    if (kind === 'box' && !calm && on) sw.animate([{ transform: 'scale(1)' }, { transform: 'scale(0.84)', offset: 0.28 }, { transform: 'scale(1.08)', offset: 0.66 }, { transform: 'scale(1)' }], { duration: 400, easing: 'cubic-bezier(0.3, 0, 0.3, 1)' });
+  }
+  // a real <button>, so Space and Enter fire this as well
+  sw.addEventListener('click', ev => {
+    if (ev.isTrusted) touched = true;
+    set(!isOn());
+  });
+
+  // 8 taps at 1500 ms is 12 s, and each one ends the way it started
+  const start = isOn();
+  const route = [!start, start];
+  if (kind === 'squash') knob.style.transform = `translateX(${start ? TRAVEL : 0}px)`;
+  function demo() {
+    if (touched) return;
+    const on = route[step++ % route.length];
+    tap.animate([{ opacity: 0, transform: 'scale(0.6)' }, { opacity: 1, transform: 'scale(1)', offset: 0.25 }, { opacity: 0, transform: 'scale(1.25)' }], { duration: 460, easing: 'ease-out' });
+    setTimeout(() => { if (!touched) set(on); }, 60);
+    setTimeout(demo, 1500);
+  }
+  document.fonts.ready.then(() => setTimeout(demo, 60 + n * 250));
+});
+</script>
+</body>
+</html>

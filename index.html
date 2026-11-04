@@ -4,24 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Source code · @zellap.app</title>
-<meta name="description" content="Source code for 85 UI components from @zellap.app: Cursed UI, Interaction and Done right. One HTML file each. View, copy or download.">
+<meta name="description" content="Source code for 93 UI components from @zellap.app. One HTML file each. View, copy or download.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Source code · @zellap.app">
-<meta property="og:description" content="Source code for 85 UI components from @zellap.app: Cursed UI, Interaction and Done right. One HTML file each. View, copy or download.">
+<meta property="og:description" content="Source code for 93 UI components from @zellap.app. One HTML file each. View, copy or download.">
 <meta name="theme-color" content="#F4F2EE">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231D1B18'/%3E%3Ctext x='16' y='21.5' font-family='monospace' font-size='14' font-weight='700' fill='%23F4F2EE' text-anchor='middle'%3E%26lt;/%26gt;%3C/text%3E%3C/svg%3E">
-<link rel="preload" href="fonts/GeneralSans-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap">
 <style>
-@font-face{font-family:"Satoshi";src:url("fonts/Satoshi-Variable.woff2") format("woff2");font-weight:300 900;font-display:swap}
-@font-face{font-family:"General Sans";src:url("fonts/GeneralSans-Variable.woff2") format("woff2");font-weight:200 700;font-display:swap}
-@font-face{font-family:"Geist Mono";src:url("fonts/GeistMono-Variable.woff2") format("woff2");font-weight:100 900;font-display:swap}
 :root{
   --bg:#F4F2EE;--surface:#FFFFFF;--sunk:#EEEBE5;--ink:#1D1B18;--ink-2:#4F4A43;--muted:#6B655C;
   --hair:rgba(40,32,20,.12);--hair-2:rgba(40,32,20,.2);--ring:#1D1B18;
-  --sans:"General Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-  --display:"Satoshi","General Sans",ui-sans-serif,system-ui,sans-serif;
-  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"Inter Tight",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --display:var(--sans);
+  --mono:var(--sans);
   --r:10px;--r-sm:8px;color-scheme:light;
 }
 *{box-sizing:border-box}
@@ -105,11 +101,137 @@ h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:-.025em;margi
 </div></header>
 <main id="main">
 <section class="hero"><div class="wrap">
-  <p class="eyebrow">Source code · 85 components</p>
+  <p class="eyebrow">Source code · 93 components</p>
   <h1>Every component, one HTML file.</h1>
-  <p class="lede">The source behind each Cursed UI, Interaction and Done right post. Open it live, copy the code, or download the file. No build step, no dependencies.</p>
+  <p class="lede">The source behind every post. Open it live, copy the code, or download the file. No build step.</p>
   <p class="follow">New component every day → <a href="https://www.instagram.com/zellap.app/" rel="noopener">follow @zellap.app</a></p>
-  <nav aria-label="Series"><ul class="jump"><li><a href="#cursed"><i class="dot" style="--c:#E0962E" aria-hidden="true"></i>Cursed UI <span>17</span></a></li><li><a href="#interaction"><i class="dot" style="--c:#D9502B" aria-hidden="true"></i>Interaction <span>16</span></a></li><li><a href="#done-right"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right <span>25</span></a></li><li><a href="#go-crazy"><i class="dot" style="--c:#955BE3" aria-hidden="true"></i>Go crazy <span>1</span></a></li><li><a href="#component"><i class="dot" style="--c:#3D5AFE" aria-hidden="true"></i>Component <span>25</span></a></li><li><a href="#game"><i class="dot" style="--c:#F2A43A" aria-hidden="true"></i>Game <span>1</span></a></li></ul></nav>
+  <nav aria-label="Series"><ul class="jump"><li><a href="#everyday"><i class="dot" style="--c:#2F5BEA" aria-hidden="true"></i>Everyday <span>8</span></a></li><li><a href="#cursed"><i class="dot" style="--c:#E0962E" aria-hidden="true"></i>Cursed UI <span>17</span></a></li><li><a href="#interaction"><i class="dot" style="--c:#D9502B" aria-hidden="true"></i>Interaction <span>16</span></a></li><li><a href="#done-right"><i class="dot" style="--c:#2D6A3E" aria-hidden="true"></i>Done right <span>25</span></a></li><li><a href="#go-crazy"><i class="dot" style="--c:#955BE3" aria-hidden="true"></i>Go crazy <span>1</span></a></li><li><a href="#component"><i class="dot" style="--c:#3D5AFE" aria-hidden="true"></i>Component <span>25</span></a></li><li><a href="#game"><i class="dot" style="--c:#F2A43A" aria-hidden="true"></i>Game <span>1</span></a></li></ul></nav>
+</div></section>
+<section class="series" id="everyday" aria-labelledby="h-everyday"><div class="wrap">
+  <div class="series-head"><h2 id="h-everyday"><i class="dot" style="--c:#2F5BEA" aria-hidden="true"></i>Everyday</h2><p>The parts every app needs: tab bars, sidebars, pricing, login. One HTML file each.</p></div>
+  <ul class="grid">
+  <li class="card" id="everyday-01-tab-bars">
+    <div class="thumb" data-src="c/everyday-01-tab-bars/component.html" data-vw="540" data-vh="960" style="aspect-ratio:540/960">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/everyday-01-tab-bars/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2F5BEA" aria-hidden="true"></i>Everyday #1</p>
+      <h3><a href="c/everyday-01-tab-bars/">Tab bars, 6 ways</a></h3>
+      
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/everyday-01-tab-bars/component.html" aria-label="View Tab bars, 6 ways live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/everyday-01-tab-bars/component.html" data-name="Tab bars, 6 ways" aria-label="Copy Tab bars, 6 ways code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/everyday-01-tab-bars/component.html" download="tab-bars.html" aria-label="Download Tab bars, 6 ways as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="everyday-02-sidebar">
+    <div class="thumb" data-src="c/everyday-02-sidebar/component.html" data-vw="540" data-vh="960" style="aspect-ratio:540/960">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/everyday-02-sidebar/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2F5BEA" aria-hidden="true"></i>Everyday #2</p>
+      <h3><a href="c/everyday-02-sidebar/">Sidebar</a></h3>
+      
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/everyday-02-sidebar/component.html" aria-label="View Sidebar live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/everyday-02-sidebar/component.html" data-name="Sidebar" aria-label="Copy Sidebar code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/everyday-02-sidebar/component.html" download="sidebar.html" aria-label="Download Sidebar as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="everyday-03-loading">
+    <div class="thumb" data-src="c/everyday-03-loading/component.html" data-vw="540" data-vh="960" style="aspect-ratio:540/960">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/everyday-03-loading/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2F5BEA" aria-hidden="true"></i>Everyday #3</p>
+      <h3><a href="c/everyday-03-loading/">Loading, 6 ways</a></h3>
+      
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/everyday-03-loading/component.html" aria-label="View Loading, 6 ways live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/everyday-03-loading/component.html" data-name="Loading, 6 ways" aria-label="Copy Loading, 6 ways code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/everyday-03-loading/component.html" download="loading.html" aria-label="Download Loading, 6 ways as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="everyday-04-pricing">
+    <div class="thumb" data-src="c/everyday-04-pricing/component.html" data-vw="540" data-vh="960" style="aspect-ratio:540/960">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/everyday-04-pricing/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2F5BEA" aria-hidden="true"></i>Everyday #4</p>
+      <h3><a href="c/everyday-04-pricing/">Pricing</a></h3>
+      
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/everyday-04-pricing/component.html" aria-label="View Pricing live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/everyday-04-pricing/component.html" data-name="Pricing" aria-label="Copy Pricing code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/everyday-04-pricing/component.html" download="pricing.html" aria-label="Download Pricing as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="everyday-05-toggles">
+    <div class="thumb" data-src="c/everyday-05-toggles/component.html" data-vw="540" data-vh="960" style="aspect-ratio:540/960">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/everyday-05-toggles/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2F5BEA" aria-hidden="true"></i>Everyday #5</p>
+      <h3><a href="c/everyday-05-toggles/">Toggles, 6 ways</a></h3>
+      
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/everyday-05-toggles/component.html" aria-label="View Toggles, 6 ways live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/everyday-05-toggles/component.html" data-name="Toggles, 6 ways" aria-label="Copy Toggles, 6 ways code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/everyday-05-toggles/component.html" download="toggles.html" aria-label="Download Toggles, 6 ways as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="everyday-06-login">
+    <div class="thumb" data-src="c/everyday-06-login/component.html" data-vw="540" data-vh="960" style="aspect-ratio:540/960">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/everyday-06-login/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2F5BEA" aria-hidden="true"></i>Everyday #6</p>
+      <h3><a href="c/everyday-06-login/">Login</a></h3>
+      
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/everyday-06-login/component.html" aria-label="View Login live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/everyday-06-login/component.html" data-name="Login" aria-label="Copy Login code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/everyday-06-login/component.html" download="login.html" aria-label="Download Login as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="everyday-07-buttons">
+    <div class="thumb" data-src="c/everyday-07-buttons/component.html" data-vw="540" data-vh="960" style="aspect-ratio:540/960">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/everyday-07-buttons/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2F5BEA" aria-hidden="true"></i>Everyday #7</p>
+      <h3><a href="c/everyday-07-buttons/">Buttons, 6 ways</a></h3>
+      
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/everyday-07-buttons/component.html" aria-label="View Buttons, 6 ways live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/everyday-07-buttons/component.html" data-name="Buttons, 6 ways" aria-label="Copy Buttons, 6 ways code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/everyday-07-buttons/component.html" download="buttons.html" aria-label="Download Buttons, 6 ways as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li><li class="card" id="everyday-08-stat-cards">
+    <div class="thumb" data-src="c/everyday-08-stat-cards/component.html" data-vw="540" data-vh="960" style="aspect-ratio:540/960">
+      <span class="ph" aria-hidden="true">loading preview</span>
+      <a class="thumb-link" href="c/everyday-08-stat-cards/" tabindex="-1" aria-hidden="true"></a>
+    </div>
+    <div class="meta">
+      <p class="eyebrow"><i class="dot" style="--c:#2F5BEA" aria-hidden="true"></i>Everyday #8</p>
+      <h3><a href="c/everyday-08-stat-cards/">Dashboard</a></h3>
+      
+    </div>
+    <div class="actions">
+      <a class="btn" href="c/everyday-08-stat-cards/component.html" aria-label="View Dashboard live"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11.75 9.5v3a.75.75 0 0 1-.75.75H3.5a.75.75 0 0 1-.75-.75V5a.75.75 0 0 1 .75-.75h3"/></svg><span>View live</span></a>
+      <button class="btn primary" type="button" data-copy="c/everyday-08-stat-cards/component.html" data-name="Dashboard" aria-label="Copy Dashboard code"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.75"/><path d="M10.75 5.25V3.5A1.25 1.25 0 0 0 9.5 2.25H3.5A1.25 1.25 0 0 0 2.25 3.5v6A1.25 1.25 0 0 0 3.5 10.75h1.75"/></svg><span class="lbl">Copy code</span></button>
+      <a class="btn" href="c/everyday-08-stat-cards/component.html" download="stat-cards.html" aria-label="Download Dashboard as .html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v8.5M4.5 7.5 8 11l3.5-3.5M2.75 13.75h10.5"/></svg><span>Download .html</span></a>
+    </div>
+  </li>
+  </ul>
 </div></section>
 <section class="series" id="cursed" aria-labelledby="h-cursed"><div class="wrap">
   <div class="series-head"><h2 id="h-cursed"><i class="dot" style="--c:#E0962E" aria-hidden="true"></i>Cursed UI</h2><p>Bad UX on purpose. Interfaces that fight back, built with real code.</p></div>
@@ -1423,7 +1545,7 @@ h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:-.025em;margi
   </ul>
 </div></section>
 </main><footer class="foot"><div class="wrap">
-  <span>85 components · one HTML file each · no build step</span>
+  <span>93 components · one HTML file each · no build step</span>
   <span><a href="index.html">All components</a> · <a href="https://www.instagram.com/zellap.app/" rel="noopener">Instagram</a></span>
 </div></footer>
 <p id="status" class="sr-only" role="status" aria-live="polite"></p>

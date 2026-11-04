@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buttons, 6 ways</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap">
+<style>
+  :root {
+    --stage: oklch(0.47 0.19 262);
+    --card: oklch(0.985 0.004 262);
+    --ink: oklch(0.23 0.04 262);
+    --ink2: oklch(0.31 0.05 262);
+    --mute: oklch(0.47 0.03 262);
+    --well: oklch(0.945 0.012 262);
+    --hot: oklch(0.7 0.2 45);
+    --out: cubic-bezier(0.23, 1, 0.32, 1);
+    --move: cubic-bezier(0.77, 0, 0.175, 1);
+    --spring: linear(0, 0.26 8%, 0.75 19%, 1.05 31%, 1.12 39%, 1.09 49%, 1 63%, 0.985 75%, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body { background: var(--stage); color: var(--ink); font-family: "Inter Tight", sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  main { width: min(100%, 540px); margin: 0 auto; padding: 52px 14px 150px; }
+  h1 { color: #fff; font-size: 92px; line-height: 0.95; font-weight: 800; letter-spacing: -0.012em; text-align: center; }
+  .ask { color: #fff; font-size: 23px; font-weight: 500; text-align: center; margin: 12px 0 22px; letter-spacing: -0.01em; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  article { background: var(--card); border-radius: 20px; padding: 24px 12px 12px; min-height: 186px; display: flex; flex-direction: column; }
+  article h2 { display: flex; align-items: baseline; gap: 7px; font-size: 20px; line-height: 1; font-weight: 700; letter-spacing: -0.015em; margin-top: auto; padding: 0 4px; }
+  article h2 b { font-size: 32px; font-weight: 800; color: var(--hot); }
+  article p { font-size: 15.5px; line-height: 1.2; font-weight: 500; color: var(--mute); padding: 4px 4px 0; text-wrap: pretty; }
+  article:nth-child(even) p { padding-right: 34px; }
+
+  .demo { position: relative; flex: none; height: 66px; padding-left: 0; display: flex; align-items: flex-start; justify-content: center; }
+  .sb { position: relative; display: block; flex: none; width: 172px; height: 58px; border: 0; padding: 0; border-radius: 16px; background: var(--ink); color: #fff; font: inherit; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; overflow: hidden; cursor: pointer; transition: transform 0.14s var(--out), background-color 0.18s var(--out), width 0.34s var(--move), border-radius 0.34s var(--move), color 0.18s var(--out); -webkit-tap-highlight-color: transparent; }
+  .sb:active { transform: scale(0.97); }
+  .sb:focus-visible { outline: 2px solid var(--stage); outline-offset: 2px; }
+  @media (hover: hover) and (pointer: fine) { .sb:hover { background: var(--ink2); } .sb[data-state="done"]:hover { background: oklch(0.74 0.19 48); } .sb[data-state="fail"]:hover { background: oklch(0.53 0.2 25); } }
+  .sb[data-state="done"] { background: var(--hot); color: var(--ink); }
+  .sb[data-state="fail"] { background: oklch(0.58 0.2 25); color: #fff; }
+  .l { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; opacity: 0; transition: opacity 0.08s linear, transform 0.3s var(--out); }
+  .sb[data-state="idle"] .l.idle, .sb[data-state="load"] .l.load, .sb[data-state="done"] .l.done, .sb[data-state="fail"] .l.fail { opacity: 1; transform: none; transition: opacity 0.16s var(--out) 0.14s, transform 0.3s var(--out); }
+  .ring { display: block; width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; animation: spin 0.72s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .tick { display: block; width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+  .tick path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .sb[data-state="done"] .tick path { stroke-dashoffset: 0; transition: stroke-dashoffset 0.3s var(--out) 0.08s; }
+  .tap { position: absolute; z-index: 5; top: 29px; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; box-shadow: inset 0 0 0 2px oklch(0.985 0.004 262 / 0.6); pointer-events: none; opacity: 0; }
+
+  /* 1 closes to a circle, spins, ticks */
+  .shrink[data-state="load"], .shrink[data-state="done"] { width: 58px; border-radius: 29px; }
+
+  /* 2 the fill is a second copy of the button, so the label changes colour right at its edge */
+  .over { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--hot); color: var(--ink); clip-path: inset(0 100% 0 0); transition: clip-path 0.26s var(--out); }
+  .under { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .fill[data-state="load"] .over { clip-path: inset(0 0 0 0); transition: clip-path 1s cubic-bezier(0.45, 0.05, 0.3, 1); }
+  .fill[data-state="done"] .over { clip-path: inset(0 0 0 0); }
+
+  /* 3 sinks on press, springs back on release */
+  .press { box-shadow: 0 2px 3px rgb(0 0 0 / 0.28), 0 12px 20px -6px rgb(0 0 0 / 0.42); transition: transform 0.46s var(--spring), box-shadow 0.46s var(--out), background-color 0.18s var(--out), color 0.18s var(--out); }
+  .press:active, .press.down { transform: translateY(7px) scale(0.93); box-shadow: 0 1px 2px rgb(0 0 0 / 0.32); transition: transform 0.1s var(--out), box-shadow 0.1s var(--out); }
+  .press .l.idle { transform: translateY(0); }
+  .press .l.done { transform: translateY(100%); }
+  .press[data-state="done"] .l.idle { transform: translateY(-100%); }
+
+  /* 4 the label moves over to make room */
+  .slide .in { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .slot { position: relative; display: block; width: 0; height: 26px; flex: none; opacity: 0; transition: width 0.32s var(--move), margin 0.32s var(--move), opacity 0.2s var(--out); }
+  .slide[data-state="load"] .slot, .slide[data-state="done"] .slot { width: 26px; margin-right: 9px; opacity: 1; transition: width 0.32s var(--move), margin 0.32s var(--move), opacity 0.14s var(--out) 0.28s; }
+  .slot .ring, .slot .tick { position: absolute; inset: 0; width: 26px; height: 26px; transition: opacity 0.14s var(--out); }
+  .slide[data-state="done"] .slot .ring, .slide:not([data-state="done"]) .slot .tick { opacity: 0; }
+  .words { display: grid; }
+  .words span { grid-area: 1 / 1; text-align: left; white-space: nowrap; opacity: 0; transition: opacity 0.08s linear; }
+  .slide:not([data-state="done"]) .words span:first-child, .slide[data-state="done"] .words span:last-child { opacity: 1; transition: opacity 0.16s var(--out) 0.14s; }
+
+  /* 6 dots fly out past the edge */
+  .burst { position: absolute; left: 50%; top: 29px; z-index: 4; width: 0; height: 0; pointer-events: none; }
+  .burst i { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%; opacity: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sb, .sb *, .press, .press:active { transition-duration: 0.01s !important; transition-delay: 0s !important; }
+    .ring { animation-duration: 1.6s; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Buttons</h1>
+  <p class="ask">Which one would you use?</p>
+  <div class="grid">
+    <article><div class="demo"><button class="sb shrink" data-kind="shrink" data-state="idle"><span class="l idle">Send</span><span class="l load"><svg class="ring" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10" stroke-dasharray="44 20"/></svg></span><span class="l done"><svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="m5 12.5 4.6 4.6L19 7.5"/></svg></span></button></div><h2><b>1</b> Shrink to tick</h2><p>It closes to a circle, spins, then ticks.</p></article>
+    <article><div class="demo"><button class="sb fill" data-kind="fill" data-state="done"><span class="under">Upload</span><span class="over">Uploaded</span></button></div><h2><b>2</b> Progress fill</h2><p>The label changes colour at the edge of the fill.</p></article>
+    <article><div class="demo"><button class="sb press" data-kind="press" data-state="done"><span class="l idle">Save</span><span class="l done">Saved</span></button></div><h2><b>3</b> Press and release</h2><p>It sinks as you press and springs up as you let go.</p></article>
+    <article><div class="demo"><button class="sb slide" data-kind="slide" data-state="idle"><span class="in"><span class="slot"><svg class="ring" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10" stroke-dasharray="44 20"/></svg><svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="m5 12.5 4.6 4.6L19 7.5"/></svg></span><span class="words"><span>Send invite</span><span>Invite sent</span></span></span></button></div><h2><b>4</b> Slide over</h2><p>The label moves aside for a spinner.</p></article>
+    <article><div class="demo"><button class="sb shake" data-kind="shake" data-state="idle"><span class="l idle">Pay $48.00</span><span class="l load"><svg class="ring" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10" stroke-dasharray="44 20"/></svg></span><span class="l fail">Card declined</span></button></div><h2><b>5</b> Shake on fail</h2><p>It nudges side to side and says what went wrong.</p></article>
+    <article><div class="demo"><button class="sb pop" data-kind="pop" data-state="idle"><span class="l idle">Book table</span><span class="l load"><svg class="ring" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10" stroke-dasharray="44 20"/></svg></span><span class="l done">Booked</span></button><i class="burst"></i></div><h2><b>6</b> Burst</h2><p>Dots fly out the moment it succeeds.</p></article>
+  </div>
+</main>
+<script>
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const run = (el, frames, opts) => calm ? null : el.animate(frames, opts);
+
+// how long each one stays busy, and what it ends on
+const WORK = { shrink: [700, 'done'], fill: [1000, 'done'], slide: [820, 'done'], shake: [380, 'fail'], pop: [340, 'done'] };
+const WORDS = {
+  shrink: { idle: 'Send', load: 'Sending', done: 'Sent' }, fill: { idle: 'Upload', load: 'Uploading', done: 'Uploaded' },
+  press: { idle: 'Save', done: 'Saved' }, slide: { idle: 'Send invite', load: 'Sending invite', done: 'Invite sent' },
+  shake: { idle: 'Pay $48.00', load: 'Paying', fail: 'Card declined. Try again' }, pop: { idle: 'Book table', load: 'Booking', done: 'Booked' },
+};
+
+document.querySelectorAll('.sb').forEach((sb, n) => {
+  const kind = sb.dataset.kind;
+  const demoBox = sb.parentElement;
+  const tap = document.createElement('i');
+  tap.className = 'tap';
+  demoBox.append(tap);
+  let token = 0, touched = false, step = 0;
+  const after = (ms, fn) => { const t = token; setTimeout(() => { if (t === token) fn(); }, ms); };
+  const set = s => {
+    sb.dataset.state = s;
+    sb.setAttribute('aria-label', WORDS[kind][s]);
+    // both copies carry the same word while the fill runs, so the letters line up at its edge
+    if (kind === 'fill') sb.querySelector('.over').textContent = s === 'done' ? 'Uploaded' : 'Upload';
+  };
+
+  function burst() {
+    const box = demoBox.querySelector('.burst');
+    box.innerHTML = '<i></i>'.repeat(12);
+    [...box.children].forEach((d, k) => {
+      const a = k / 12 * Math.PI * 2, x = Math.cos(a) * (k % 2 ? 110 : 88), y = Math.sin(a) * (k % 2 ? 46 : 36);
+      d.style.background = k % 3 ? 'var(--hot)' : 'var(--ink)';
+      run(d, [{ opacity: 0, transform: `translate(${x * 0.5}px, ${y * 0.5}px) scale(0.6)` }, { opacity: 1, transform: `translate(${x * 0.6}px, ${y * 0.6}px) scale(1)`, offset: 0.1 }, { opacity: 1, transform: `translate(${x * 0.85}px, ${y * 0.85}px) scale(1)`, offset: 0.55 }, { opacity: 0, transform: `translate(${x}px, ${y}px) scale(0.3)` }], { duration: 760, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+    });
+  }
+  const FINISH = {
+    shake() { run(sb, [0, -15, 14, -11, 8, -4, 0].map(x => ({ transform: `translateX(${x}px)` })), { duration: 500, delay: 180, easing: 'cubic-bezier(0.33, 0.1, 0.6, 1)' }); },
+    pop() { burst(); },
+  };
+
+  function go(pressedByHand) {
+    token++;
+    if (kind === 'press') {
+      if (pressedByHand) { set('done'); return; }
+      sb.classList.add('down');
+      after(220, () => { sb.classList.remove('down'); set('done'); });
+      return;
+    }
+    set('load');
+    const [ms, end] = WORK[kind];
+    after(ms, () => { set(end); FINISH[kind]?.(); });
+  }
+  function back() { token++; sb.classList.remove('down'); set('idle'); }
+
+  // a real <button>, so Space and Enter land here as well
+  sb.addEventListener('click', ev => {
+    if (ev.isTrusted) touched = true;
+    if (sb.dataset.state === 'load') return;
+    sb.dataset.state === 'idle' ? go(true) : back();
+  });
+
+  // 8 taps at 1500 ms is 12 s; the route ends on the state it starts in
+  const start = sb.dataset.state;
+  set(start);
+  const route = start === 'idle' ? [go, back] : [back, go];
+  function demo() {
+    if (touched) return;
+    const act = route[step++ % route.length];
+    tap.style.left = demoBox.offsetWidth / 2 + 66 + 'px';
+    tap.animate([{ opacity: 0, transform: 'scale(0.6)' }, { opacity: 1, transform: 'scale(1)', offset: 0.25 }, { opacity: 0, transform: 'scale(1.25)' }], { duration: 300, easing: 'ease-out' });
+    setTimeout(() => { if (!touched) act(false); }, 60);
+    setTimeout(demo, 1500);
+  }
+  document.fonts.ready.then(() => setTimeout(demo, 60 + n * 240));
+});
+</script>
+</body>
+</html>

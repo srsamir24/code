@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sidebar</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap">
+<style>
+  :root {
+    --stage: oklch(0.47 0.19 262);
+    --card: oklch(0.985 0.004 262);
+    --ink: oklch(0.23 0.04 262);
+    --mute: oklch(0.47 0.03 262);
+    --well: oklch(0.945 0.012 262);
+    --hot: oklch(0.7 0.2 45);
+    --out: cubic-bezier(0.23, 1, 0.32, 1);
+    --move: cubic-bezier(0.77, 0, 0.175, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--stage); color: var(--ink); font-family: "Inter Tight", sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; overflow-x: hidden; }
+  main { width: min(100%, 540px); margin: 0 auto; padding: 52px 14px 150px; }
+  h1 { color: #fff; font-size: 92px; line-height: 0.95; font-weight: 800; letter-spacing: -0.025em; text-align: center; }
+  .ask { color: #fff; font-size: 23px; font-weight: 500; text-align: center; margin: 12px 0 22px; letter-spacing: -0.01em; }
+
+  .app { position: relative; display: flex; height: 600px; border-radius: 24px; background: var(--card); overflow: hidden; }
+  .side { position: relative; flex: none; width: 282px; padding: 14px 12px; display: flex; flex-direction: column; background: var(--well); transition: width 0.42s var(--move); overflow: hidden; }
+  .app.rail .side { width: 74px; }
+
+  .top { display: flex; align-items: center; height: 44px; margin-bottom: 10px; position: relative; }
+  .logo { flex: none; width: 34px; height: 34px; margin-left: 8px; border-radius: 10px; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 19px; }
+  .org { margin-left: 10px; font-size: 19px; font-weight: 700; letter-spacing: -0.015em; white-space: nowrap; transition: opacity 0.18s var(--out); }
+  .fold { position: absolute; right: 7px; top: 470px; width: 36px; height: 36px; border: 0; border-radius: 10px; background: none; color: var(--mute); cursor: pointer; display: grid; place-items: center; transition: transform 0.14s var(--out), background-color 0.15s var(--out); }
+  .fold:hover { background: oklch(0.89 0.018 262); }
+  .fold:active { transform: scale(0.94); }
+  .fold svg { transition: transform 0.42s var(--move); }
+  .toggled .count { animation: showA 0.26s var(--out) 0.28s both; }
+  .toggled.rail .count { animation-name: showB; }
+  @keyframes showA { from { opacity: 0; } }
+  @keyframes showB { from { opacity: 0; } }
+  .app.rail .fold svg { transform: rotate(180deg); }
+
+  nav { position: relative; display: flex; flex-direction: column; gap: 2px; }
+  .mark { position: absolute; left: 0; right: 0; top: 0; height: 44px; border-radius: 12px; background: var(--ink); transition: transform 0.24s var(--out), height 0.24s var(--out), opacity 0.2s var(--out); }
+  /* while rows are moving, the row itself carries the highlight */
+  nav.solo .mark { opacity: 0; transition: none; }
+  nav.solo .item { transition: background-color 0.2s var(--out), color 0.2s var(--out); }
+  nav.solo .item[aria-current="page"], nav.solo .item.held { background: var(--ink); }
+  .item { position: relative; z-index: 1; display: flex; align-items: center; width: 100%; height: 44px; border: 0; border-radius: 12px; padding: 0 13px; background: none; color: var(--ink); font: inherit; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; text-align: left; white-space: nowrap; cursor: pointer; transition: color 0.2s var(--out), transform 0.14s var(--out), background-color 0.15s var(--out); }
+  @media (hover: hover) { .item:not([aria-current]):hover { background: oklch(0.89 0.018 262); } }
+  .item:active { transform: scale(0.98); }
+  .item:focus-visible, .fold:focus-visible { outline: 2px solid var(--stage); outline-offset: 2px; }
+  .item[aria-current="page"], .item.held { color: #fff; }
+  .item.held .chev { color: #fff; }
+  .item svg.ico { flex: none; width: 24px; height: 24px; }
+  svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .name { margin-left: 12px; transition: opacity 0.18s var(--out); }
+  .count { margin-left: auto; min-width: 26px; height: 24px; padding: 0 7px; border-radius: 12px; background: var(--hot); color: var(--ink); font-size: 14px; font-weight: 800; display: grid; place-items: center; font-variant-numeric: tabular-nums; }
+  .chev { margin-left: auto; width: 20px; height: 20px; color: var(--mute); transition: transform 0.3s var(--out), opacity 0.18s var(--out); }
+  .item[aria-expanded="true"] .chev { transform: rotate(90deg); }
+
+  .kids { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.34s var(--out); }
+  .kids.open { grid-template-rows: 1fr; }
+  .kids > div { overflow: hidden; min-height: 0; }
+  .kid { height: 38px; padding-left: 49px; font-size: 16.5px; font-weight: 500; opacity: 0; transform: translateY(-6px); transition: opacity 0.22s var(--out), transform 0.3s var(--out), color 0.2s var(--out); }
+  .kids.open .kid { opacity: 1; transform: none; transition-delay: calc(var(--i) * 45ms); }
+
+  .app.rail .org, .app.rail .name, .app.rail .chev { opacity: 0; }
+  .app.rail .count { position: absolute; left: 31px; top: 3px; min-width: 19px; height: 19px; padding: 0 4px; font-size: 11.5px; margin: 0; }
+  .app.rail .kids { grid-template-rows: 0fr; }
+
+  .who { display: flex; align-items: center; margin-top: auto; height: 48px; padding-left: 5px; white-space: nowrap; }
+  .face { flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--hot); color: var(--ink); display: grid; place-items: center; font-size: 15px; font-weight: 800; }
+  .who b { margin-left: 10px; font-size: 16.5px; font-weight: 600; transition: opacity 0.18s var(--out); }
+  .app.rail .who b { opacity: 0; }
+
+  .tip { position: absolute; left: 76px; top: 0; z-index: 5; height: 28px; padding: 0 12px; border-radius: 10px; background: var(--ink); color: #fff; font-size: 15px; font-weight: 600; display: flex; align-items: center; white-space: nowrap; opacity: 0; transform: translateX(-5px); pointer-events: none; transition: opacity 0.14s var(--out), transform 0.2s var(--out); }
+  .tip.on { opacity: 1; transform: none; }
+
+  .page { position: relative; flex: 1; min-width: 0; padding: 26px 20px; }
+  .page h2 { font-size: 30px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.05; }
+  .page small { display: block; margin-top: 6px; font-size: 15px; font-weight: 500; color: var(--mute); }
+  .page ul { list-style: none; padding: 0; margin-top: 20px; }
+  .page li { padding: 13px 0; border-top: 1px solid oklch(0.91 0.012 262); font-size: 15.5px; font-weight: 600; letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .page li span { display: block; font-size: 13.5px; font-weight: 500; color: var(--mute); margin-top: 2px; }
+  .page .in { animation: in 0.32s var(--out); }
+  @keyframes in { from { opacity: 0; transform: translateY(6px); } }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before { transition-duration: 0.01s !important; animation-duration: 0.01s !important; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sidebar</h1>
+  <p class="ask">Free code, link in bio.</p>
+  <div class="app" id="app">
+    <aside class="side" id="side">
+      <div class="top">
+        <div class="logo" aria-hidden="true">N</div><div class="org">Northline</div>
+        <button class="fold" id="fold" aria-label="Collapse sidebar" aria-expanded="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><path d="M9.5 4.5v15M16 9.5 13.5 12l2.5 2.5"/></svg>
+        </button>
+      </div>
+      <nav id="nav" aria-label="Main">
+        <i class="mark" id="mark"></i>
+        <button class="item" data-page="Today" aria-current="page"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></svg><span class="name">Today</span></button>
+        <button class="item" data-page="Inbox"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 13.5 6 5.5h12l2.5 8v5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="M3.5 13.5H9a3 3 0 0 0 6 0h5.5"/></svg><span class="name">Inbox</span><span class="count">12</span></button>
+        <button class="item" id="projects" aria-expanded="false" aria-controls="kids"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7a1.5 1.5 0 0 1 1.5-1.5h4.5L12 8h7a1.5 1.5 0 0 1 1.5 1.5V18a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 18z"/></svg><span class="name">Projects</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+        <div class="kids" id="kids"><div>
+          <button class="item kid" style="--i:0" data-page="Spring launch" tabindex="-1">Spring launch</button>
+          <button class="item kid" style="--i:1" data-page="Mobile app" tabindex="-1">Mobile app</button>
+          <button class="item kid" style="--i:2" data-page="Brand refresh" tabindex="-1">Brand refresh</button>
+        </div></div>
+        <button class="item" data-page="Calendar"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span class="name">Calendar</span></button>
+        <button class="item" data-page="Invoices"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-3-2-3 2-3-2-3 2z"/><path d="M9.5 8.5h5M9.5 12.5h5"/></svg><span class="name">Invoices</span></button>
+      </nav>
+      <div class="who"><div class="face" aria-hidden="true">ML</div><b>Mara Lindqvist</b></div>
+    </aside>
+    <div class="tip" id="tip" role="status"></div>
+    <section class="page" id="page" aria-live="polite"></section>
+  </div>
+</main>
+<script>
+const PAGES = {
+  'Today': ['3 things due', [['Send the launch brief', 'Due 11:00'], ['Review checkout copy', 'Due 14:30'], ['Approve the new icons', 'Due 17:00'], ['Client call moved', 'Now 13:30'], ['Pay Halden Studio', 'Due Friday']]],
+  'Inbox': ['12 unread', [['Priya Raman', 'The pricing page is ready'], ['Tom Becker', 'Can we move Thursday?'], ['Ana Costa', 'Final logo files'], ['Jonas Weber', 'Contract signed'], ['Lea Hart', 'Two quick questions']]],
+  'Spring launch': ['Ships in 9 days', [['Landing page', 'In review'], ['Launch email', 'In progress'], ['Press kit', 'Not started'], ['Pricing update', 'In review'], ['Demo video', 'In progress']]],
+  'Mobile app': ['Version 2.4', [['Onboarding flow', 'In review'], ['Push settings', 'In progress'], ['Offline mode', 'Blocked'], ['Dark mode', 'Done'], ['App Store text', 'In review']]],
+  'Brand refresh': ['Phase 2 of 3', [['Colour tokens', 'Done'], ['Type scale', 'In review'], ['Icon set', 'In progress'], ['Photo style', 'Not started'], ['Slide template', 'Not started']]],
+  'Calendar': ['Wednesday', [['Design review', '10:00'], ['Client call', '13:00'], ['Team demo', '15:30'], ['Budget check', '16:30'], ['Gym', '18:00']]],
+  'Invoices': ['2 overdue', [['Halden Studio', '4,200 overdue'], ['Oak & Ivy', '1,850 overdue'], ['Lumen Labs', '6,400 paid'], ['North Pier', '2,300 paid'], ['Fern Works', '980 paid']]],
+};
+const $ = s => document.querySelector(s);
+const app = $('#app'), nav = $('#nav'), mark = $('#mark'), page = $('#page'), tip = $('#tip');
+const projects = $('#projects'), kids = $('#kids'), fold = $('#fold');
+const items = [...nav.querySelectorAll('.item[data-page]')];
+let current = items[0];
+
+const isKid = el => el.classList.contains('kid');
+const shown = el => (isKid(el) && (!kids.classList.contains('open') || app.classList.contains('rail'))) ? projects : el;
+
+function placeMark() {
+  const el = shown(current);
+  projects.classList.toggle('held', el === projects);
+  const a = el.getBoundingClientRect(), b = nav.getBoundingClientRect();
+  mark.style.transform = `translateY(${a.top - b.top}px)`;
+  mark.style.height = a.height + 'px';
+}
+function render(name, first) {
+  const [sub, rows] = PAGES[name];
+  page.innerHTML = `<div class="${first ? '' : 'in'}"><h2>${name}</h2><small>${sub}</small><ul>${rows.map(([a, b]) => `<li>${a}<span>${b}</span></li>`).join('')}</ul></div>`;
+}
+function go(el) {
+  current.removeAttribute('aria-current');
+  current = el;
+  el.setAttribute('aria-current', 'page');
+  placeMark();
+  render(el.dataset.page);
+}
+function toggleKids(open) {
+  kids.classList.toggle('open', open);
+  projects.setAttribute('aria-expanded', open);
+  kids.querySelectorAll('.kid').forEach(k => k.tabIndex = open ? 0 : -1);
+  follow(360);
+}
+function follow(ms) {
+  const end = performance.now() + ms;
+  const tick = () => { placeMark(); if (performance.now() < end) requestAnimationFrame(tick); };
+  nav.classList.add('solo');
+  tick();
+  clearTimeout(follow.done);
+  follow.done = setTimeout(() => { nav.classList.remove('solo'); }, ms + 20);
+}
+items.forEach(el => el.addEventListener('click', () => go(el)));
+projects.addEventListener('click', () => {
+  if (app.classList.contains('rail')) setRail(false);
+  toggleKids(!kids.classList.contains('open'));
+});
+function setRail(on) {
+  app.classList.add('toggled');
+  app.classList.toggle('rail', on);
+  fold.setAttribute('aria-label', on ? 'Expand sidebar' : 'Collapse sidebar');
+  fold.setAttribute('aria-expanded', !on);
+  tip.classList.remove('on');
+  follow(460);
+}
+fold.addEventListener('click', () => setRail(!app.classList.contains('rail')));
+
+// names come back as tooltips when the rail is closed
+nav.addEventListener('pointerover', e => {
+  const item = e.target.closest('.item');
+  if (!item || !app.classList.contains('rail')) { tip.classList.remove('on'); return; }
+  const a = item.getBoundingClientRect(), s = app.getBoundingClientRect();
+  tip.textContent = item.querySelector('.name').textContent;
+  tip.style.top = a.top - s.top + 8 + 'px';
+  tip.classList.add('on');
+});
+nav.addEventListener('pointerleave', () => tip.classList.remove('on'));
+
+render('Today', true);
+document.fonts.ready.then(placeMark);
+</script>
+</body>
+</html>

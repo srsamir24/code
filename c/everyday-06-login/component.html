@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Login</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap">
+<style>
+  :root {
+    --stage: oklch(0.47 0.19 262);
+    --card: oklch(0.985 0.004 262);
+    --ink: oklch(0.23 0.04 262);
+    --ink2: oklch(0.31 0.05 262);
+    --mute: oklch(0.47 0.03 262);
+    --well: oklch(0.945 0.012 262);
+    --hover: oklch(0.905 0.018 262);
+    --hot: oklch(0.7 0.2 45);
+    --out: cubic-bezier(0.23, 1, 0.32, 1);
+    --move: cubic-bezier(0.77, 0, 0.175, 1);
+    --spring: linear(0, 0.26 8%, 0.75 19%, 1.05 31%, 1.12 39%, 1.09 49%, 1 63%, 0.985 75%, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  ::selection { background: var(--hot); color: var(--ink); }
+  body { background: var(--stage); color: var(--ink); font-family: "Inter Tight", sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; overflow-x: hidden; }
+  main { width: min(100%, 540px); margin: 0 auto; padding: 52px 14px 150px; }
+  h1 { color: #fff; font-size: 92px; line-height: 0.95; font-weight: 800; letter-spacing: -0.025em; text-align: center; }
+  .ask { color: #fff; font-size: 23px; font-weight: 500; text-align: center; margin: 12px 0 22px; letter-spacing: -0.01em; }
+
+  .app { position: relative; height: 600px; border-radius: 24px; background: var(--card); overflow: hidden; }
+  /* one screen leaves before the other arrives, in both directions */
+  form { position: absolute; inset: 0; padding: 28px 40px; display: flex; flex-direction: column; transition: opacity 0.24s var(--out) 0.16s, transform 0.36s var(--out) 0.16s; }
+  .app.in form { opacity: 0; transform: translateY(-14px); pointer-events: none; transition-delay: 0s; }
+
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 21px; font-weight: 800; letter-spacing: -0.02em; }
+  .logo { width: 36px; height: 36px; border-radius: 11px; background: var(--ink); display: grid; place-items: center; }
+  .logo svg { width: 22px; height: 22px; fill: var(--hot); }
+  h2 { margin-top: 28px; font-size: 38px; line-height: 1.04; font-weight: 800; letter-spacing: -0.025em; }
+  .sub { margin-top: 5px; font-size: 17.5px; font-weight: 500; color: var(--mute); }
+
+  .lab { display: flex; justify-content: space-between; align-items: baseline; margin-top: 24px; font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .lab a { color: var(--stage); font-size: 15.5px; font-weight: 600; text-decoration: none; border-radius: 4px; }
+  @media (hover: hover) and (pointer: fine) { .lab a:hover { text-decoration: underline; text-underline-offset: 3px; } }
+  .lab a:focus-visible { outline: 2px solid var(--stage); outline-offset: 2px; }
+  .field { position: relative; margin-top: 7px; height: 58px; border-radius: 15px; background: var(--well); box-shadow: inset 0 0 0 2px transparent; transition: background-color 0.16s var(--out), box-shadow 0.16s var(--out); }
+  @media (hover: hover) and (pointer: fine) { .field:hover { background: oklch(0.925 0.016 262); } }
+  .field:focus-within { background: var(--card); box-shadow: inset 0 0 0 2.5px var(--stage); }
+  .field.bad, .field.bad:focus-within { background: oklch(0.96 0.03 55); box-shadow: inset 0 0 0 2.5px var(--hot); }
+  input { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0 56px 0 17px; border: 0; background: none; outline: 0; color: var(--ink); caret-color: var(--stage); font: inherit; font-size: 19px; font-weight: 600; letter-spacing: -0.005em; }
+  .ok { position: absolute; right: 16px; top: 16px; width: 26px; height: 26px; fill: none; stroke: var(--stage); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+  .ok path { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 0.14s var(--out); }
+  .field.good .ok path { stroke-dashoffset: 0; transition: stroke-dashoffset 0.3s var(--out); }
+  .eye { position: absolute; right: 7px; top: 7px; width: 44px; height: 44px; border: 0; border-radius: 11px; background: none; color: var(--mute); cursor: pointer; display: grid; place-items: center; transition: background-color 0.15s var(--out), color 0.15s var(--out), transform 0.14s var(--out); }
+  @media (hover: hover) and (pointer: fine) { .eye:hover { background: var(--hover); color: var(--ink); } }
+  .eye:active { transform: scale(0.94); }
+  .eye:focus-visible { outline: 2px solid var(--stage); outline-offset: -2px; }
+  .eye svg { width: 25px; height: 25px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+  .slash { stroke-dasharray: 1; stroke-dashoffset: 0; transition: stroke-dashoffset 0.08s linear; }
+  .eye[aria-pressed="true"] .slash { stroke-dashoffset: 1; }
+
+  .err { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s var(--out); }
+  .err.on { grid-template-rows: 1fr; }
+  .err > div { overflow: hidden; min-height: 0; }
+  .err p { display: flex; align-items: center; gap: 7px; padding-top: 7px; font-size: 15.5px; line-height: 1.2; font-weight: 600; opacity: 0; transition: opacity 0.2s var(--out); }
+  .err.on p { opacity: 1; }
+  .err i { flex: none; width: 19px; height: 19px; border-radius: 50%; background: var(--hot); display: grid; place-items: center; font-style: normal; font-size: 14px; font-weight: 800; }
+
+  .go { position: relative; margin-top: 28px; flex: none; height: 62px; border: 0; border-radius: 16px; background: var(--ink); color: #fff; font: inherit; font-size: 21px; font-weight: 800; letter-spacing: -0.015em; cursor: pointer; overflow: hidden; transition: transform 0.14s var(--out), background-color 0.18s var(--out), color 0.18s var(--out); }
+  @media (hover: hover) and (pointer: fine) { .go:hover { background: var(--ink2); } }
+  .go:active { transform: scale(0.97); }
+  .go:focus-visible { outline: 2px solid var(--stage); outline-offset: 2px; }
+  .go[aria-busy="true"] { cursor: progress; }
+  .go span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 10px; transition: opacity 0.16s var(--out), transform 0.3s var(--out); }
+  .go .wait { opacity: 0; transform: translateY(14px); }
+  .go[aria-busy="true"] .idle { opacity: 0; transform: translateY(-14px); }
+  .go[aria-busy="true"] .wait { opacity: 1; transform: none; }
+  .ring { width: 25px; height: 25px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; animation: spin 0.72s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .foot { margin-top: 16px; text-align: center; font-size: 16px; font-weight: 500; color: var(--mute); }
+  .foot a { color: var(--ink); font-weight: 700; text-decoration: none; border-radius: 4px; }
+  @media (hover: hover) and (pointer: fine) { .foot a:hover { text-decoration: underline; text-underline-offset: 3px; } }
+  .foot a:focus-visible { outline: 2px solid var(--stage); outline-offset: 2px; }
+
+  .done { position: absolute; inset: 0; padding: 28px 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; visibility: hidden; opacity: 0; transform: translateY(16px); transition: opacity 0.14s var(--out), transform 0.14s var(--out), visibility 0s linear 0.14s; }
+  .app.in .done { visibility: visible; opacity: 1; transform: none; transition: opacity 0.26s var(--out) 0.1s, transform 0.42s var(--out) 0.1s, visibility 0s; }
+  .badge { width: 104px; height: 104px; border-radius: 50%; background: var(--hot); display: grid; place-items: center; }
+  .app.in .badge { animation: pop 0.5s var(--spring) 0.1s backwards; }
+  @keyframes pop { from { transform: scale(0.72); } }
+  .badge svg { width: 60px; height: 60px; fill: none; stroke: var(--ink); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+  .badge path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .app.in .badge path { stroke-dashoffset: 0; transition: stroke-dashoffset 0.42s var(--out) 0.24s; }
+  .done h3 { margin-top: 24px; font-size: 42px; line-height: 1.04; font-weight: 800; letter-spacing: -0.025em; }
+  .done p { margin-top: 8px; font-size: 18px; font-weight: 500; color: var(--mute); }
+  .out { margin-top: 24px; height: 50px; padding: 0 22px; border: 0; border-radius: 14px; background: var(--well); color: var(--ink); font: inherit; font-size: 17.5px; font-weight: 700; cursor: pointer; transition: background-color 0.15s var(--out), transform 0.14s var(--out); }
+  @media (hover: hover) and (pointer: fine) { .out:hover { background: var(--hover); } }
+  .out:active { transform: scale(0.97); }
+  .out:focus-visible { outline: 2px solid var(--stage); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before { transition-duration: 0.01s !important; transition-delay: 0s !important; } .badge { animation-duration: 0.01s !important; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Login</h1>
+  <p class="ask">Free code, link in bio.</p>
+  <div class="app" id="app">
+    <form id="form" novalidate>
+      <div class="brand"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2.5c2 3.2 2 5.8 0 8.5-2-2.7-2-5.3 0-8.5zM4 8c3.700.3 6 1.700 7.500 4.600C8.300 13 5.800 11.500 4 8zm16 0c-1.800 3.500-4.300 5-7.500 4.600C14 9.700 16.300 8.300 20 8zM11 14h2v7.500h-2z"/></svg></span>Larkspur</div>
+      <h2>Welcome back</h2>
+      <p class="sub">Sign in to your bookings.</p>
+
+      <label class="lab" for="email">Email</label>
+      <div class="field" id="emailField">
+        <input id="email" type="email" autocomplete="email" spellcheck="false" aria-describedby="emailErrText" placeholder="you@studio.com">
+        <svg class="ok" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="m5 12.5 4.600 4.600L19 7.500"/></svg>
+      </div>
+      <div class="err" id="emailErr"><div><p id="emailErrText" role="alert"><i aria-hidden="true">!</i><span></span></p></div></div>
+
+      <div class="lab"><label for="pass">Password</label><a href="#" id="forgot">Forgot it?</a></div>
+      <div class="field" id="passField">
+        <input id="pass" type="password" autocomplete="current-password" aria-describedby="passErrText" placeholder="At least 8 characters">
+        <button class="eye" id="eye" type="button" aria-label="Show password" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.500 12S6 5.500 12 5.500 21.500 12 21.500 12 18 18.500 12 18.500 2.500 12 2.500 12z"/><circle cx="12" cy="12" r="3"/><path class="slash" pathLength="1" d="m4 4 16 16"/></svg>
+        </button>
+      </div>
+      <div class="err" id="passErr"><div><p id="passErrText" role="alert"><i aria-hidden="true">!</i><span></span></p></div></div>
+
+      <button class="go" id="go" type="submit" aria-busy="false"><span class="idle">Sign in</span><span class="wait"><svg class="ring" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10" stroke-dasharray="44 20"/></svg>Checking</span></button>
+      <p class="foot">New here? <a href="#" id="join">Start a free trial</a></p>
+    </form>
+
+    <div class="done" id="done" aria-live="polite">
+      <div class="badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path pathLength="1" d="m5 12.500 4.600 4.600L19 7.500"/></svg></div>
+      <h3 id="hello"></h3>
+      <p>You have 3 bookings today.</p>
+      <button class="out" id="out" type="button">Sign out</button>
+    </div>
+  </div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const app = $('#app'), form = $('#form'), email = $('#email'), pass = $('#pass'), eye = $('#eye'), go = $('#go');
+const emailField = $('#emailField'), passField = $('#passField');
+const validEmail = v => /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(v.trim());
+
+function setErr(field, box, text) {
+  field.classList.toggle('bad', !!text);
+  box.classList.toggle('on', !!text);
+  if (text) box.querySelector('span').textContent = text;
+  field.querySelector('input').setAttribute('aria-invalid', !!text);
+}
+const nudge = el => { if (!calm) el.animate([0, -8, 7, -5, 3, 0].map(x => ({ transform: `translateX(${x}px)` })), { duration: 340, easing: 'cubic-bezier(0.33, 0.1, 0.6, 1)' }); };
+
+const emailProblem = () => validEmail(email.value) ? '' : email.value.includes('@') ? 'That address needs an ending, like .com' : 'Enter your email address';
+const passProblem = () => pass.value.length >= 8 ? '' : 'Use at least 8 characters';
+
+// an error clears as soon as the text is right, not on the next submit
+email.addEventListener('input', () => {
+  emailField.classList.toggle('good', validEmail(email.value));
+  if (emailField.classList.contains('bad') && !emailProblem()) setErr(emailField, $('#emailErr'), '');
+});
+pass.addEventListener('input', () => { if (passField.classList.contains('bad') && !passProblem()) setErr(passField, $('#passErr'), ''); });
+// tell people about a bad address when they leave the field. Not on the way to Sign in:
+// the error would push that button down in the middle of the click, and submit checks it anyway
+email.addEventListener('blur', e => {
+  if (email.value && e.relatedTarget !== go) setErr(emailField, $('#emailErr'), emailProblem());
+});
+
+eye.addEventListener('click', () => {
+  const show = pass.type === 'password';
+  pass.type = show ? 'text' : 'password';
+  eye.setAttribute('aria-pressed', show);
+  eye.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+});
+['#forgot', '#join'].forEach(s => $(s).addEventListener('click', e => e.preventDefault()));
+
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  if (go.getAttribute('aria-busy') === 'true') return;
+  const a = emailProblem(), b = passProblem();
+  // on the way to the first submit an empty password is not worth a second error yet
+  setErr(emailField, $('#emailErr'), a);
+  setErr(passField, $('#passErr'), a && !pass.value ? '' : b);
+  if (a) { nudge(emailField); email.focus(); return; }
+  if (b) { nudge(passField); pass.focus(); return; }
+  go.setAttribute('aria-busy', 'true');
+  setTimeout(() => {
+    const name = email.value.trim().split('@')[0].split(/[._-]/)[0];
+    $('#hello').textContent = `You're in, ${name[0].toUpperCase()}${name.slice(1)}`;
+    app.classList.add('in');
+    go.setAttribute('aria-busy', 'false');
+    $('#out').focus({ preventScroll: true });
+  }, 600);
+});
+$('#out').addEventListener('click', () => {
+  app.classList.remove('in');
+  form.reset();
+  emailField.classList.remove('good');
+  pass.type = 'password';
+  eye.setAttribute('aria-pressed', 'false');
+  eye.setAttribute('aria-label', 'Show password');
+});
+</script>
+</body>
+</html>

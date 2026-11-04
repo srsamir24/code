@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loading, 6 ways</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap">
+<style>
+  :root {
+    --stage: oklch(0.47 0.19 262);
+    --card: oklch(0.985 0.004 262);
+    --ink: oklch(0.23 0.04 262);
+    --mute: oklch(0.47 0.03 262);
+    --well: oklch(0.945 0.012 262);
+    --bone: oklch(0.86 0.02 262);
+    --hot: oklch(0.7 0.2 45);
+    --out: cubic-bezier(0.23, 1, 0.32, 1);
+    --spring: linear(0, 0.26 8%, 0.75 19%, 1.05 31%, 1.12 39%, 1.09 49%, 1 63%, 0.985 75%, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body { background: var(--stage); color: var(--ink); font-family: "Inter Tight", sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  main { width: min(100%, 540px); margin: 0 auto; padding: 52px 14px 150px; }
+  h1 { color: #fff; font-size: 92px; line-height: 0.95; font-weight: 800; letter-spacing: -0.025em; text-align: center; }
+  .ask { color: #fff; font-size: 23px; font-weight: 500; text-align: center; margin: 12px 0 22px; letter-spacing: -0.01em; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  article { background: var(--card); border-radius: 20px; padding: 24px 12px 12px; min-height: 186px; display: flex; flex-direction: column; }
+  article h2 { display: flex; align-items: baseline; gap: 7px; font-size: 20px; line-height: 1; font-weight: 700; letter-spacing: -0.015em; margin-top: auto; padding: 0 4px; }
+  article h2 b { font-size: 32px; font-weight: 800; color: var(--hot); }
+  article p { font-size: 15.5px; line-height: 1.2; font-weight: 500; color: var(--mute); padding: 4px 4px 0; text-wrap: pretty; }
+  article:nth-child(even) p { padding-right: 34px; }
+
+  .demo { position: relative; display: block; width: 100%; height: 66px; flex: none; border: 0; padding: 0; border-radius: 18px; background: var(--well); color: var(--ink); font: inherit; text-align: left; overflow: hidden; cursor: pointer; transition: transform 0.14s var(--out), background-color 0.15s var(--out); -webkit-tap-highlight-color: transparent; }
+  .demo:active { transform: scale(0.97); }
+  .demo:focus-visible { outline: 2px solid var(--stage); outline-offset: 2px; }
+  @media (hover: hover) and (pointer: fine) { .demo:hover { background: oklch(0.915 0.016 262); } }
+  .demo span { display: block; }
+
+  /* 1 skeleton: the outline of the row, with a band passing over it */
+  .row, .ghost { position: absolute; inset: 0; display: flex !important; align-items: center; gap: 10px; padding: 0 12px; transition: opacity 0.12s linear; }
+  .face { flex: none; width: 42px; height: 42px; border-radius: 50%; background: var(--hot); display: grid !important; place-items: center; font-size: 15px; font-weight: 800; }
+  .row b { display: block; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; }
+  .row small { display: block; margin-top: 2px; font-size: 15.5px; font-weight: 500; color: var(--mute); white-space: nowrap; }
+  .ghost { opacity: 0; }
+  .ghost i { display: block; background: var(--bone); }
+  .ghost .c { flex: none; width: 42px; height: 42px; border-radius: 50%; }
+  .ghost .gl i { width: 112px; height: 13px; border-radius: 6px; }
+  .ghost .gl i + i { width: 84px; margin-top: 8px; }
+  .band { position: absolute; top: -10px; bottom: -10px; left: 0; width: 52px; background: oklch(0.985 0.004 262 / 0.82); transform: translateX(-90px) skewX(-16deg); pointer-events: none; }
+
+  /* 2 eased bar along the top edge, the page dims under it */
+  .edge { position: absolute; left: 0; right: 0; top: 0; height: 16px; background: var(--hot); transform-origin: 0 50%; opacity: 0; transition: opacity 0.16s var(--out); }
+  .pg { position: absolute; left: 14px; right: 10px; top: 22px; transition: opacity 0.18s var(--out); }
+  .pg b { display: block; font-size: 19px; line-height: 1.1; font-weight: 700; letter-spacing: -0.015em; white-space: nowrap; }
+  .pg small { display: block; margin-top: 2px; font-size: 15.5px; font-weight: 500; color: var(--mute); white-space: nowrap; }
+
+  /* 3 typing dots inside a bubble that grows to fit the reply */
+  .bub { position: absolute; left: 10px; top: 12px; height: 42px; width: 66px; border-radius: 21px 21px 21px 6px; background: var(--ink); color: #fff; overflow: hidden; transition: width 0.3s var(--spring); }
+  .dots { position: absolute; left: 15px; top: 17px; display: flex !important; gap: 5px; opacity: 0; transition: opacity 0.1s linear; }
+  .dots i { display: block; width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+  .said { position: absolute; left: 16px; top: 10px; font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; transition: opacity 0.1s linear; }
+
+  /* 4 percent read from the bar */
+  .pct { position: absolute; left: 12px; top: 8px; width: calc(100% - 24px); }
+  .pct .top { display: flex !important; align-items: baseline; gap: 7px; }
+  .pct b { font-size: 30px; line-height: 1; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; min-width: 66px; }
+  .pct small { font-size: 14.5px; font-weight: 600; color: var(--mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .track { height: 11px; margin-top: 6px; border-radius: 6px; background: var(--bone); overflow: hidden; }
+  .bar { display: block; height: 100%; width: 100%; border-radius: 6px; background: var(--hot); }
+
+  /* 5 tiles rise in one after another */
+  .tiles { position: absolute; inset: 6px; display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .tile { background: var(--card); border-radius: 12px; padding: 7px 8px; min-width: 0; }
+  .tile small { display: block; font-size: 14px; line-height: 1.1; font-weight: 600; color: var(--mute); white-space: nowrap; }
+  .tile b { display: block; margin-top: 2px; font-size: 22px; line-height: 1.05; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+  /* 6 the picture arrives blurred and sharpens */
+  .pic { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; overflow: hidden; border-radius: 18px; }
+  .pic svg { display: block; width: 100%; height: 100%; }
+  .pic em { position: absolute; left: 10px; bottom: 7px; font-style: normal; font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; transition: opacity 0.2s var(--out); }
+
+  @media (prefers-reduced-motion: reduce) { .demo, .demo * { transition-duration: 0.01s !important; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Loading</h1>
+  <p class="ask">Which one would you use?</p>
+  <div class="grid">
+    <article><button class="demo" data-kind="skeleton" aria-label="Reload, skeleton sweep"></button><h2><b>1</b> Skeleton sweep</h2><p>A band sweeps the outline, then the real row fades in.</p></article>
+    <article><button class="demo" data-kind="eased" aria-label="Reload, eased bar"></button><h2><b>2</b> Eased bar</h2><p>It rushes, crawls, then snaps full at the end.</p></article>
+    <article><button class="demo" data-kind="dots" aria-label="Reload, typing dots"></button><h2><b>3</b> Typing dots</h2><p>Three dots wave, then the bubble grows to fit the reply.</p></article>
+    <article><button class="demo" data-kind="percent" aria-label="Reload, real percent"></button><h2><b>4</b> Real percent</h2><p>The number is read off the width of the bar.</p></article>
+    <article><button class="demo" data-kind="tiles" aria-label="Reload, stagger in"></button><h2><b>5</b> Stagger in</h2><p>Each tile rises in, 140 ms after the one before.</p></article>
+    <article><button class="demo" data-kind="blur" aria-label="Reload, blur up"></button><h2><b>6</b> Blur up</h2><p>The picture lands blurred, then sharpens.</p></article>
+  </div>
+</main>
+<script>
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const run = (el, frames, opts) => el.animate(frames, calm ? { ...opts, duration: 1, delay: 0, iterations: 1 } : opts);
+
+const VARIANTS = {
+  skeleton(el, after) {
+    const P = [['NH', 'Noor Haddad', 'Product designer'], ['EB', 'Elias Berg', 'Founder, Kiln'], ['SO', 'Sana Okafor', 'Head of support'], ['TM', 'Theo Marsh', 'iOS engineer']];
+    el.innerHTML = '<span class="row"><span class="face"></span><span><b></b><small></small></span></span><span class="ghost"><i class="c"></i><span class="gl"><i></i><i></i></span></span><i class="band"></i>';
+    const [row, ghost, band] = [el.querySelector('.row'), el.querySelector('.ghost'), el.querySelector('.band')];
+    const fill = i => {
+      el.querySelector('.face').textContent = P[i][0];
+      el.querySelector('.row b').textContent = P[i][1];
+      el.querySelector('.row small').textContent = P[i][2];
+    };
+    return { show(i) { fill(i); row.style.opacity = 1; ghost.style.opacity = 0; }, load(i) {
+      row.style.opacity = 0;
+      after(120, () => {
+        ghost.style.opacity = 1;
+        run(band, [{ transform: 'translateX(-90px) skewX(-16deg)' }, { transform: 'translateX(260px) skewX(-16deg)' }], { duration: 540, easing: 'linear' });
+      });
+      after(660, () => { fill(i); ghost.style.opacity = 0; });
+      after(760, () => { row.style.opacity = 1; });
+    } };
+  },
+
+  eased(el, after) {
+    const P = [['Reports', '14 files, updated today'], ['Invoices', '6 waiting on approval'], ['Customers', '1,204 active this month'], ['Payouts', 'Next one on Friday']];
+    el.innerHTML = '<i class="edge"></i><span class="pg"><b></b><small></small></span>';
+    const edge = el.querySelector('.edge'), pg = el.querySelector('.pg');
+    const show = i => {
+      pg.querySelector('b').textContent = P[i][0];
+      pg.querySelector('small').textContent = P[i][1];
+      pg.style.opacity = 1; edge.style.opacity = 0;
+    };
+    return { show, load(i) {
+      pg.style.opacity = 0.35; edge.style.opacity = 1;
+      run(edge, [
+        { transform: 'scaleX(0)', easing: 'cubic-bezier(0.2, 0.7, 0.3, 1)' },
+        { transform: 'scaleX(0.62)', offset: 0.28, easing: 'linear' },
+        { transform: 'scaleX(0.84)', offset: 0.84, easing: 'cubic-bezier(0.5, 0, 0.2, 1)' },
+        { transform: 'scaleX(1)' },
+      ], { duration: 1040 });
+      after(1040, () => show(i));
+    } };
+  },
+
+  dots(el, after) {
+    const P = ['Running ten late', 'Table for four?', 'Sent you the deck', 'On my way up'];
+    el.innerHTML = '<span class="bub"><span class="dots"><i></i><i></i><i></i></span><span class="said"></span></span>';
+    const bub = el.querySelector('.bub'), said = el.querySelector('.said'), dots = el.querySelector('.dots');
+    const size = i => { said.textContent = P[i]; bub.style.width = said.offsetWidth + 32 + 'px'; };
+    return { show(i) { size(i); said.style.opacity = 1; dots.style.opacity = 0; }, load(i) {
+      said.style.opacity = 0;
+      after(110, () => {
+        dots.style.opacity = 1;
+        bub.style.width = '66px';
+        [...dots.children].forEach((d, k) => run(d, [{ transform: 'translateY(0)' }, { transform: 'translateY(-13px)', offset: 0.4 }, { transform: 'translateY(0)' }], { duration: 270, delay: k * 60, iterations: 2, easing: 'cubic-bezier(0.37, 0, 0.63, 1)' }));
+      });
+      after(780, () => { dots.style.opacity = 0; size(i); });
+      after(1040, () => { said.style.opacity = 1; });
+    } };
+  },
+
+  percent(el, after) {
+    const SIZE = [4.2, 1.8, 6.4, 2.6];
+    el.innerHTML = '<span class="pct"><span class="top"><b></b><small></small></span><span class="track"><i class="bar"></i></span></span>';
+    const num = el.querySelector('b'), mb = el.querySelector('small'), bar = el.querySelector('.bar'), track = el.querySelector('.track');
+    let size = SIZE[0], busy = false;
+    const read = () => {
+      const p = bar.offsetWidth / track.clientWidth;
+      num.textContent = Math.round(p * 100) + '%';
+      mb.textContent = `${(p * size).toFixed(1)} of ${size} MB`;
+      if (busy) requestAnimationFrame(read);
+    };
+    return { show(i) { size = SIZE[i]; busy = false; read(); }, load(i) {
+      size = SIZE[i]; busy = true;
+      run(bar, [{ width: '0%' }, { width: '24%', offset: 0.25 }, { width: '31%', offset: 0.42 }, { width: '76%', offset: 0.7 }, { width: '84%', offset: 0.84 }, { width: '100%' }], { duration: 880, easing: 'linear' });
+      read();
+      after(880, () => { bar.getAnimations().forEach(a => a.finish()); busy = false; read(); });
+    } };
+  },
+
+  tiles(el, after) {
+    const P = [[['Oslo', '14°'], ['Bergen', '11°'], ['Tromsø', '4°']], [['Lisbon', '23°'], ['Porto', '19°'], ['Faro', '26°']], [['Kyoto', '18°'], ['Osaka', '20°'], ['Nara', '17°']], [['Quito', '16°'], ['Lima', '21°'], ['Cusco', '12°']]];
+    el.innerHTML = '<span class="tiles">' + '<span class="tile"><small></small><b></b></span>'.repeat(3) + '</span>';
+    const tiles = [...el.querySelectorAll('.tile')];
+    const fill = i => tiles.forEach((t, k) => { t.querySelector('small').textContent = P[i][k][0]; t.querySelector('b').textContent = P[i][k][1]; });
+    return { show: fill, load(i) {
+      const outs = tiles.map(t => run(t, [{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: 'forwards' }));
+      after(170, () => {
+        outs.forEach(a => a.cancel());
+        fill(i);
+        tiles.forEach((t, k) => run(t, [{ opacity: 0, transform: 'translateY(30px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 440, delay: k * 140, fill: 'backwards', easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }));
+      });
+    } };
+  },
+
+  blur(el, after) {
+    const scene = (sky, sun, x, y, far, near) => `<svg viewBox="0 0 184 66" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="184" height="66" fill="${sky}"/><circle cx="${x}" cy="${y}" r="13" fill="${sun}"/><path d="M0 46 34 22l26 20 30-28 40 34 24-14 30 18v14H0z" fill="${far}"/><path d="M0 56c30-12 52-10 84-2s66 6 100-6v18H0z" fill="${near}"/></svg>`;
+    const P = [
+      [scene('oklch(0.7 0.2 45)', '#fff', 128, 20, 'oklch(0.47 0.19 262)', 'oklch(0.23 0.04 262)'), 'Lofoten, 06:12'],
+      [scene('oklch(0.47 0.19 262)', 'oklch(0.7 0.2 45)', 46, 18, 'oklch(0.35 0.14 262)', 'oklch(0.23 0.04 262)'), 'Atlas, 19:40'],
+      [scene('oklch(0.8 0.08 262)', '#fff', 92, 16, 'oklch(0.47 0.19 262)', 'oklch(0.7 0.2 45)'), 'Dolomites, 08:05'],
+      [scene('oklch(0.23 0.04 262)', 'oklch(0.7 0.2 45)', 150, 24, 'oklch(0.47 0.19 262)', 'oklch(0.35 0.14 262)'), 'Patagonia, 21:18'],
+    ];
+    el.innerHTML = '<span class="pic"><span class="art"></span><em></em></span>';
+    const art = el.querySelector('.art'), cap = el.querySelector('em');
+    art.style.height = '100%';
+    const paint = i => { art.innerHTML = P[i][0]; cap.textContent = P[i][1]; };
+    return { show(i) { paint(i); cap.style.opacity = 1; }, load(i) {
+      paint(i); cap.style.opacity = 0;
+      run(art, [{ filter: 'blur(14px)', transform: 'scale(1.16)' }, { filter: 'blur(0px)', transform: 'scale(1)' }], { duration: 800, easing: 'ease-in-out' });
+      after(600, () => { cap.style.opacity = 1; });
+    } };
+  },
+};
+
+document.querySelectorAll('.demo').forEach((demo, n) => {
+  let token = 0, touched = false, shown = 0, step = 0;
+  const after = (ms, fn) => { const t = token; setTimeout(() => { if (t === token) fn(); }, ms); };
+  const v = VARIANTS[demo.dataset.kind](demo, after);
+
+  function go(i) {
+    token++;
+    shown = i;
+    demo.getAnimations({ subtree: true }).forEach(a => { if (a instanceof CSSTransition === false) a.cancel(); });
+    v.load(i);
+  }
+  demo.addEventListener('click', ev => {
+    if (ev.isTrusted) touched = true;
+    go((shown + 1) % 4);
+  });
+
+  // shows itself until someone uses it: 8 runs at 1500 ms is 12 s, and the route ends where it started
+  const route = [1, 2, 3, 0];
+  function demoTap() {
+    if (touched) return;
+    const i = route[step++ % route.length];
+    setTimeout(() => { if (!touched) go(i); }, 60);
+    setTimeout(demoTap, 1500);
+  }
+  document.fonts.ready.then(() => {
+    v.show(route[route.length - 1]);
+    setTimeout(demoTap, 60 + n * 140);
+  });
+});
+</script>
+</body>
+</html>

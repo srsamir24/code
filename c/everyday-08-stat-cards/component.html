@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap">
+<style>
+  :root {
+    --stage: oklch(0.47 0.19 262);
+    --card: oklch(0.985 0.004 262);
+    --ink: oklch(0.23 0.04 262);
+    --mute: oklch(0.47 0.03 262);
+    --well: oklch(0.945 0.012 262);
+    --hover: oklch(0.905 0.018 262);
+    --line: oklch(0.91 0.012 262);
+    --hot: oklch(0.7 0.2 45);
+    --out: cubic-bezier(0.23, 1, 0.32, 1);
+    --settle: linear(0, 0.3 8%, 0.8 22%, 1.02 38%, 1.015 52%, 1 70%, 1);
+    --spring: linear(0, 0.26 8%, 0.75 19%, 1.05 31%, 1.12 39%, 1.09 49%, 1 63%, 0.985 75%, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--stage); color: var(--ink); font-family: "Inter Tight", sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; overflow-x: hidden; }
+  main { width: min(100%, 540px); margin: 0 auto; padding: 52px 14px 150px; }
+  h1 { color: #fff; font-size: 92px; line-height: 0.95; font-weight: 800; letter-spacing: -0.025em; text-align: center; }
+  .ask { color: #fff; font-size: 23px; font-weight: 500; text-align: center; margin: 12px 0 22px; letter-spacing: -0.01em; }
+
+  .app { display: flex; flex-direction: column; height: 600px; padding: 20px 20px 18px; border-radius: 24px; background: var(--card); }
+  .head { display: flex; align-items: center; justify-content: space-between; flex: none; }
+  .who b { display: block; font-size: 22px; line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
+  .who span { display: block; margin-top: 1px; font-size: 15px; font-weight: 500; color: var(--mute); }
+  .periods { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); width: 186px; height: 46px; padding: 4px; border-radius: 14px; background: var(--well); }
+  .pick { position: absolute; left: 4px; top: 4px; bottom: 4px; width: 59.33px; border-radius: 10px; background: var(--ink); transition: transform 0.42s var(--settle); }
+  .periods button { position: relative; z-index: 1; border: 0; border-radius: 10px; background: none; color: var(--ink); font: inherit; font-size: 16.5px; font-weight: 700; cursor: pointer; transition: color 0.2s var(--out), transform 0.14s var(--out), background-color 0.15s var(--out); -webkit-tap-highlight-color: transparent; }
+  .periods button:active { transform: scale(0.95); }
+  .periods button[aria-pressed="true"] { color: #fff; }
+  .periods button:focus-visible { outline: 2px solid var(--stage); outline-offset: 1px; }
+  @media (hover: hover) and (pointer: fine) { .periods button:not([aria-pressed="true"]):hover { background: var(--hover); } }
+
+  .big { display: flex; align-items: flex-start; margin-top: 16px; font-size: 76px; line-height: 1; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; flex: none; }
+  .big .pre { font-size: 44px; line-height: 1.22; margin-right: 2px; }
+
+  /* rolling digits: every position is a column of 0-9, unused ones collapse */
+  .roll { display: inline-flex; }
+  .sl { display: block; flex: none; height: 1em; overflow: hidden; width: var(--w); transition: width 0.38s var(--out), opacity 0.2s var(--out); text-align: center; }
+  .sl.off { width: 0; opacity: 0; }
+  .st { display: block; transition: transform 0.7s var(--out); transition-delay: var(--d, 0ms); }
+  .st i { display: block; height: 1em; font-style: normal; }
+
+  .delta { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 16px; font-weight: 500; color: var(--mute); flex: none; }
+  .pill { display: flex; align-items: center; gap: 3px; height: 28px; padding: 0 10px 0 7px; border-radius: 9px; background: var(--hot); color: var(--ink); font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; transition: background-color 0.24s var(--out), color 0.24s var(--out); }
+  .pill.down { background: var(--ink); color: #fff; }
+  .pill svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.36s var(--spring); }
+  .pill.down svg { transform: rotate(180deg); }
+
+  .chartbox { position: relative; flex: 1; min-height: 0; margin: 12px 26px 0 0; }
+  #chart { position: absolute; inset: 0 0 22px 0; border-radius: 8px; cursor: crosshair; }
+  #chart:focus-visible { outline: 2px solid var(--stage); outline-offset: 2px; }
+  #chart svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .grid-l { stroke: var(--line); stroke-width: 1; }
+  .area { fill: oklch(0.47 0.19 262 / 0.1); stroke: none; }
+  .ln { fill: none; stroke: var(--stage); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+  .now { fill: var(--stage); stroke: var(--card); stroke-width: 3; }
+  .hair { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 3 4; opacity: 0; transition: opacity 0.14s var(--out); }
+  .spot { fill: var(--hot); stroke: var(--ink); stroke-width: 3; opacity: 0; transition: opacity 0.14s var(--out); }
+  .on .hair, .on .spot { opacity: 1; }
+  .xlabs { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; font-size: 14px; line-height: 18px; font-weight: 600; color: var(--mute); }
+  .tip { position: absolute; left: 0; top: 0; z-index: 3; padding: 7px 11px 8px; border-radius: 11px; background: var(--ink); color: #fff; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.14s var(--out), transform 0.16s var(--out); }
+  .tip.on { opacity: 1; }
+  .tip small { display: block; font-size: 13.5px; font-weight: 500; color: oklch(0.84 0.02 262); }
+  .tip b { display: block; margin-top: 1px; font-size: 21px; line-height: 1.05; font-weight: 800; letter-spacing: -0.015em; font-variant-numeric: tabular-nums; }
+
+  .minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; flex: none; }
+  .mini { padding: 10px 12px 11px; border-radius: 14px; background: var(--well); }
+  .mini span.k { display: block; font-size: 14.5px; font-weight: 600; color: var(--mute); }
+  .mini .v { display: flex; margin-top: 3px; font-size: 26px; line-height: 1; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before { transition-duration: 0.01s !important; transition-delay: 0s !important; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Dashboard</h1>
+  <p class="ask">Free code, link in bio.</p>
+  <div class="app">
+    <div class="head">
+      <div class="who"><b>Revenue</b><span>Ostra Coffee Roasters</span></div>
+      <div class="periods" id="periods" role="group" aria-label="Period">
+        <i class="pick" id="pick" style="transform: translateX(59.33px)"></i>
+        <button id="p7" data-p="7" aria-pressed="false">7d</button>
+        <button id="p30" data-p="30" aria-pressed="true">30d</button>
+        <button id="p12" data-p="12" aria-pressed="false">12m</button>
+      </div>
+    </div>
+    <div class="big" aria-live="polite"><span class="pre">$</span><span class="roll" id="total"></span></div>
+    <div class="delta"><span class="pill" id="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg><span id="pct"></span></span><span id="vs"></span></div>
+    <div class="chartbox" id="box">
+      <div id="chart" tabindex="0" role="img" aria-label="Revenue chart. Use the left and right arrow keys to read each point.">
+        <svg id="svg" aria-hidden="true">
+          <line class="grid-l" id="g1"/><line class="grid-l" id="g2"/><line class="grid-l" id="g3"/>
+          <path class="area" id="area"/><path class="ln" id="ln"/>
+          <line class="hair" id="hair"/><circle class="now" id="now" r="6"/><circle class="spot" id="spot" r="7"/>
+        </svg>
+      </div>
+      <div class="xlabs" id="xlabs"><span></span><span></span><span></span></div>
+      <div class="tip" id="tip" role="status"><small></small><b></b></div>
+    </div>
+    <div class="minis">
+      <div class="mini"><span class="k">Orders</span><span class="v roll" id="orders"></span></div>
+      <div class="mini"><span class="k">Avg. order</span><span class="v"><span>$</span><span class="roll" id="avg"></span></span></div>
+      <div class="mini"><span class="k">Returning</span><span class="v"><span class="roll" id="ret"></span><span>%</span></span></div>
+    </div>
+  </div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const day = (d, opts) => new Date(Date.UTC(2026, 9, d)).toLocaleDateString('en-GB', { timeZone: 'UTC', ...opts });
+
+// the big number and Orders are worked out from these points, so the chart and the total always agree
+const DATA = {
+  7: { v: [1520, 1560, 1690, 1980, 1910, 1430, 1480], label: i => day(28 + i, { weekday: 'short', day: 'numeric', month: 'short' }), short: i => day(28 + i, { weekday: 'short' }), pct: 3.1, down: true, vs: 'vs the 7 days before', avg: 38.44, ret: 44 },
+  30: { v: [1300, 1330, 1400, 1450, 1620, 1840, 1760, 1340, 1370, 1420, 1480, 1650, 1880, 1800, 1390, 1430, 1580, 1610, 1760, 2040, 1960, 1480, 1510, 1520, 1560, 1690, 1980, 1910, 1430, 1480], label: i => day(5 + i, { weekday: 'short', day: 'numeric', month: 'short' }), short: i => day(5 + i, { day: 'numeric', month: 'short' }), pct: 12.4, down: false, vs: 'vs the 30 days before', avg: 37.56, ret: 41 },
+  12: { v: [30000, 32100, 34900, 30900, 36700, 41000, 43100, 45900, 42300, 38800, 45000, 48300], label: i => new Date(Date.UTC(2025, 10 + i, 1)).toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'long', year: 'numeric' }), short: i => new Date(Date.UTC(2025, 10 + i, 1)).toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'short' }), pct: 31.7, down: false, vs: 'vs the year before', avg: 36.9, ret: 38 },
+};
+const sum = a => a.reduce((x, y) => x + y, 0);
+const money = n => n.toLocaleString('en-US');
+const DIGITS = Array.from({ length: 10 }, (_, d) => `<i>${d}</i>`).join('');
+
+/* A roller right-aligns the value onto a template, so the comma keeps its column. */
+function roller(el, template) {
+  const cells = [...template].map(ch => {
+    const sl = document.createElement('span');
+    sl.className = 'sl';
+    if (ch === '#') { sl.innerHTML = `<span class="st">${DIGITS}</span>`; sl.dataset.d = 1; }
+    else { sl.textContent = ch; }
+    el.append(sl);
+    return sl;
+  });
+  return {
+    cells,
+    set(text) {
+      const pad = template.length - text.length;
+      cells.forEach((sl, k) => {
+        const ch = text[k - pad];
+        const off = ch === undefined;
+        const appearing = sl.classList.contains('off') && !off;
+        sl.classList.toggle('off', off);
+        if (sl.dataset.d && !off) {
+          const st = sl.firstChild;
+          // a column that opens up starts on its digit, so it never rolls through a leading zero
+          if (appearing) { st.style.transition = 'none'; st.style.transform = `translateY(${-Number(ch) * 10}%)`; st.offsetWidth; st.style.transition = ''; }
+          st.style.setProperty('--d', (cells.length - k) * 28 + 'ms');
+          st.style.transform = `translateY(${-Number(ch) * 10}%)`;
+        }
+      });
+    },
+  };
+}
+const rollers = { total: roller($('#total'), '###,###'), orders: roller($('#orders'), '##,###'), avg: roller($('#avg'), '##.##'), ret: roller($('#ret'), '##') };
+
+/* Column widths depend on the font, so they are measured once it has loaded. */
+function measureColumns() {
+  Object.values(rollers).forEach(r => r.cells.forEach(sl => {
+    const probe = document.createElement('span');
+    probe.style.cssText = 'position:absolute;visibility:hidden;white-space:pre';
+    probe.textContent = sl.dataset.d ? '0' : sl.textContent;
+    sl.parentElement.append(probe);
+    sl.style.setProperty('--w', probe.getBoundingClientRect().width + 'px');
+    probe.remove();
+  }));
+}
+
+/* chart */
+const chart = $('#chart'), tip = $('#tip'), box = $('#box');
+let period = 30, W = 0, H = 0, xs = [], ys = [], targetY = [], fromY = [], t0 = 0, raf = 0, hoverI = -1;
+const TOP = 50, BOTTOM = 10, SIDE = 8;
+
+const xAt = (i, n) => SIDE + (W - SIDE * 2) * i / (n - 1);
+function yFor(values) {
+  const hi = Math.max(...values), lo = Math.min(...values) * 0.72;
+  return values.map(v => TOP + (H - TOP - BOTTOM) * (1 - (v - lo) / (hi - lo)));
+}
+// a smooth line that never overshoots its points
+function linePath(px, py) {
+  const n = px.length, m = [];
+  for (let i = 0; i < n; i++) {
+    const a = i ? (py[i] - py[i - 1]) / (px[i] - px[i - 1]) : 0;
+    const b = i < n - 1 ? (py[i + 1] - py[i]) / (px[i + 1] - px[i]) : 0;
+    m[i] = !i ? b : i === n - 1 ? a : a * b <= 0 ? 0 : 2 * a * b / (a + b);
+  }
+  let d = `M${px[0]} ${py[0]}`;
+  for (let i = 1; i < n; i++) {
+    const h = (px[i] - px[i - 1]) / 3;
+    d += `C${px[i - 1] + h} ${py[i - 1] + m[i - 1] * h} ${px[i] - h} ${py[i] - m[i] * h} ${px[i]} ${py[i]}`;
+  }
+  return d;
+}
+function paint() {
+  const d = linePath(xs, ys);
+  $('#ln').setAttribute('d', d);
+  $('#area').setAttribute('d', `${d}L${xs[xs.length - 1]} ${H - BOTTOM}L${xs[0]} ${H - BOTTOM}Z`);
+  const last = xs.length - 1;
+  $('#now').setAttribute('cx', xs[last]);
+  $('#now').setAttribute('cy', ys[last]);
+}
+const sampleY = (oldX, oldY, x) => {
+  if (x <= oldX[0]) return oldY[0];
+  for (let i = 1; i < oldX.length; i++) if (x <= oldX[i]) {
+    const u = (x - oldX[i - 1]) / (oldX[i] - oldX[i - 1]);
+    return oldY[i - 1] + (oldY[i] - oldY[i - 1]) * u;
+  }
+  return oldY[oldY.length - 1];
+};
+const easeOut = u => 1 - Math.pow(1 - u, 3);
+// the old line is resampled onto the new points, then each point travels, left to right
+function redraw(values) {
+  const n = values.length, oldX = xs, oldY = ys;
+  xs = values.map((_, i) => xAt(i, n));
+  targetY = yFor(values);
+  fromY = xs.map(x => sampleY(oldX, oldY, x));
+  ys = fromY.slice();
+  t0 = performance.now();
+  cancelAnimationFrame(raf);
+  if (calm) { ys = targetY.slice(); paint(); return; }
+  const step = () => {
+    const now = performance.now();
+    let busy = false;
+    ys = xs.map((x, i) => {
+      const u = Math.min(1, Math.max(0, (now - t0 - (x / W) * 240) / 560));
+      if (u < 1) busy = true;
+      return fromY[i] + (targetY[i] - fromY[i]) * easeOut(u);
+    });
+    paint();
+    if (busy) raf = requestAnimationFrame(step);
+  };
+  raf = requestAnimationFrame(step);
+}
+function layout() {
+  W = chart.clientWidth; H = chart.clientHeight;
+  $('#svg').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  [TOP, (TOP + H - BOTTOM) / 2, H - BOTTOM].forEach((y, i) => {
+    const g = $('#g' + (i + 1));
+    g.setAttribute('x1', 0); g.setAttribute('x2', W); g.setAttribute('y1', y); g.setAttribute('y2', y);
+  });
+  const v = DATA[period].v;
+  xs = v.map((_, i) => xAt(i, v.length));
+  ys = targetY = yFor(v);
+  paint();
+}
+
+/* tooltip on a real data point */
+function showPoint(i) {
+  const d = DATA[period];
+  hoverI = i;
+  const x = xs[i], y = targetY[i];
+  $('#hair').setAttribute('x1', x); $('#hair').setAttribute('x2', x); $('#hair').setAttribute('y1', y); $('#hair').setAttribute('y2', H - BOTTOM);
+  $('#spot').setAttribute('cx', x); $('#spot').setAttribute('cy', y);
+  chart.classList.add('on');
+  tip.querySelector('small').textContent = d.label(i);
+  tip.querySelector('b').textContent = '$' + money(d.v[i]);
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  const left = Math.max(0, Math.min(W - tw, x - tw / 2));
+  // always above the point: TOP leaves room for it even on the highest one
+  tip.style.transform = `translate(${left}px, ${y - th - 10}px)`;
+  tip.classList.add('on');
+}
+function hidePoint() { hoverI = -1; chart.classList.remove('on'); tip.classList.remove('on'); }
+chart.addEventListener('pointermove', e => {
+  const n = DATA[period].v.length, r = chart.getBoundingClientRect();
+  const i = Math.max(0, Math.min(n - 1, Math.round((e.clientX - r.left - SIDE) / (W - SIDE * 2) * (n - 1))));
+  if (i !== hoverI) showPoint(i);
+});
+chart.addEventListener('pointerleave', hidePoint);
+chart.addEventListener('keydown', e => {
+  const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+  if (!d) return;
+  e.preventDefault();
+  const n = DATA[period].v.length;
+  showPoint(hoverI < 0 ? (d > 0 ? 0 : n - 1) : (hoverI + d + n) % n);
+});
+chart.addEventListener('blur', hidePoint);
+
+/* period */
+function fillStats(p) {
+  const d = DATA[p], total = sum(d.v);
+  rollers.total.set(money(total));
+  rollers.orders.set(money(Math.round(total / d.avg)));
+  rollers.avg.set(d.avg.toFixed(2));
+  rollers.ret.set(String(d.ret));
+  $('#pct').textContent = `${d.pct.toFixed(1)}%`;
+  $('#pill').classList.toggle('down', d.down);
+  $('#pill').setAttribute('aria-label', `${d.down ? 'Down' : 'Up'} ${d.pct.toFixed(1)} percent`);
+  $('#vs').textContent = d.vs;
+  const labs = $('#xlabs').children, n = d.v.length;
+  labs[0].textContent = d.short(0);
+  labs[1].textContent = d.short(Math.floor((n - 1) / 2));
+  labs[2].textContent = d.short(n - 1);
+  const order = ['7', '30', '12'].indexOf(String(p));
+  $('#pick').style.transform = `translateX(${order * 59.33}px)`;
+  document.querySelectorAll('#periods button').forEach(b => b.setAttribute('aria-pressed', b.dataset.p === String(p)));
+}
+function setPeriod(p) {
+  if (p === period) return;
+  period = p;
+  hidePoint();
+  fillStats(p);
+  redraw(DATA[p].v);
+  if (!calm) $('#xlabs').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+}
+document.querySelectorAll('#periods button').forEach(b => b.addEventListener('click', () => setPeriod(Number(b.dataset.p))));
+
+fillStats(30);
+document.fonts.ready.then(() => { measureColumns(); layout(); });
+addEventListener('resize', layout);
+</script>
+</body>
+</html>

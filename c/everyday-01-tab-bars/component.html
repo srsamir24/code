@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tab bars, 6 ways</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap">
+<style>
+  @property --x { syntax: "<length>"; inherits: true; initial-value: 0px; }
+  :root {
+    --stage: oklch(0.47 0.19 262);
+    --card: oklch(0.985 0.004 262);
+    --ink: oklch(0.23 0.04 262);
+    --mute: oklch(0.47 0.03 262);
+    --well: oklch(0.945 0.012 262);
+    --hot: oklch(0.7 0.2 45);
+    --out: cubic-bezier(0.23, 1, 0.32, 1);
+    --spring: linear(0, 0.26 8%, 0.75 19%, 1.05 31%, 1.12 39%, 1.09 49%, 1 63%, 0.985 75%, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body { background: var(--stage); color: var(--ink); font-family: "Inter Tight", sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  main { width: min(100%, 540px); margin: 0 auto; padding: 52px 14px 150px; }
+  h1 { color: #fff; font-size: 92px; line-height: 0.95; font-weight: 800; letter-spacing: -0.025em; text-align: center; }
+  .ask { color: #fff; font-size: 23px; font-weight: 500; text-align: center; margin: 12px 0 22px; letter-spacing: -0.01em; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  article { background: var(--card); border-radius: 20px; padding: 24px 12px 12px; min-height: 186px; display: flex; flex-direction: column; }
+  article h2 { display: flex; align-items: baseline; gap: 7px; font-size: 20px; line-height: 1; font-weight: 700; letter-spacing: -0.015em; margin-top: auto; padding: 0 4px; }
+  article h2 b { font-size: 32px; font-weight: 800; color: var(--hot); }
+  article p { font-size: 15.5px; line-height: 1.2; font-weight: 500; color: var(--mute); padding: 4px 4px 0; text-wrap: pretty; }
+
+  article:nth-child(6) p { padding-right: 34px; }
+  .bar { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); height: 58px; border-radius: 18px; background: var(--well); }
+  .bar button { position: relative; z-index: 1; display: grid; place-items: center; border: 0; background: none; padding: 0; color: var(--ink); cursor: pointer; font: inherit; border-radius: 14px; transition: color 0.2s var(--out); -webkit-tap-highlight-color: transparent; }
+  .bar button:focus-visible { outline: 2px solid var(--stage); outline-offset: -3px; }
+  .bar svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .tap { position: absolute; z-index: 3; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; background: oklch(0.23 0.04 262 / 0.28); pointer-events: none; opacity: 0; }
+
+  /* 1 the pill's leading edge runs ahead, the trailing edge catches up */
+  .stretch .pill { position: absolute; top: 6px; bottom: 6px; left: var(--l); right: var(--r); border-radius: 13px; background: var(--ink); transition: left var(--tl, 0.4s) var(--out), right var(--tr, 0.4s) var(--out); }
+  .stretch button[aria-selected="true"] { color: #fff; }
+
+  /* 2 the icon fills from below, the old one drains */
+  .fill button .solid { position: absolute; inset: 0; display: grid; place-items: center; color: var(--hot); clip-path: inset(100% 0 0 0); transition: clip-path 0.5s cubic-bezier(0.45, 0, 0.55, 1); }
+  .fill button .solid svg { fill: currentColor; }
+  .fill button > svg { transition: transform 0.4s var(--spring); }
+  .fill button[aria-selected="true"] .solid { clip-path: inset(0 0 0 0); }
+  .fill button[aria-selected="true"] > svg, .fill button[aria-selected="true"] .solid svg { transform: scale(1.14); }
+  .fill button .solid svg { transition: transform 0.4s var(--spring); }
+
+  /* 3 the active tab opens up and its label slides out */
+  .label { display: flex; padding: 6px; gap: 2px; }
+  .label button { flex: 1 1 0; display: flex; justify-content: center; align-items: center; min-width: 0; overflow: hidden; transition: flex-grow 0.46s var(--spring), background-color 0.12s var(--out), color 0.25s var(--out); }
+  .label span { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; transition: max-width 0.46s var(--out), opacity 0.2s var(--out), margin 0.46s var(--out); }
+  .label svg { flex: none; width: 21px; height: 21px; }
+  .label button[aria-selected="true"] { flex-grow: 3.4; background: var(--hot); color: var(--ink); }
+  .label button[aria-selected="true"] span { max-width: 62px; opacity: 1; margin-left: 5px; }
+
+  /* 4 a dot pulls into a line, travels, then closes back into a dot */
+  .worm .line { position: absolute; bottom: 5px; height: 7px; left: var(--l); right: var(--r); border-radius: 4px; background: var(--ink); transition: left 0.3s var(--out) var(--dl, 0s), right 0.3s var(--out) var(--dr, 0s); }
+  .worm button { padding-bottom: 7px; opacity: 0.5; transition: opacity 0.25s var(--out), transform 0.4s var(--spring); }
+  .worm button[aria-selected="true"] { opacity: 1; transform: translateY(-1px); }
+
+  /* 5 a ball hops in an arc and squashes on landing */
+  .hop .ball { position: absolute; left: 0; top: 0; width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; border-radius: 50%; background: var(--hot); z-index: 2; transform-origin: 50% 100%; }
+  .hop button { padding-top: 12px; transition: transform 0.36s var(--spring); }
+  .hop button[aria-selected="true"] { transform: translateY(-1px); }
+
+  /* 6 the icon rises out of the bar and a notch follows it */
+  .rise { background: none; }
+  .rise .plate { position: absolute; inset: 0; border-radius: 18px; background: var(--well); --x: var(--to); transition: --x 0.5s var(--out); -webkit-mask: radial-gradient(circle 27px at var(--x) 0, transparent 97%, #000 100%); mask: radial-gradient(circle 27px at var(--x) 0, transparent 97%, #000 100%); }
+  .rise .orb { position: absolute; top: -23px; left: -21px; width: 42px; height: 42px; border-radius: 50%; background: var(--ink); transform: translateX(var(--to)); transition: transform 0.5s var(--out); }
+  .rise button { transition: transform 0.5s var(--spring), color 0.25s var(--out); }
+  .rise button[aria-selected="true"] { transform: translateY(-31px); color: #fff; transition-delay: 0.2s; }
+
+  @media (prefers-reduced-motion: reduce) { .bar *, .bar { transition-duration: 0.01s !important; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Tab bars</h1>
+  <p class="ask">Which one would you use?</p>
+  <div class="grid">
+    <article><div class="bar stretch" data-kind="stretch"></div><h2><b>1</b> Stretch pill</h2><p>The front edge runs ahead, the back catches up.</p></article>
+    <article><div class="bar fill" data-kind="fill"></div><h2><b>2</b> Liquid fill</h2><p>The icon fills from below as the old one drains.</p></article>
+    <article><div class="bar label" data-kind="label"></div><h2><b>3</b> Open label</h2><p>The active tab opens up and its name slides out.</p></article>
+    <article><div class="bar worm" data-kind="worm"></div><h2><b>4</b> Inch worm</h2><p>A dot pulls into a line, then closes up again.</p></article>
+    <article><div class="bar hop" data-kind="hop"></div><h2><b>5</b> Ball hop</h2><p>A ball jumps across and squashes when it lands.</p></article>
+    <article><div class="bar rise" data-kind="rise"></div><h2><b>6</b> Rising dock</h2><p>The icon lifts out and a notch follows it.</p></article>
+  </div>
+</main>
+<script>
+const ICONS = {
+  Home: '<path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/>',
+  Search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+  Saved: '<path d="M12 20.5s-8-4.6-8-10.6A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8 2.9c0 6-8 10.6-8 10.6z"/>',
+  You: '<circle cx="12" cy="8" r="4"/><path d="M4.5 21c.8-4 3.8-6 7.5-6s6.7 2 7.5 6"/>',
+};
+const NAMES = Object.keys(ICONS);
+const svg = n => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;
+
+document.querySelectorAll('.bar').forEach((bar, n) => {
+  const kind = bar.dataset.kind;
+  bar.setAttribute('role', 'tablist');
+  bar.setAttribute('aria-label', `Tab bar example ${n + 1}`);
+  const extra = { stretch: '<i class="pill"></i>', worm: '<i class="line"></i>', hop: '<i class="ball"></i>', rise: '<i class="plate"></i><i class="orb"></i>' }[kind] || '';
+  bar.innerHTML = extra + NAMES.map(name => `<button role="tab" aria-label="${name}" aria-selected="false">${svg(name)}${
+    kind === 'fill' ? `<i class="solid">${svg(name)}</i>` : kind === 'label' ? `<span>${name}</span>` : ''}</button>`).join('') + '<i class="tap"></i>';
+  const tabs = [...bar.querySelectorAll('button')];
+  const tap = bar.querySelector('.tap');
+  const ball = bar.querySelector('.ball');
+  let now = -1, touched = false;
+
+  const edges = i => {
+    const t = tabs[i], w = bar.clientWidth;
+    return { l: t.offsetLeft, r: w - t.offsetLeft - t.offsetWidth, c: t.offsetLeft + t.offsetWidth / 2 };
+  };
+  const ballAt = c => `translate(${c}px, 13px)`;
+
+  function select(i, instant) {
+    if (i === now) return;
+    const was = now; now = i;
+    tabs.forEach((t, k) => t.setAttribute('aria-selected', k === i));
+    const e = edges(i), right = was >= 0 && i > was;
+    if (kind === 'stretch') {
+      bar.style.setProperty('--tl', right ? '0.46s' : '0.24s');
+      bar.style.setProperty('--tr', right ? '0.24s' : '0.46s');
+      bar.style.setProperty('--l', e.l + 6 + 'px');
+      bar.style.setProperty('--r', e.r + 6 + 'px');
+    }
+    if (kind === 'worm') {
+      bar.style.setProperty('--dl', right ? '0.15s' : '0s');
+      bar.style.setProperty('--dr', right ? '0s' : '0.15s');
+      bar.style.setProperty('--l', e.l + (tabs[i].offsetWidth - 7) / 2 + 'px');
+      bar.style.setProperty('--r', e.r + (tabs[i].offsetWidth - 7) / 2 + 'px');
+    }
+    if (kind === 'rise') bar.style.setProperty('--to', e.c + 'px');
+    if (kind === 'hop') {
+      if (was < 0 || instant) { ball.style.transform = ballAt(e.c); return; }
+      const a = edges(was).c, mid = (a + e.c) / 2;
+      ball.animate([
+        { transform: `${ballAt(a)} scale(1, 1)`, easing: 'cubic-bezier(0.2, 0.7, 0.4, 1)' },
+        { transform: `translate(${mid}px, -14px) scale(0.86, 1.14)`, easing: 'cubic-bezier(0.6, 0, 0.8, 0.4)', offset: 0.46 },
+        { transform: `${ballAt(e.c)} scale(1.5, 0.55)`, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)', offset: 0.78 },
+        { transform: `${ballAt(e.c)} scale(1, 1)` },
+      ], { duration: 620 });
+      ball.style.transform = ballAt(e.c);
+    }
+  }
+  tabs.forEach((t, i) => t.addEventListener('click', ev => {
+    if (ev.isTrusted) touched = true;
+    select(i);
+  }));
+  bar.addEventListener('keydown', ev => {
+    const d = { ArrowRight: 1, ArrowLeft: -1 }[ev.key];
+    if (!d) return;
+    touched = true;
+    const i = (now + d + tabs.length) % tabs.length;
+    select(i); tabs[i].focus();
+  });
+
+  // shows itself until someone uses it
+  // bars 4 and 6 stay off the far tab, which sits under Instagram's buttons
+  const route = n === 3 || n === 5 ? [2, 0, 1, 0] : [2, 0, 3, 1];
+  let step = 0;
+  function demo() {
+    if (touched) return;
+    const i = route[step++ % route.length];
+    const e = edges(i);
+    tap.style.left = e.c + 'px'; tap.style.top = kind === 'rise' ? '40%' : '50%';
+    tap.animate([{ opacity: 0, transform: 'scale(0.6)' }, { opacity: 1, transform: 'scale(1)', offset: 0.25 }, { opacity: 0, transform: 'scale(1.25)' }], { duration: 280, easing: 'ease-out' });
+    setTimeout(() => select(i), 90);
+    setTimeout(demo, 1500);
+  }
+  document.fonts.ready.then(() => {
+    select(route[route.length - 1], true);
+    setTimeout(demo, 60 + n * 160);
+  });
+});
+</script>
+</body>
+</html>
